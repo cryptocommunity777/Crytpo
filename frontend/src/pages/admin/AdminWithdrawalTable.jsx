@@ -61,7 +61,7 @@ const AdminWithdrawalTable = () => {
         } 
         // Check: Agar aap Live Server par ho
         else {
-          targetBaseUrl = "https:// cryptocommunity.live"; // Live Main Website
+          targetBaseUrl = "https://cryptocommunity.live"; // Live Main Website
         }
 
         // Final URL banayen

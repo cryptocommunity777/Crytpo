@@ -154,7 +154,7 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
                     
                     <!-- Login Button -->
                     <div style="text-align: center; margin-bottom: 40px;">
-                        <a href="https:// cryptocommunity.live/login" style="display: inline-block; background-color: #1e88e5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">🔐 Login to Dashboard</a>
+                        <a href="https://cryptocommunity.live/login" style="display: inline-block; background-color: #1e88e5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">🔐 Login to Dashboard</a>
                     </div>
                     
                     <!-- Security Warning -->
@@ -350,7 +350,7 @@ router.post('/reset-password/:token', async (req, res) => {
           </div>
 
           <br/>
-          <a href="https:// cryptocommunity.live/login"
+          <a href="https://cryptocommunity.live/login"
           style="background:#1e88e5; color:#fff; padding:12px 25px; text-decoration:none; border-radius:6px;">
           🔐 Login Now
           </a>

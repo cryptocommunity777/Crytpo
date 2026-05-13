@@ -128,7 +128,7 @@ const UserListTable = () => {
       if (currentHost === "localhost" || currentHost === "127.0.0.1") {
         targetBaseUrl = "http://localhost:3000"; 
       } else {
-        targetBaseUrl = "https:// cryptocommunity.live"; 
+        targetBaseUrl = "https://cryptocommunity.live"; 
       }
 
       const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${encodeURIComponent(userDataStr)}`;

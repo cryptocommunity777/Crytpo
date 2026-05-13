@@ -11,7 +11,7 @@ const isLocal = window.location.hostname.includes("localhost");
 const api = axios.create({
   // Local par seedha port 5000 hit karega. 
   // LIVE ke liye 'https://yourdomain.com/api' daalna best hai taki subdomain se API cross-origin fail na ho
-  baseURL: isLocal ? 'http://localhost:5000/api' : 'https:// cryptocommunity.live/api',
+  baseURL: isLocal ? 'http://localhost:5000/api' : ' https://cryptocommunity.live/api',
   
   // 🔥 CACHE FIX (GLOBAL): Ye 3 lines poori website se 304 Cache error hamesha ke liye khatam kar dengi
   headers: {
