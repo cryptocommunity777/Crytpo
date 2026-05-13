@@ -19,6 +19,7 @@ app.set('trust proxy', true);
 
 // ====================== 1. CORS SETUP ======================
 const allowedOrigins = [
+  // --- Local Testing ke liye ---
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'http://good.localhost:3000',
@@ -26,9 +27,13 @@ const allowedOrigins = [
   'http://127.0.0.1:5000',
   'http://localhost:5173',       
   'http://127.0.0.1:5173',
-  'http://good.localhost:5173'  // 🔥 YE NAYA ADD KIYA HAI ADMIN PANEL KE LIYE
-];
+  'http://good.localhost:5173', 
 
+  // --- LIVE SERVER KE LIYE (Ye sabse zaroori hain) ---
+  'https://cryptocommunity.live',        // 🔥 Live Main Website
+  'https://www.cryptocommunity.live',    // 🔥 Live Main Website (www wali)
+  'https://good.cryptocommunity.live'   // 🔥 Live Admin Panel (good.localhost ki jagah)
+];
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
