@@ -1,0 +1,41 @@
+/* 🎰 3D GOLD-RED SPIN BUTTON */
+.golden-spin-btn {
+  position: relative;
+  display: inline-block;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  border: none;
+  background: linear-gradient(135deg, #FFD700, #C00000);
+  text-shadow: 0 0 4px rgba(0,0,0,0.6);
+
+  box-shadow: 
+    0 5px 12px rgba(255, 0, 0, 0.35),
+    inset 0 2px 4px rgba(255,255,255,0.4),
+    inset 0 -2px 4px rgba(0,0,0,0.3);
+
+  transition: all 0.2s ease-in-out;
+}
+
+/* Hover → lift + shine animation */
+.golden-spin-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 
+    0 8px 20px rgba(255, 0, 0, 0.5),
+    inset 0 2px 4px rgba(255,255,255,0.6),
+    inset 0 -2px 4px rgba(0,0,0,0.4);
+}
+
+.golden-spin-btn:active {
+  transform: translateY(2px);
+}
+
+/* ✨ Shine Line Effect */
+ 
+
+.golden-spin-btn:hover::after {
+  left: 140%;
+}

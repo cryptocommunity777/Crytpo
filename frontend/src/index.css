@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+:root {
+  background-color: #f8fafc; /* Naya Light Background (slate-50) */
+  color-scheme: light; /* Dark se Light kar diya */
+}
+
+/* 1. Global Reset - Extra space aur side scrolling hatane ke liye */
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #f8fafc; /* Light slate background */
+  color: #0f172a; /* Dark text for readability (slate-900) */
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden; /* Side scrolling block */
+  
+  /* 🛑 Firefox ke liye scrollbar hide */
+  scrollbar-width: none; 
+  /* 🛑 IE/Edge ke liye scrollbar hide */
+  -ms-overflow-style: none; 
+}
+
+/* 2. Chrome, Safari aur Opera ke liye scrollbar hide */
+/* Isse scrollbar gayab ho jayegi par scroll mast kaam karega */
+::-webkit-scrollbar {
+  display: none; /* Puri tarah se gayab */
+  width: 0;
+  height: 0;
+}
+
+/* Glassmorphism for Green/Light Theme */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85); /* Semi-transparent white */
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(34, 197, 94, 0.2); /* Light green border */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04); /* Halka sa shadow */
+}
+
+/* Theme Green Glow Text (Replaces Lava Text) */
+.text-theme-green {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #047857 100%); /* Green to Emerald */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Purane class ko bhi same green gradient de diya hai, 
+   taaki agar kisi purane component me text-lava likha ho toh wo tootega nahi */
+.text-lava {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #047857 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Agar aap chahte ho ki PC par thoda sa dikhe aur Mobile par nahi, 
+   toh aap niche wala code use kar sakte ho (Optional) */
+@media (min-width: 1024px) {
+  /* Sirf PC par halka sa dikhana ho toh isko enable karein, warna upar wala kafi hai */
+  /* .custom-scroll::-webkit-scrollbar { width: 4px; display: block; }
+  .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; } 
+  */
+}
