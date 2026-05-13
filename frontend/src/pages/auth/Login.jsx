@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../api/axios';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { User, Lock, ArrowRight, Eye, EyeOff, Check, Flame } from 'lucide-react';
-import TelegramButton from '../../components/TelegramButton';
+import { User, Lock, ArrowRight, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 
@@ -83,15 +82,19 @@ const UserLogin = () => {
       const fp = await fpPromise;
       const result = await fp.get();
       const visitorId = result.visitorId;
+      
       const res = await api.post('/auth/login', { userId, password, deviceId: visitorId });
       const { token, user } = res.data;
+      
       login(user, token);
+      
       if (rememberMe) {
         const updatedUsers = savedUsers.filter(u => u.id !== userId);
         updatedUsers.unshift({ id: userId, password });
         localStorage.setItem('savedUsers', JSON.stringify(updatedUsers));
         setSavedUsers(updatedUsers);
       }
+      
       setTimeout(() => {
         setLoading(false);
         navigate('/dashboard', { replace: true });
@@ -103,357 +106,95 @@ const UserLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 font-sans overflow-x-hidden flex flex-col">
-
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-start p-4 pt-24 md:pt-32 relative overflow-hidden font-sans">
+      
+      {/* --- PREMIUM BACKGROUND ELEMENTS (Matching Register Page) --- */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap');
-
-        * { box-sizing: border-box; }
-
-        body { font-family: 'Space Grotesk', sans-serif; }
-
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-8px) rotate(2deg); }
-        }
-        @keyframes pulse-ring {
-          0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4), 0 0 20px rgba(34,197,94,0.2); }
-          70% { box-shadow: 0 0 0 12px rgba(34,197,94,0), 0 0 30px rgba(34,197,94,0.1); }
-          100% { box-shadow: 0 0 0 0 rgba(34,197,94,0), 0 0 20px rgba(34,197,94,0.2); }
-        }
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(24px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes shimmer {
-          0% { background-position: -200% center; }
-          100% { background-position: 200% center; }
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        @keyframes dotPulse {
-          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-          40% { transform: scale(1); opacity: 1; }
-        }
-
-        .bg-grid {
-          background-image:
-            linear-gradient(rgba(34,197,94,0.04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(34,197,94,0.04) 1px, transparent 1px);
-          background-size: 48px 48px;
-        }
-
-        .card-glass {
-          background: rgba(15, 23, 42, 0.85);
-          backdrop-filter: blur(24px);
-          border: 1px solid rgba(34,197,94,0.15);
-          box-shadow:
-            0 0 0 1px rgba(34,197,94,0.05),
-            0 24px 48px rgba(0,0,0,0.6),
-            0 0 80px rgba(34,197,94,0.05) inset;
-        }
-
-        .logo-icon {
-          animation: float 4s ease-in-out infinite, pulse-ring 3s ease-in-out infinite;
-          background: linear-gradient(135deg, #22c55e, #16a34a);
-          box-shadow: 0 0 30px rgba(34,197,94,0.35);
-        }
-
-        .brand-text {
-          background: linear-gradient(90deg, #22c55e 0%, #4ade80 40%, #22c55e 80%, #86efac 100%);
-          background-size: 200% auto;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          animation: shimmer 3s linear infinite;
-        }
-
-        .form-slide-up {
-          animation: slideUp 0.5s ease-out forwards;
-        }
-
-        .input-field {
-          width: 100%;
-          background: rgba(30, 41, 59, 0.8);
-          border: 1.5px solid rgba(71, 85, 105, 0.5);
-          color: #e2e8f0;
-          border-radius: 12px;
-          padding: 14px 16px 14px 48px;
-          font-size: 15px;
-          font-family: 'Space Grotesk', sans-serif;
-          outline: none;
-          transition: all 0.2s ease;
-        }
-        .input-field::placeholder { color: #475569; }
-        .input-field:focus {
-          border-color: #22c55e;
-          background: rgba(30, 41, 59, 0.95);
-          box-shadow: 0 0 0 3px rgba(34,197,94,0.12), 0 0 20px rgba(34,197,94,0.08);
-        }
-
-        .btn-login {
-          width: 100%;
-          padding: 16px;
-          border-radius: 12px;
-          background: linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%);
-          color: #000;
-          font-weight: 800;
-          font-size: 16px;
-          font-family: 'Space Grotesk', sans-serif;
-          letter-spacing: 0.5px;
-          border: none;
-          cursor: pointer;
-          transition: all 0.25s ease;
-          position: relative;
-          overflow: hidden;
-          box-shadow: 0 8px 24px rgba(34,197,94,0.35), 0 0 0 1px rgba(34,197,94,0.2);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-        }
-        .btn-login::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
-          opacity: 0;
-          transition: opacity 0.2s;
-        }
-        .btn-login:hover:not(:disabled)::before { opacity: 1; }
-        .btn-login:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 32px rgba(34,197,94,0.45), 0 0 0 1px rgba(34,197,94,0.3);
-        }
-        .btn-login:active:not(:disabled) { transform: translateY(0) scale(0.98); }
-        .btn-login:disabled { opacity: 0.7; cursor: not-allowed; }
-
-        .dropdown-list {
-          position: absolute;
-          top: calc(100% + 6px);
-          left: 0; right: 0;
-          background: rgba(15, 23, 42, 0.98);
-          border: 1px solid rgba(34,197,94,0.25);
-          border-radius: 12px;
-          overflow: hidden;
-          z-index: 100;
-          box-shadow: 0 16px 40px rgba(0,0,0,0.7);
-          max-height: 180px;
-          overflow-y: auto;
-        }
-        .dropdown-list::-webkit-scrollbar { width: 3px; }
-        .dropdown-list::-webkit-scrollbar-track { background: transparent; }
-        .dropdown-list::-webkit-scrollbar-thumb { background: #22c55e; border-radius: 4px; }
-
-        .dropdown-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 11px 14px;
-          cursor: pointer;
-          transition: background 0.15s;
-          border-bottom: 1px solid rgba(255,255,255,0.04);
-        }
-        .dropdown-item:last-child { border-bottom: none; }
-        .dropdown-item:hover { background: rgba(34,197,94,0.1); }
-
-        .nav-bar {
-          background: rgba(2, 6, 23, 0.8);
-          backdrop-filter: blur(16px);
-          border-bottom: 1px solid rgba(34,197,94,0.1);
-        }
-
-        .spinner {
-          width: 20px; height: 20px;
-          border: 2.5px solid rgba(0,0,0,0.3);
-          border-top-color: #000;
-          border-radius: 50%;
-          animation: spin 0.7s linear infinite;
-        }
-
-        .divider-line {
-          flex: 1;
-          height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(71,85,105,0.4), transparent);
-        }
-
-        .checkbox-box {
-          width: 20px; height: 20px;
-          border-radius: 6px;
-          border: 1.5px solid #475569;
-          display: flex; align-items: center; justify-content: center;
-          transition: all 0.2s;
-          flex-shrink: 0;
-          cursor: pointer;
-          position: relative;
-        }
-        .checkbox-box.checked {
-          background: #22c55e;
-          border-color: #22c55e;
-          box-shadow: 0 0 8px rgba(34,197,94,0.4);
-        }
-        .checkbox-box:hover:not(.checked) { border-color: #22c55e; }
-
-        .status-dot {
-          width: 8px; height: 8px;
-          border-radius: 50%;
-          background: #22c55e;
-          box-shadow: 0 0 6px rgba(34,197,94,0.8);
-          animation: dotPulse 1.5s ease-in-out infinite;
-        }
-
-        @media (max-width: 640px) {
-          .brand-full { font-size: 18px !important; }
-          .card-glass { border-radius: 20px; padding: 24px 20px; }
-        }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
+        @keyframes pulseGlow { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.1); } }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .animate-pulse-glow { animation: pulseGlow 5s ease-in-out infinite; }
+        .glass-panel { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.5); }
       `}</style>
 
-      {/* Background */}
-      <div className="bg-grid fixed inset-0 pointer-events-none" />
-      <div className="fixed top-0 left-1/4 w-96 h-96 rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 70%)', filter: 'blur(40px)' }} />
-      <div className="fixed bottom-0 right-1/4 w-80 h-80 rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(34,197,94,0.06) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+      {/* Abstract Glowing Orbs */}
+      <div className="fixed top-[-10%] left-[-5%] w-[40vw] h-[40vw] bg-emerald-400/20 blur-[100px] rounded-full pointer-events-none animate-pulse-glow"></div>
+      <div className="fixed bottom-[-10%] right-[-5%] w-[40vw] h-[40vw] bg-green-500/15 blur-[100px] rounded-full pointer-events-none animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
 
-      {/* NAVBAR */}
-      <nav className="nav-bar fixed top-0 left-0 w-full z-50 px-4 sm:px-8 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-
-          {/* Brand — Full name, wraps gracefully on mobile */}
-          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div className="logo-icon flex-shrink-0" style={{
-              width: 38, height: 38, borderRadius: 10,
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <Flame size={20} color="#000" fill="#000" />
-            </div>
-            <div className="brand-full" style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.1 }}>
-              <span style={{ color: '#f1f5f9' }}>CRYPTO</span>
-              <span className="brand-text"> COMMUNITY</span>
-            </div>
+      {/* Navbar (Matching Register Page) */}
+      <nav className="fixed top-0 left-0 w-full z-50 glass-panel shadow-sm px-4 md:px-8 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-3 no-underline group">
+            <span className="text-xl md:text-2xl font-black text-slate-900 tracking-wider">
+              CRYPTO<span className="text-emerald-500">COMMUNITY</span>
+            </span>
           </Link>
-
-          {/* Nav Actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Link to="/" style={{
-              display: 'none', color: '#64748b', fontWeight: 600,
-              fontSize: 14, textDecoration: 'none', padding: '8px 14px', borderRadius: 8,
-              transition: 'color 0.2s'
-            }}
-              className="hidden sm:block hover:text-green-400">
-              Home
-            </Link>
-            <Link to="/register" style={{
-              background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.35)',
-              color: '#22c55e', fontWeight: 700, fontSize: 14, textDecoration: 'none',
-              padding: '9px 18px', borderRadius: 10, transition: 'all 0.2s',
-              letterSpacing: '0.3px'
-            }}>
-              Register
-            </Link>
-          </div>
+          <Link to="/register" className="bg-emerald-50 text-emerald-600 font-bold py-2.5 px-6 rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-sm flex items-center gap-2 border border-emerald-100 hover:border-emerald-500">
+            <User size={16} /> <span className="hidden sm:inline">Create Account</span><span className="sm:hidden">Register</span>
+          </Link>
         </div>
       </nav>
 
-      {/* MAIN CONTENT */}
-      <div style={{
-        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '100px 16px 40px', minHeight: '100vh'
-      }}>
-        <div className="card-glass form-slide-up w-full" style={{
-          maxWidth: 440, borderRadius: 24, padding: '36px 32px'
-        }}>
-
-          {/* Logo + Title */}
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div className="logo-icon" style={{
-              width: 80, height: 80, borderRadius: '50%',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: 20
-            }}>
-              <Flame size={36} color="#000" fill="#000" />
-            </div>
-
-            <h1 style={{
-              fontSize: 30, fontWeight: 800, color: '#f1f5f9',
-              margin: '0 0 8px', letterSpacing: '-0.5px', lineHeight: 1.2
-            }}>
-              Welcome Back
-            </h1>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              <div className="status-dot" />
-              <p style={{ color: '#64748b', fontSize: 14, margin: 0, fontWeight: 500 }}>
-                Secure access to your dashboard
-              </p>
-            </div>
+      {/* Main Form Container */}
+      <div className="w-full max-w-md relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700 mt-8 mb-10">
+        
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-[1.5rem] bg-white mb-6 animate-float shadow-[0_15px_35px_rgba(16,185,129,0.2)] overflow-hidden relative border border-emerald-100 p-1">
+             <img src="/crypto_com.jpg" alt="Logo" className="w-full h-full object-cover rounded-2xl" />
           </div>
+          
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-2 tracking-tight">
+            Welcome <span className="text-emerald-500">Back</span>
+          </h2>
+          <p className="text-slate-500 font-medium">Secure access to your dashboard.</p>
+        </div>
 
-          {/* Error */}
+        {/* Premium Form Box */}
+        <div className="bg-white shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] border border-slate-100 p-6 md:p-10 rounded-[2.5rem] relative">
+          
           {error && (
-            <div style={{
-              marginBottom: 20, background: 'rgba(239,68,68,0.1)',
-              border: '1px solid rgba(239,68,68,0.25)', color: '#f87171',
-              padding: '12px 16px', borderRadius: 10, fontSize: 13,
-              fontWeight: 600, textAlign: 'center', lineHeight: 1.5
-            }}>
-              ⚠️ {error}
+            <div className="mb-6 bg-red-50 border-l-4 border-red-500 text-red-600 text-sm p-4 rounded-r-xl font-medium flex items-center gap-3 animate-in zoom-in duration-300">
+                ⚠️ {error}
             </div>
           )}
 
-          {/* FORM */}
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-            {/* User ID */}
-            <div ref={inputRef} style={{ position: 'relative' }}>
-              <label style={{
-                display: 'block', fontSize: 12, color: '#94a3b8',
-                fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px',
-                marginBottom: 8
-              }}>
-                User ID
-              </label>
-              <div style={{ position: 'relative' }}>
-                <div style={{
-                  position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
-                  pointerEvents: 'none', color: '#64748b'
-                }}>
-                  <User size={18} />
+          <form onSubmit={handleLogin} className="space-y-5 relative z-10">
+            
+            {/* User ID Field with Dropdown */}
+            <div ref={inputRef} className="relative z-20">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2">User ID</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                 </div>
                 <input
                   type="text"
                   value={userId}
                   onChange={(e) => setUserId(e.target.value.replace(/\D/g, ''))}
                   onFocus={() => setDropdownOpen(true)}
-                  className="input-field"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-bold focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all"
                   placeholder="Enter your User ID"
                   required
                 />
               </div>
 
-              {/* Dropdown */}
+              {/* Light Theme Saved Users Dropdown */}
               {dropdownOpen && filteredUsers.length > 0 && (
-                <div className="dropdown-list">
+                <div className="absolute top-[105%] left-0 right-0 bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden z-50 max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2">
                   {filteredUsers.map((u, idx) => (
-                    <div key={idx} className="dropdown-item" onClick={() => handleUserSelect(u.id)}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{
-                          width: 32, height: 32, borderRadius: '50%',
-                          background: 'rgba(34,197,94,0.1)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }}>
-                          <User size={14} color="#22c55e" />
+                    <div 
+                      key={idx} 
+                      className="flex items-center justify-between p-3 cursor-pointer hover:bg-emerald-50 border-b border-slate-50 last:border-0 transition-colors"
+                      onClick={() => handleUserSelect(u.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                          <User size={14} />
                         </div>
-                        <span style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 14, fontFamily: 'monospace' }}>
-                          {u.id}
-                        </span>
+                        <span className="text-slate-700 font-bold font-mono">{u.id}</span>
                       </div>
-                      <span style={{
-                        fontSize: 11, fontWeight: 700, color: '#22c55e',
-                        background: 'rgba(34,197,94,0.1)', padding: '3px 8px',
-                        borderRadius: 6, letterSpacing: '0.5px', textTransform: 'uppercase'
-                      }}>
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-md uppercase tracking-wider">
                         Saved
                       </span>
                     </div>
@@ -462,111 +203,76 @@ const UserLogin = () => {
               )}
             </div>
 
-            {/* Password */}
-            <div>
-              <label style={{
-                display: 'block', fontSize: 12, color: '#94a3b8',
-                fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px',
-                marginBottom: 8
-              }}>
-                Password
-              </label>
-              <div style={{ position: 'relative' }}>
-                <div style={{
-                  position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
-                  pointerEvents: 'none', color: '#64748b'
-                }}>
-                  <Lock size={18} />
+            {/* Password Field */}
+            <div className="relative z-10">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2">Password</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input-field"
-                  style={{ paddingRight: 48 }}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pl-12 pr-12 text-slate-900 font-medium focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all"
                   placeholder="Enter your password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: '#64748b', padding: 4, display: 'flex', transition: 'color 0.2s'
-                  }}
+                  className="absolute right-4 top-3.5 text-slate-400 hover:text-emerald-500 transition-colors"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
 
-            {/* Remember Me + Forgot Password */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                <div
-                  className={`checkbox-box ${rememberMe ? 'checked' : ''}`}
-                  onClick={() => setRememberMe(!rememberMe)}
-                >
-                  {rememberMe && <Check size={13} strokeWidth={3.5} color="#000" />}
+            {/* Remember Me & Forgot Password */}
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2.5 cursor-pointer group">
+                <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${rememberMe ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'border-slate-300 group-hover:border-emerald-400'}`}>
+                  {rememberMe && <CheckCircle2 size={14} color="#fff" strokeWidth={3} />}
                 </div>
-                <span style={{ color: '#94a3b8', fontSize: 14, fontWeight: 500, userSelect: 'none' }}>
+                <span className="text-slate-500 text-sm font-medium select-none group-hover:text-slate-700 transition-colors">
                   Remember me
                 </span>
               </label>
 
-              <Link to="/forgot-password" style={{
-                color: '#22c55e', fontSize: 14, fontWeight: 600,
-                textDecoration: 'none', transition: 'color 0.2s'
-              }}>
-                Forgot password?
+              <Link to="/forgot-password" className="text-emerald-600 text-sm font-bold hover:text-emerald-700 transition-colors">
+                Forgot Password?
               </Link>
             </div>
 
-            {/* Submit */}
-            <button type="submit" className="btn-login" disabled={loading}>
+            {/* Submit Button */}
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className={`w-full py-4 mt-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-lg shadow-[0_10px_20px_-10px_rgba(16,185,129,0.6)] hover:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.8)] transition-all flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-wait' : 'hover:-translate-y-1'}`}
+            >
               {loading ? (
                 <>
-                  <div className="spinner" />
-                  <span>Authenticating...</span>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  AUTHENTICATING...
                 </>
               ) : (
-                <>
-                  Secure Login
-                  <ArrowRight size={18} strokeWidth={2.5} />
-                </>
+                <>SECURE LOGIN <ArrowRight size={20} strokeWidth={2.5} /></>
               )}
             </button>
-
-            {/* Divider */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0' }}>
-              <div className="divider-line" />
-              <span style={{ color: '#334155', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>OR</span>
-              <div className="divider-line" />
-            </div>
-
-            {/* Telegram */}
-           </form>
-
-          {/* Register Link */}
-          <p style={{ textAlign: 'center', marginTop: 24, color: '#475569', fontSize: 14 }}>
-            Don't have an account?{' '}
-            <Link to="/register" style={{
-              color: '#22c55e', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.2px'
-            }}>
-              Register now
-            </Link>
-          </p>
-
-          {/* Footer note */}
-          <p style={{
-            textAlign: 'center', marginTop: 16, color: '#1e293b',
-            fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
-          }}>
-            <Lock size={11} color="#1e293b" />
-            256-bit encrypted connection
-          </p>
+          </form>
         </div>
+
+        {/* Footer Notes */}
+        <p className="text-center mt-8 text-slate-500 font-medium">
+          New to the community?{' '}
+          <Link to="/register" className="text-emerald-600 font-bold hover:text-emerald-700 transition-colors">
+            Create an account
+          </Link>
+        </p>
+
+        <p className="text-center mt-4 text-slate-400 text-xs font-bold flex items-center justify-center gap-1.5 uppercase tracking-widest">
+          <Lock size={12} /> 256-Bit Encrypted Connection
+        </p>
       </div>
     </div>
   );

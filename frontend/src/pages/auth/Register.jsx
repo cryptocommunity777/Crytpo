@@ -3,12 +3,11 @@ import api from '../../api/axios';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import Select from 'react-select';
 import Confetti from 'react-confetti';
-import TelegramButton from '../../components/TelegramButton';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 import { 
   User, Users, Lock, Mail, Phone, Eye, EyeOff, 
-  CheckCircle2, XCircle, ArrowRight, ShieldCheck
-} from 'lucide-react'; // Activity icon hata diya kyunki ab logo use ho raha hai
+  CheckCircle2, XCircle, ArrowRight, ShieldCheck, Copy
+} from 'lucide-react'; 
 
 function Register() {
   const [name, setName] = useState('');
@@ -44,7 +43,7 @@ function Register() {
     }
   }, [location]);
 
-  // 🔥 CACHE FIX: Added Timestamp to bypass browser cache
+  // Sponsor Name Fetch with Cache Bypass
   const fetchSponsorName = async (id) => {
     if (id.length < 3) {
       setSponsorName('');
@@ -120,6 +119,11 @@ function Register() {
     navigate('/login');
   };
 
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    alert("Copied: " + text);
+  };
+
   const countryOptions = [
     { value: 'India', label: 'India (+91)' },
     { value: 'USA', label: 'United States (+1)' },
@@ -139,91 +143,84 @@ function Register() {
   const customSelectStyles = {
     control: (base, state) => ({
       ...base,
-      background: '#0a0a0a',
-      borderColor: state.isFocused ? '#f97316' : 'rgba(255,255,255,0.1)',
+      background: '#f8fafc',
+      borderColor: state.isFocused ? '#10b981' : '#e2e8f0',
       borderRadius: '0.75rem',
-      color: 'white',
-      minHeight: '48px',
-      boxShadow: state.isFocused ? '0 0 10px rgba(249,115,22,0.3)' : 'none',
+      color: '#0f172a',
+      minHeight: '52px',
+      boxShadow: state.isFocused ? '0 0 0 4px rgba(16, 185, 129, 0.1)' : 'none',
       transition: 'all 0.3s ease',
+      paddingLeft: '35px',
+      cursor: 'pointer'
     }),
-    singleValue: (base) => ({ ...base, color: 'white' }),
-    input: (base) => ({ ...base, color: 'white' }),
-    menu: (base) => ({ ...base, background: '#0f0f0f', border: '1px solid #f97316', zIndex: 50, borderRadius: '12px' }),
+    singleValue: (base) => ({ ...base, color: '#0f172a', fontWeight: '500' }),
+    input: (base) => ({ ...base, color: '#0f172a' }),
+    menu: (base) => ({ ...base, background: '#ffffff', border: '1px solid #e2e8f0', zIndex: 50, borderRadius: '12px', overflow: 'hidden', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }),
     option: (base, state) => ({
       ...base,
-      backgroundColor: state.isFocused ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
-      color: state.isFocused ? '#f97316' : 'white',
+      backgroundColor: state.isFocused ? '#ecfdf5' : 'transparent',
+      color: state.isFocused ? '#059669' : '#334155',
       cursor: 'pointer',
-      padding: '10px 15px',
+      padding: '12px 18px',
+      fontWeight: '500'
     }),
-    placeholder: (base) => ({ ...base, color: '#6b7280' }),
+    placeholder: (base) => ({ ...base, color: '#94a3b8', fontWeight: '400' }),
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-200 flex flex-col items-center justify-start p-4 pt-24 md:pt-32 relative overflow-hidden font-sans selection:bg-green-500/30 selection:text-slate-900">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-start p-4 pt-24 md:pt-32 relative overflow-hidden font-sans">
       
-      {/* --- GLOBAL STYLES & ANIMATIONS --- */}
+      {/* --- PREMIUM BACKGROUND ELEMENTS --- */}
       <style>{`
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
-        @keyframes pulseGlow { 0%, 100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.05); } }
-        .animate-float { animation: float 5s ease-in-out infinite; }
-        .animate-pulse-glow { animation: pulseGlow 4s ease-in-out infinite; }
-        .bg-grid-dark { background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 30px 30px; }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
+        @keyframes pulseGlow { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.1); } }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .animate-pulse-glow { animation: pulseGlow 5s ease-in-out infinite; }
+        .glass-panel { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.5); }
       `}</style>
 
-      {/* Background Ambience */}
-      <div className="fixed inset-0 bg-grid-dark pointer-events-none"></div>
-      <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-green-600/10 blur-[120px] rounded-full pointer-events-none animate-pulse-glow"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-red-800/10 blur-[120px] rounded-full pointer-events-none animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
+      {/* Abstract Glowing Orbs */}
+      <div className="fixed top-[-10%] left-[-5%] w-[40vw] h-[40vw] bg-emerald-400/20 blur-[100px] rounded-full pointer-events-none animate-pulse-glow"></div>
+      <div className="fixed bottom-[-10%] right-[-5%] w-[40vw] h-[40vw] bg-green-500/15 blur-[100px] rounded-full pointer-events-none animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
 
-      {/* Navbar with Clear Logo */}
-      <nav className="fixed top-0 left-0 w-full z-50  bg-slate-900/40 backdrop-blur-lg border-b border-slate-200 px-4 md:px-8 py-3 md:py-4 shadow-[0_4px_30px_rgba(0,0,0,0.8)]">
+      {/* Navbar */}
+      <nav className="fixed top-0 left-0 w-full z-50 glass-panel shadow-sm px-4 md:px-8 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 no-underline group">
-            
-          
-
             <span className="text-xl md:text-2xl font-black text-slate-900 tracking-wider">
-              CRYPTO<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">COMMUNITY</span>
+              CRYPTO<span className="text-emerald-500">COMMUNITY</span>
             </span>
           </Link>
-          <Link to="/login" className="bg-green-500/10 border border-green-500/30 text-green-500 font-bold py-2 px-5 md:px-6 rounded-lg hover:bg-green-500 hover:text-black hover:border-green-500 transition-all shadow-[0_0_15px_rgba(249,115,22,0.15)] flex items-center gap-2">
+          <Link to="/login" className="bg-emerald-50 text-emerald-600 font-bold py-2.5 px-6 rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-sm flex items-center gap-2 border border-emerald-100 hover:border-emerald-500">
             <Lock size={16} /> <span className="hidden sm:inline">Secure Login</span><span className="sm:hidden">Login</span>
           </Link>
         </div>
       </nav>
 
-      {/* Main Registration Container */}
-      <div className="w-full max-w-xl relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700 mb-10">
+      {/* Main Form Container */}
+      <div className="w-full max-w-lg relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700 mb-10 mt-4">
         
-        {/* Header Section */}
+        {/* Header */}
         <div className="text-center mb-8">
-          {/* ✅ UPDATED: CENTRAL LOGO HERE */}
-          <div className="inline-flex items-center justify-center w-20 h-20 md:w-24 md:h-24 rounded-2xl  bg-white mb-5 animate-float border border-green-500/30 shadow-[0_0_30px_rgba(249,115,22,0.4)] overflow-hidden relative p-1">
-             <img src="/crypto_com.jpg" alt="Financial Saarthi" className="w-full h-full object-cover rounded-xl" />
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-[1.5rem] bg-white mb-6 animate-float shadow-[0_15px_35px_rgba(16,185,129,0.2)] overflow-hidden relative border border-emerald-100 p-1">
+             <img src="/crypto_com.jpg" alt="Logo" className="w-full h-full object-cover rounded-2xl" />
           </div>
           
-          <h2 className="text-3xl md:text-5xl font-black tracking-tighter text-slate-900 mb-2">
-            Create Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">Node</span>
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-2">
+            Create Your <span className="text-emerald-500">Node</span>
           </h2>
-          <p className="text-slate-500 text-sm md:text-base font-medium max-w-xs mx-auto">
-            Join the ultimate $30 Global Auto-Pool System.
-          </p>
+          <p className="text-slate-500 font-medium">Join the premium global auto-pool system.</p>
         </div>
 
-        {/* Form Box */}
-        <div className="bg-white shadow-sm backdrop-blur-xl border border-slate-200 p-6 md:p-8 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative overflow-hidden">
+        {/* Premium Form Box */}
+        <div className="bg-white shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] border border-slate-100 p-6 md:p-10 rounded-[2.5rem] relative">
           
-          {/* Internal ambient glow */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 blur-[50px]"></div>
-
-          <form onSubmit={handleRegister} className="space-y-4 relative z-10">
+          <form onSubmit={handleRegister} className="space-y-5 relative z-10">
             
-            {/* Sponsor ID */}
-            <div className="bg-white/[0.02] p-4 rounded-2xl border border-slate-100 mb-2">
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-2 flex items-center gap-1.5">
-                 <Users size={12} className="text-green-500" /> Referral Sponsor
+            {/* Sponsor Box */}
+            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 flex items-center gap-2">
+                 <Users size={14} className="text-emerald-500" /> Referral Sponsor
               </label>
               <div className="relative">
                 <input
@@ -234,48 +231,53 @@ function Register() {
                     setSponsorId(val); 
                     fetchSponsorName(val); 
                   }}                  
-                  className={`w-full bg-white border ${sponsorName === 'Invalid Sponsor' ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : (sponsorName && sponsorId) ? 'border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.2)]' : 'border-slate-200'} rounded-xl px-4 py-3.5 text-slate-900 font-bold tracking-wide focus:outline-none focus:border-green-500 transition-all`}
+                  className={`w-full bg-white border ${sponsorName === 'Invalid Sponsor' ? 'border-red-400 ring-4 ring-red-50' : (sponsorName && sponsorId) ? 'border-emerald-400 ring-4 ring-emerald-50' : 'border-slate-200'} rounded-xl px-4 py-3.5 text-slate-900 font-bold tracking-wide focus:outline-none transition-all`}
                   placeholder="Enter Sponsor ID"
                 />
                 <div className="absolute right-4 top-4">
-                   {sponsorName === 'Invalid Sponsor' && <XCircle className="text-red-500" size={18} strokeWidth={2.5} />}
-                   {sponsorName && sponsorName !== 'Invalid Sponsor' && <CheckCircle2 className="text-green-500" size={18} strokeWidth={2.5} />}
+                   {sponsorName === 'Invalid Sponsor' && <XCircle className="text-red-500" size={20} />}
+                   {sponsorName && sponsorName !== 'Invalid Sponsor' && <CheckCircle2 className="text-emerald-500" size={20} />}
                 </div>
               </div>
               
-              <div className="h-5 mt-1.5 ml-1">
+              <div className="h-5 mt-2 ml-1">
                   {sponsorName && (
-                    <p className={`text-[11px] font-black tracking-wide ${sponsorName === 'Invalid Sponsor' ? 'text-red-500' : 'text-green-400'}`}>
-                       {sponsorName === 'Invalid Sponsor' ? 'Sponsor ID not found' : `✓ Verified: ${sponsorName}`}
+                    <p className={`text-xs font-bold tracking-wide ${sponsorName === 'Invalid Sponsor' ? 'text-red-500' : 'text-emerald-600'}`}>
+                       {sponsorName === 'Invalid Sponsor' ? 'Sponsor not found' : `✓ Verified: ${sponsorName}`}
                     </p>
                   )}
               </div>
             </div>
 
-            {/* Personal Details */}
+            {/* Input Fields */}
             <div className="space-y-4">
                 <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <User className="h-5 w-5 text-gray-600 group-focus-within:text-green-500 transition-colors" />
+                      <User className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                     </div>
-                    <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} className="w-full  bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 focus:border-green-500 outline-none focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] transition-all" />
+                    <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-medium focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all" />
                 </div>
 
                 <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Mail className="h-5 w-5 text-gray-600 group-focus-within:text-green-500 transition-colors" />
+                      <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                     </div>
-                    <input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} className="w-full  bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 focus:border-green-500 outline-none focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] transition-all" />
+                    <input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-medium focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all" />
                 </div>
                 
-                <Select options={countryOptions} onChange={s => setCountry(s.value)} styles={customSelectStyles} placeholder="Select Country" isSearchable={false} />
+                <div className="relative group">
+                   <div className="absolute top-[15px] left-4 z-10 pointer-events-none">
+                     <span className="text-slate-400 group-focus-within:text-emerald-500 transition-colors">🌎</span>
+                   </div>
+                   <Select options={countryOptions} onChange={s => setCountry(s.value)} styles={customSelectStyles} placeholder="Select Country" isSearchable={false} />
+                </div>
                 
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Phone className="h-5 w-5 text-gray-600 group-focus-within:text-green-500 transition-colors" />
+                      <Phone className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                   </div>
-                  <input type="tel" placeholder="Mobile Number" value={mobile} onChange={handleMobileChange} className="w-full  bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 focus:border-green-500 outline-none focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] transition-all" />
-                  {country === 'India' && <span className="absolute right-4 top-4 text-[10px] text-green-500 font-bold bg-green-500/10 px-2 py-0.5 rounded border border-slate-200">10 Digits</span>}
+                  <input type="tel" placeholder="Mobile Number" value={mobile} onChange={handleMobileChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-medium focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all" />
+                  {country === 'India' && <span className="absolute right-4 top-3.5 text-[10px] text-emerald-600 font-bold bg-emerald-100 px-2 py-1 rounded-md">10 Digits</span>}
                 </div>
             </div>
 
@@ -283,90 +285,80 @@ function Register() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                <div className="relative group">
                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                     <Lock className="h-5 w-5 text-gray-600 group-focus-within:text-green-500 transition-colors" />
+                     <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                  </div>
-                 <input type={showPassword ? 'text' : 'password'} placeholder="Create Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full  bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 pr-12 text-slate-900 focus:border-green-500 outline-none focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] transition-all" />
-                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-4 text-gray-500 hover:text-green-500">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                 <input type={showPassword ? 'text' : 'password'} placeholder="Create Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pl-12 pr-12 text-slate-900 font-medium focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all" />
+                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3.5 text-slate-400 hover:text-emerald-500">{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button>
                </div>
                
                <div className="relative group">
                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                     <ShieldCheck className="h-5 w-5 text-gray-600 group-focus-within:text-green-500 transition-colors" />
+                     <ShieldCheck className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                  </div>
-                 <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full  bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 pr-12 text-slate-900 focus:border-green-500 outline-none focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] transition-all" />
-                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-4 text-gray-500 hover:text-green-500">{showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                 <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pl-12 pr-12 text-slate-900 font-medium focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all" />
+                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-3.5 text-slate-400 hover:text-emerald-500">{showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button>
                </div>
             </div>
 
-            {/* Info Box */}
-            <div className="bg-green-500/5 border border-green-500/10 p-3 rounded-xl flex items-start gap-2 mt-2">
-                <Lock size={14} className="text-green-500 shrink-0 mt-0.5" />
-                <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
-                  Your login password will also act as your <b>Transaction Password</b>. You can change this later from your profile settings.
-                </p>
-            </div>
-
             {errorMsg && (
-              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs p-3.5 rounded-xl text-center font-bold flex items-center justify-center gap-2 animate-in slide-in-from-top-2">
-                  <XCircle size={16} /> {errorMsg}
+              <div className="bg-red-50 border-l-4 border-red-500 text-red-600 text-sm p-4 rounded-r-xl font-medium flex items-center gap-3 animate-in slide-in-from-top-2">
+                  <XCircle size={18} /> {errorMsg}
               </div>
             )}
 
-            <button type="submit" disabled={loading} className={`w-full py-4 mt-2 rounded-xl bg-gradient-to-r from-green-500 to-red-600 text-slate-900 font-black text-lg shadow-[0_10px_30px_-10px_rgba(249,115,22,0.8)] hover:shadow-[0_10px_40px_-10px_rgba(249,115,22,1)] transition-all flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-wait' : 'hover:-translate-y-1 active:scale-95'}`}>
+            <button type="submit" disabled={loading} className={`w-full py-4 mt-4 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-lg shadow-[0_10px_20px_-10px_rgba(16,185,129,0.6)] hover:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.8)] transition-all flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-wait' : 'hover:-translate-y-1'}`}>
               {loading ? (
                 <>
-                  <svg className="animate-spin h-5 w-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  CREATING NODE...
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  PROCESSING...
                 </>
               ) : (
-                <>ACTIVATE MY NODE <ArrowRight size={20} strokeWidth={3} /></>
+                <>CREATE ACCOUNT <ArrowRight size={20} strokeWidth={2.5} /></>
               )}
             </button>
-
-            <div className="pt-4 border-t border-slate-100">
-                <TelegramButton />
-            </div>
-
           </form>
         </div>
       </div>
 
-      {/* --- SUCCESS MODAL ($30 Plan Version) --- */}
+      {/* --- PREMIUM SUCCESS MODAL --- */}
       {showPopup && registeredData && (
         <div style={modalOverlay}>
-          {showConfetti && <Confetti width={window.innerWidth} height={window.innerHeight} numberOfPieces={300} gravity={0.2} colors={['#f97316', '#ef4444', '#fcd34d', '#ffffff']} recycle={false} style={{ zIndex: 2001 }} />}
+          {showConfetti && <Confetti width={window.innerWidth} height={window.innerHeight} numberOfPieces={400} gravity={0.15} colors={['#10b981', '#34d399', '#fcd34d', '#ffffff']} recycle={false} style={{ zIndex: 2001 }} />}
           
-          <div className="animate-in zoom-in duration-300 shadow-[0_0_60px_rgba(249,115,22,0.3)]" style={modalBox}>
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-400 to-red-600 flex items-center justify-center shadow-[0_0_30px_rgba(249,115,22,0.5)] mx-auto mb-6 relative">
-               <div className="absolute inset-0 bg-white/20 rounded-full animate-ping"></div>
-               <CheckCircle2 size={40} className="text-slate-900 relative z-10" />
+          <div className="animate-in zoom-in duration-300" style={modalBox}>
+            
+            {/* Modal Icon */}
+            <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6 relative border-4 border-white shadow-lg">
+               <div className="absolute inset-0 bg-emerald-400/20 rounded-full animate-ping"></div>
+               <CheckCircle2 size={40} className="text-emerald-500 relative z-10" strokeWidth={2.5} />
             </div>
             
-            <h2 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Registration <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">Successful!</span></h2>
-            <p className="text-slate-500 text-sm mb-6">Welcome aboard, <strong className="text-slate-900">{registeredData.name}</strong>. Your node is ready.</p>
+            <h2 className="text-2xl font-black text-slate-900 mb-1">Registration <span className="text-emerald-500">Successful!</span></h2>
+            <p className="text-slate-500 text-sm mb-6 font-medium">Welcome to the future, <span className="text-slate-800 font-bold">{registeredData.name}</span></p>
             
-            <div className="text-left bg-white border border-slate-200 p-5 rounded-2xl mb-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/10 blur-[20px]"></div>
-              
-              <div className="flex justify-between items-center mb-3 pb-3 border-b border-slate-100">
-                 <span className="text-gray-500 font-bold text-xs uppercase tracking-widest">User ID</span>
-                 <span className="text-green-500 font-black text-lg">{registeredData.userId}</span>
-              </div>
-              <div className="flex justify-between items-center mb-3">
-                 <span className="text-gray-500 font-bold text-xs uppercase tracking-widest">Password</span>
-                 <span className="text-slate-900 font-bold font-mono bg-white/5 px-2 py-1 rounded">{registeredData.password}</span>
+            {/* Details Box */}
+            <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl mb-6 text-left shadow-inner relative">
+              <div className="flex justify-between items-center mb-4 pb-4 border-b border-slate-200">
+                 <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">User ID</span>
+                 <div className="flex items-center gap-2">
+                    <span className="text-emerald-600 font-black text-xl tracking-tight">{registeredData.userId}</span>
+                    <button onClick={() => copyToClipboard(registeredData.userId)} className="text-slate-400 hover:text-emerald-500"><Copy size={16}/></button>
+                 </div>
               </div>
               <div className="flex justify-between items-center">
-                 <span className="text-gray-500 font-bold text-xs uppercase tracking-widest">Txn Pass</span>
-                 <span className="text-slate-900 font-bold font-mono bg-white/5 px-2 py-1 rounded">{registeredData.password}</span>
+                 <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">Password</span>
+                 <div className="flex items-center gap-2">
+                    <span className="text-slate-800 font-bold font-mono bg-white border border-slate-200 px-3 py-1 rounded-lg">{registeredData.password}</span>
+                    <button onClick={() => copyToClipboard(registeredData.password)} className="text-slate-400 hover:text-emerald-500"><Copy size={16}/></button>
+                 </div>
               </div>
             </div>
 
-            <p className="text-red-400 font-black text-[10px] mb-6 uppercase tracking-widest bg-red-500/10 inline-block px-3 py-1.5 rounded-full border border-red-500/20">
-              📸 Take a screenshot for security
-            </p>
+            <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs p-3 rounded-xl font-bold mb-6 flex items-center justify-center gap-2">
+              📸 Please save or screenshot these details!
+            </div>
             
-            <button onClick={handlePopupClose} className="w-full py-4 rounded-xl bg-gradient-to-r from-green-500 to-red-600 text-slate-900 font-black hover:shadow-[0_0_20px_rgba(249,115,22,0.5)] transition-all">
+            <button onClick={handlePopupClose} className="w-full py-4 rounded-xl bg-slate-900 text-white font-bold tracking-wide hover:bg-emerald-500 transition-all shadow-lg hover:shadow-emerald-500/30">
               PROCEED TO LOGIN
             </button>
           </div>
@@ -376,7 +368,7 @@ function Register() {
   );
 }
 
-const modalOverlay = { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(15px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 };
-const modalBox = { backgroundColor: '#0a0a0a', padding: '35px 25px', borderRadius: 30, width: '90%', maxWidth: 420, textAlign: 'center', color: '#fff', border: '1px solid rgba(249, 115, 22, 0.3)' };
+const modalOverlay = { position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 };
+const modalBox = { backgroundColor: '#ffffff', padding: '40px 30px', borderRadius: '32px', width: '90%', maxWidth: '420px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' };
 
 export default Register;
