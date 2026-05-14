@@ -28,18 +28,26 @@ const startGlobalGrowthCron = () => {
         try {
             // 🔥 1. FAKE/SYSTEM GROWTH LOGIC (Target: ~100 per day)
             // 1 Din = 1440 minutes. 100/1440 = 0.069 (Lagbhag 7% chance har minute)
-           const shouldAddFakeUser = Math.random() < (100 / 1440);
-             
-            if (shouldAddFakeUser) {
-                // A. Sabhi Active/Free Users ki downline badhao (+1) -> "My Community" sync
-                await User.updateMany({}, { $inc: { globalTeamCount: 1 } });
+         // 🔥 1. FAKE/SYSTEM GROWTH LOGIC (Target: ~100 per day)
+const shouldAddFakeUser = Math.random() < (100 / 1440);
 
-                // B. SYSTEM TOTAL FAKE COUNT BHI BADHAO (+1) -> "Total Community" sync
-                await SystemStat.findOneAndUpdate({}, { $inc: { globalFakeCount: 1 } }, { upsert: true, returnDocument: 'after' });            
-                
-                // 🔥 Ye terminal me batayega ki cron kaam kar raha hai
-                console.log("✅ Cron Success: +1 User added to Total & My Community!");
-            }        
+if (shouldAddFakeUser) {
+    // ✅ FIX: Ab sirf unhi users ki downline badhegi jinka ID Top-up (Active) hai
+    // Humne {} ki jagah { isToppedUp: true } laga diya hai
+    await User.updateMany(
+        { isToppedUp: true }, 
+        { $inc: { globalTeamCount: 1 } }
+    );
+
+    // B. SYSTEM TOTAL FAKE COUNT (Ye hamesha badhega system stats ke liye)
+    await SystemStat.findOneAndUpdate(
+        {}, 
+        { $inc: { globalFakeCount: 1 } }, 
+        { upsert: true, returnDocument: 'after' }
+    );            
+    
+    console.log("✅ Cron Success: +1 User added to Active Users & Total Community!");
+}       
             // 🔥 2. POOL UNLOCK DISTRIBUTION LOGIC (Chahe fake aaye ya real)
             const eligibleUsers = await User.find({ directCount: { $gte: 1 }, isToppedUp: true });
             const todayStr = new Date().toISOString().split('T')[0]; 
