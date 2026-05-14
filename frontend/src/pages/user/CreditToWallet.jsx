@@ -117,23 +117,7 @@ const CreditToWalletHistory = () => {
              className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-bold tracking-wide rounded-xl px-4 py-3 pl-10 focus:border-green-500 focus:outline-none transition-all placeholder-slate-400"
            />
         </div>
-
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-           <span className="text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Show:</span>
-           <select
-             value={itemsPerPage}
-             onChange={(e) => {
-               setItemsPerPage(Number(e.target.value));
-               setCurrentPage(1);
-             }}
-             className="w-full sm:w-auto bg-white border border-slate-200 text-slate-900 text-sm font-bold rounded-xl px-4 py-3 focus:border-green-500 focus:outline-none transition-all appearance-none cursor-pointer"
-           >
-             <option value={10}>10 Rows</option>
-             <option value={20}>20 Rows</option>
-             <option value={50}>50 Rows</option>
-             <option value={100}>100 Rows</option>
-           </select>
-        </div>
+ 
       </div>
 
       {/* Table Box */}

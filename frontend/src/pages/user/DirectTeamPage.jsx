@@ -91,27 +91,7 @@ const DirectTeamPage = () => {
       </div>
 
       {/* Top Stats Cards */}
-      <div className="grid grid-cols-2 gap-4 md:gap-6 mb-8">
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6 shadow-sm relative overflow-hidden flex flex-col justify-center">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-green-100 blur-[30px]"></div>
-          <h3 className="text-black text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 mb-2 relative z-10">
-             <UserPlus size={14} className="text-green-600" /> My Directs
-          </h3>
-          <p className="text-3xl md:text-4xl font-black text-slate-800 relative z-10">
-            {team.length}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6 shadow-sm relative overflow-hidden flex flex-col justify-center">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100 blur-[30px]"></div>
-          <h3 className="text-black text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 mb-2 relative z-10">
-             <Users size={14} className="text-blue-600" /> Total Team
-          </h3>
-          <p className="text-3xl md:text-4xl font-black text-slate-800 relative z-10">
-            {totalTeamCount}
-          </p>
-        </div>
-      </div>
+   
 
       {/* Filters (Search & Entries) */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
@@ -129,19 +109,7 @@ const DirectTeamPage = () => {
            />
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-           <span className="text-xs font-bold text-black uppercase tracking-widest whitespace-nowrap">Show:</span>
-           <select
-             value={entriesPerPage}
-             onChange={handleEntriesChange}
-             className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-slate-700 text-sm font-bold rounded-xl px-4 py-3 focus:border-green-400 focus:ring-2 focus:ring-green-100 focus:outline-none transition-all cursor-pointer"
-           >
-             <option value={10}>10 Entries</option>
-             <option value={25}>25 Entries</option>
-             <option value={50}>50 Entries</option>
-             <option value={100}>100 Entries</option>
-           </select>
-        </div>
+      
       </div>
 
       {/* Table */}

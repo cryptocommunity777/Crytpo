@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../api/axios';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { User, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, Globe, Sparkles } from 'lucide-react';
+import { User, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, Globe, Sparkles, Home } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 
@@ -21,23 +21,34 @@ const UserLogin = () => {
   const { login } = useAuth();
   const inputRef = useRef(null);
 
-  // Auto-Login from URL
+  // 🔥 BULLETPROOF AUTO-LOGIN FROM ADMIN
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const urlToken = queryParams.get('token');
     const urlUser = queryParams.get('user');
+    
     if (urlToken && urlUser) {
       try {
         const userData = JSON.parse(decodeURIComponent(urlUser));
+        
+        // 1. Storage me direct save karo (React race conditions avoid karne ke liye)
+        localStorage.setItem('token', urlToken);
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // 2. Auth context ko update karo
         login(userData, urlToken);
+        
+        // 3. URL ko saaf karo
         window.history.replaceState({}, document.title, '/login');
-        navigate('/dashboard', { replace: true });
+        
+        // 4. Force Redirect to Dashboard (Isse login page par rukne wali bimari theek ho jayegi)
+        window.location.href = '/dashboard'; 
       } catch (err) {
         console.error('Auto-login data parsing failed', err);
         setError('Invalid login link from Admin.');
       }
     }
-  }, [location.search, login, navigate]);
+  }, [location.search, login]);
 
   // Saved Users Logic
   useEffect(() => {
@@ -109,12 +120,10 @@ const UserLogin = () => {
   };
 
   return (
-    // 🔥 Split Screen Layout
     <div className="min-h-screen bg-white flex font-sans selection:bg-emerald-500/30">
       
       {/* --- LEFT SIDE: BRANDING (Hidden on Mobile, Visible on PC) --- */}
       <div className="hidden lg:flex w-1/2 relative overflow-hidden bg-slate-50 flex-col justify-between p-12 border-r border-slate-200">
-         {/* Glowing Effects */}
          <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-emerald-400/20 blur-[100px] rounded-full pointer-events-none"></div>
          <div className="absolute bottom-[-10%] right-[-10%] w-[30vw] h-[30vw] bg-green-500/15 blur-[100px] rounded-full pointer-events-none"></div>
 
@@ -146,26 +155,30 @@ const UserLogin = () => {
          </div>
       </div>
 
-      {/* --- RIGHT SIDE: FORM (Full width on Mobile, Half on PC) --- */}
+      {/* --- RIGHT SIDE: FORM --- */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-4 sm:p-8 relative overflow-y-auto bg-white">
          
-         {/* Mobile Only Header (Logo & Register Link) */}
-         <div className="lg:hidden w-full max-w-md mb-8 flex flex-col sm:flex-row justify-between items-center gap-4 mt-4">
-            <Link to="/" className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-1.5 no-underline hover:opacity-80 transition-opacity">
+         {/* Mobile Only Header (Logo & Action Links) */}
+         <div className="lg:hidden w-full max-w-md mb-6 flex flex-col items-center gap-4 mt-2">
+            <Link to="/" className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-1.5 no-underline hover:opacity-80 transition-opacity mb-2">
               <Globe className="text-emerald-500" size={26} /> CRYPTO<span className="text-emerald-500">COMMUNITY</span>
             </Link>
-            <Link to="/register" className="text-sm font-black text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors">
-              Create Account
-            </Link>
+            <div className="flex w-full gap-2">
+               <Link to="/" className="flex-1 flex justify-center items-center gap-1.5 text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-lg transition-colors">
+                 <Home size={16} /> Home
+               </Link>
+               <Link to="/register" className="flex-1 flex justify-center items-center text-sm font-black text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 px-4 py-2.5 rounded-lg transition-colors">
+                 Create Account
+               </Link>
+            </div>
          </div>
 
          <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-700 mt-2 md:mt-0">
             
-            {/* Desktop Header (Logo & Register Link) */}
-            <div className="hidden lg:flex justify-between items-center mb-10">
-               <Link to="/" className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5 no-underline hover:opacity-80 transition-opacity">
-                 <Globe className="text-emerald-500" size={24} />
-                 CRYPTO<span className="text-emerald-500">COMMUNITY</span>
+            {/* Desktop Header (Action Links) */}
+            <div className="hidden lg:flex justify-end items-center mb-10 gap-3">
+               <Link to="/" className="text-sm flex items-center gap-1.5 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg transition-colors">
+                 <Home size={16} /> Home
                </Link>
                <Link to="/register" className="text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors">
                  Create Account
@@ -179,13 +192,13 @@ const UserLogin = () => {
 
             {error && (
               <div className="mb-6 bg-red-50 border border-red-200 text-red-600 text-xs p-3 rounded-xl font-bold flex items-center gap-2 animate-in slide-in-from-top-2 shadow-sm">
-                  ⚠️ {error}
+                 ⚠️ {error}
               </div>
             )}
 
             <form onSubmit={handleLogin} className="space-y-4">
               
-              {/* User ID Field with Saved Users Dropdown */}
+              {/* User ID Field */}
               <div ref={inputRef} className="relative z-20">
                 <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">

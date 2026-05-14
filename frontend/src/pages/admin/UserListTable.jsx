@@ -120,18 +120,20 @@ const UserListTable = () => {
       });
 
       const { token: userToken, user: impersonatedUser } = res.data;
-      const userDataStr = JSON.stringify(impersonatedUser);
+      const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
       
+      // 🔥 FIXED LOGIC: Subdomain ignore aur port 5173 set karne ke liye
       let targetBaseUrl = "";
       const currentHost = window.location.hostname;
 
-      if (currentHost === "localhost" || currentHost === "127.0.0.1") {
-        targetBaseUrl = "http://localhost:3000"; 
+      // Agar domain me 'localhost' hai (jaise good.localhost) ya IP 127.0.0.1 hai
+      if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
+        targetBaseUrl = "http://localhost:5173"; // Hamesha clean local URL pe bheje
       } else {
-        targetBaseUrl = "https://cryptocommunity.live"; 
+        targetBaseUrl = "https://cryptocommunity.live"; // Live website
       }
 
-      const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${encodeURIComponent(userDataStr)}`;
+      const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
       window.open(mainWebsiteUrl, '_blank', 'noopener,noreferrer');
       
     } catch (err) {

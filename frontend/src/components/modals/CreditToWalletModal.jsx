@@ -114,22 +114,23 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
     }
   };
 
+  // 🔥 MORE COMPACT INCOME BOX 🔥
   const IncomeBox = ({ title, icon: Icon, iconColor, source, balance, val }) => (
-      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">
-        <div className="flex justify-between items-end mb-2 px-1">
-            <h3 className="text-slate-600 text-[10px] md:text-[11px] font-black uppercase tracking-widest flex items-center gap-1.5">
+      <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">
+        <div className="flex justify-between items-end mb-1.5 px-1">
+            <h3 className="text-slate-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
                 <Icon size={12} className={iconColor} /> {title}
             </h3>
-            <span className="text-black text-[9px] md:text-[10px] font-bold bg-white px-1.5 py-0.5 rounded border border-slate-200">
+            <span className="text-black text-[9px] font-bold bg-white px-1.5 py-0.5 rounded border border-slate-200">
                 Avail: ${balance.toFixed(2)}
             </span>
         </div>
-        <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-inner">
+        <div className="flex items-center gap-2 bg-white p-1.5 rounded-lg border border-slate-200 shadow-inner">
             <span className={`${iconColor} font-bold text-base pl-1`}>$</span>
             <input 
                 type="number" 
                 placeholder="0.00" 
-                className="flex-1 bg-transparent border-none text-slate-800 text-sm font-black outline-none w-full placeholder-slate-300"
+                className="flex-1 bg-transparent border-none text-slate-800 text-sm font-black outline-none w-full placeholder-slate-300 py-0.5"
                 value={val || ""} 
                 onChange={e => handleInputChange(e, source)} 
                 max={balance} 
@@ -164,19 +165,18 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
       )}
 
       {!successModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1000] flex justify-center items-center p-4">
+        <div className="fixed inset-0 mt-8 bg-slate-900/60 backdrop-blur-sm z-[1000] flex justify-center items-center p-4">
           
-          {/* Main Modal Container - Height Compact & Scrollable */}
-          <div className="bg-white mt-10 w-full max-w-[480px] rounded-[24px] border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden animate-in zoom-in duration-300">
+          {/* 🔥 MAIN MODAL CONTAINER (Compact height, removed mt-10) 🔥 */}
+          <div className="bg-white w-full max-w-[480px] rounded-[20px] border border-slate-200 shadow-2xl flex flex-col max-h-[85vh] relative overflow-hidden animate-in zoom-in duration-300">
             
-            {/* Ambient Glow */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-100 blur-[50px] pointer-events-none rounded-full"></div>
 
-            {/* Header - Padding Reduced */}
-            <div className="px-4 py-3.5 border-b border-slate-200 bg-slate-50 flex justify-between items-center z-10 shrink-0">
-              <h2 className="text-[13px] md:text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 m-0">
+            {/* Header - Compact padding */}
+            <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center z-10 shrink-0">
+              <h2 className="text-[12px] md:text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 m-0">
                 <div className="bg-green-100 p-1.5 rounded-lg">
-                  <ArrowRightLeft size={16} className="text-green-600" /> 
+                  <ArrowRightLeft size={14} className="text-green-600" /> 
                 </div>
                 Credit To Wallet
               </h2>
@@ -185,17 +185,18 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
               </button>
             </div>
 
-            {/* Body - Padding Reduced & Gaps Shrinked */}
-            <div className="p-4 overflow-y-auto custom-scroll flex-1 flex flex-col gap-3 bg-white relative z-10">
+            {/* Body - Compact Padding & Gaps */}
+            <div className="p-3 overflow-y-auto custom-scroll flex-1 flex flex-col gap-2 bg-white relative z-10">
               
-              <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex items-center justify-between shadow-sm">
+              {/* Balances Top Box */}
+              <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl flex items-center justify-between shadow-sm">
                  <div>
                     <p className="text-black text-[9px] font-bold uppercase tracking-widest">Total Income Available</p>
-                    <h3 className="text-xl font-black text-slate-800">${totalAvailable.toFixed(2)}</h3>
+                    <h3 className="text-lg font-black text-slate-800">${totalAvailable.toFixed(2)}</h3>
                  </div>
                  <div className="text-right">
                     <p className="text-black text-[9px] font-bold uppercase tracking-widest">Main Wallet</p>
-                    <h3 className="text-lg font-black text-emerald-600">${(available.walletBalance || 0).toFixed(2)}</h3>
+                    <h3 className="text-base font-black text-emerald-600">${(available.walletBalance || 0).toFixed(2)}</h3>
                  </div>
               </div>
 
@@ -204,17 +205,17 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
                   <IncomeBox title="Direct Income" icon={Zap} iconColor="text-amber-500" source="direct" balance={availDirect} val={credits.direct} />
                   <IncomeBox title="Level Income" icon={Users} iconColor="text-blue-500" source="level" balance={availLevel} val={credits.level} />
                   <IncomeBox title="Team Reward" icon={Trophy} iconColor="text-indigo-500" source="reward" balance={availReward} val={credits.reward} />
-                  <IncomeBox title="Single Leg Community Income" icon={Layers} iconColor="text-emerald-500" source="pool" balance={availPool} val={credits.pool} />
+                  <IncomeBox title="Single Leg Community" icon={Layers} iconColor="text-emerald-500" source="pool" balance={availPool} val={credits.pool} />
               </div>
 
               {/* SECURITY */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 mt-1">
-                  <label className="text-[9px] text-black block mb-1.5 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mt-1">
+                  <label className="text-[9px] text-black block mb-1 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
                   <input 
                     type="password" 
                     autoComplete="new-password"
                     placeholder="Enter Transaction Password" 
-                    className="w-full bg-white border border-slate-200 text-slate-800 p-3 rounded-xl outline-none font-mono text-xs transition-all shadow-inner focus:border-green-400 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
+                    className="w-full bg-white border border-slate-200 text-slate-800 p-2.5 rounded-lg outline-none font-mono text-xs transition-all shadow-inner focus:border-green-400 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
                     value={transactionPassword} 
                     onChange={e => setTransactionPassword(e.target.value)} 
                   />
@@ -222,27 +223,25 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
 
             </div>
 
-            {/* ACTION BUTTONS & Footer */}
-            <div className="p-4 border-t border-slate-200 bg-slate-50 z-10 shrink-0">
-              <div className="space-y-3">
+            {/* ACTION BUTTONS & Footer - Compact Padding */}
+            <div className="p-3 border-t border-slate-200 bg-slate-50 z-10 shrink-0">
+              <div className="flex gap-2">
+                 <button 
+                   onClick={onClose} 
+                   className="w-1/3 py-2.5 rounded-lg font-bold text-[11px] bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors shadow-sm uppercase tracking-wider"
+                 >
+                    Cancel
+                 </button>
                  <button 
                    onClick={handleCredit} 
                    disabled={loading} 
-                   className={`w-full py-3 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest transition-all ${
+                   className={`w-2/3 py-2.5 rounded-lg font-black text-[11px] md:text-xs uppercase tracking-widest transition-all ${
                      loading 
                        ? 'bg-slate-200 text-black cursor-not-allowed border border-slate-300' 
-                       : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-[0_4px_15px_rgba(34,197,94,0.4)] hover:shadow-[0_6px_20px_rgba(34,197,94,0.6)] hover:-translate-y-0.5 active:scale-95'
+                       : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-[0_4px_10px_rgba(34,197,94,0.3)] hover:-translate-y-0.5 active:scale-95'
                    }`}
                  >
                    {loading ? "PROCESSING..." : "CREDIT TO WALLET"}
-                 </button>
-
-                 {/* 🔥 NEW: Cancel Button */}
-                 <button 
-                   onClick={onClose} 
-                   className="w-full py-2.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shadow-sm"
-                 >
-                    Cancel
                  </button>
               </div>
             </div>

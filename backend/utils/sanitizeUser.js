@@ -1,29 +1,43 @@
 // C:\Users\HP\Desktop\Cryptocommunity\backend\utils\sanitizeUser.js
+
 module.exports = function sanitizeUser(user) {
+  if (!user) return null;
+
   return {
     userId: user.userId,
     name: user.name,
     email: user.email,
-    walletBalance: user.walletBalance,
-    isTelegramJoined: user.isTelegramJoined, 
+    mobile: user.mobile, // 👈 Profile ke liye zaroori hai
+    role: user.role,
+    sponsorId: user.sponsorId,
+    
+    // 🛡️ WALLET & SECURITY (Ye missing tha, isliye refresh par udd raha tha)
+    walletAddress: user.walletAddress || "", 
+    walletAddressChangeCount: user.walletAddressChangeCount || 0,
+    walletAddressChangeWindowStart: user.walletAddressChangeWindowStart,
+    pendingWithdrawals: user.pendingWithdrawals || 0,
+
+    // 💰 WALLET BALANCES
+    walletBalance: user.walletBalance || 0,
+    directIncome: user.directIncome || 0,
+    levelIncome: user.levelIncome || 0,
+    poolIncome: user.poolIncome || 0,
+    rewardIncome: user.rewardIncome || 0,
+    totalWithdrawn: user.totalWithdrawn || 0,
+
+    // 🚀 TOPUP & STATUS
     isToppedUp: user.isToppedUp,
     topUpAmount: user.topUpAmount,
-    sponsorId: user.sponsorId,
-    role: user.role,
-    profileImage: user.profileImage,
     topUpDate: user.topUpDate,
     hasTopup: user.hasTopup,
     levelStatus: user.levelStatus,
+    isTelegramJoined: user.isTelegramJoined,
 
-    // 🔥 MAIN FIX: Ye sab missing tha!
-    globalTeamCount: user.globalTeamCount, // 👈 My Community ke liye
-    directCount: user.directCount,         // 👈 Direct Referrals ke liye
+    // 👥 TEAM DATA
+    globalTeamCount: user.globalTeamCount || 0,
+    directCount: user.directCount || 0,
 
-    // 💰 INCOME BALANCES (Ye bhi add kar lo, warna dashboard me income bhi show nahi hogi)
-    directIncome: user.directIncome,
-    levelIncome: user.levelIncome,
-    poolIncome: user.poolIncome,
-    rewardIncome: user.rewardIncome,
-    totalWithdrawn: user.totalWithdrawn
+    // 🌊 POOL DATA (Jo humne abhi Modal me theek kiya tha)
+    activePools: user.activePools || [] 
   };
 };

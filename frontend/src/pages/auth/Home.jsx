@@ -42,18 +42,18 @@ const AnimatedCounter = ({ end, duration = 2000, prefix = "", suffix = "", decim
 
 // --- PLAN DATA ---
 const communityPlan = [
-  { sr: 1, team: 20, income: 10 },
-  { sr: 2, team: 40, income: 20 },
-  { sr: 3, team: 100, income: 40 },
-  { sr: 4, team: 200, income: 80 },
-  { sr: 5, team: 400, income: 150 },
-  { sr: 6, team: 1000, income: 200 },
-  { sr: 7, team: 2000, income: 500 },
-  { sr: 8, team: 3000, income: 700 },
-  { sr: 9, team: 4000, income: 1000 },
-  { sr: 10, team: 5000, income: 1500 },
-  { sr: 11, team: 7500, income: 3000 },
-  { sr: 12, team: 10000, income: 5000 },
+  { sr: 1, team: "20", directs: 1, daily: 1,   income: "10" },
+  { sr: 2, team: "40", directs: 1, daily: 1,   income: "20" },
+  { sr: 3, team: "100", directs: 1, daily: 1,   income: "40" },
+  { sr: 4, team: "200", directs: 1, daily: 1,   income: "80" },
+  { sr: 5, team: "400", directs: 1, daily: 1,   income: "150" },
+  { sr: 6, team: "1600", directs: 1, daily: 1,   income: "200" },
+  { sr: 7, team: "2000", directs: 2, daily: 2,  income: "500" },
+  { sr: 8, team: "3000", directs: 2, daily: 2,   income: "700" },
+  { sr: 9, team: "4000", directs: 2, daily: 2,   income: "1000" },
+  { sr: 10, team: "5000", directs: 2, daily: 3,   income: "1500" },
+  { sr: 11, team: "7500", directs: 2, daily: 6,   income: "3000" },
+  { sr: 12, team: "10000", directs: 2, daily: 10,  income: "5000" }
 ];
 
 const rewardsPlan = [
@@ -227,31 +227,53 @@ const Home = () => {
         </section>
 
         {/* --- 1. COMMUNITY EARNING TABLE --- */}
-        <section className="py-20 px-6 bg-slate-100 border-y border-slate-200">
-           <div className="max-w-4xl mx-auto">
+       <section className="py-20 px-6 bg-slate-100 border-y border-slate-200">
+           <div className="max-w-5xl mx-auto">
               <div className="text-center mb-12">
-                <h2 className="text-3xl md:text-4xl font-black mb-2 text-slate-900">Crypto Community <span className="text-theme-green">Earning</span></h2>
-                <p className="text-slate-600 font-bold bg-white inline-block px-4 py-1 rounded-full border border-slate-200 shadow-sm mt-3">
-                  Total Potential Income: <span className="text-green-600 text-lg">$12,200</span>
+                <h2 className="text-3xl md:text-4xl font-black mb-2 text-slate-900">Crypto Community <span className="text-emerald-500">Earning</span></h2>
+                <p className="text-slate-600 font-bold bg-white inline-block px-4 py-1.5 rounded-full border border-slate-200 shadow-sm mt-3">
+                  Total Potential Income: <span className="text-emerald-600 text-xl font-black">$12,200</span>
                 </p>
               </div>
 
               <div className="bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                <div className="overflow-x-auto custom-scroll">
+                  <table className="w-full text-left border-collapse whitespace-nowrap">
                     <thead>
-                      <tr className="bg-green-50 border-b border-green-100 text-green-800">
-                        <th className="p-4 font-bold text-center">Sr.</th>
-                        <th className="p-4 font-bold text-center">Community Team</th>
-                        <th className="p-4 font-black text-right text-lg">Income</th>
+                      <tr className="bg-emerald-50 border-b border-emerald-100 text-emerald-800">
+                        <th className="p-4 font-black text-center text-sm uppercase tracking-wider">Sr.</th>
+                        <th className="p-4 font-black text-center text-sm uppercase tracking-wider">Community Team</th>
+                        <th className="p-4 font-black text-center text-sm uppercase tracking-wider">Direct</th>
+                        <th className="p-4 font-black text-center text-sm uppercase tracking-wider">Daily</th>
+                         <th className="p-4 font-black text-right text-base uppercase tracking-wider">Total Income</th>
                       </tr>
                     </thead>
                     <tbody>
                       {communityPlan.map((row, idx) => (
                         <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                           <td className="p-4 text-center text-slate-500 font-bold">{row.sr}</td>
-                          <td className="p-4 text-center text-slate-800 font-bold">{row.team} IDs</td>
-                          <td className="p-4 text-right text-green-600 font-black text-lg">${row.income}</td>
+                          
+                          <td className="p-4 text-center text-slate-800 font-bold">
+                            <span className="bg-slate-100 px-2 py-1 rounded-md border border-slate-200 text-sm">
+                              {row.team}
+                            </span>
+                          </td>
+                          
+                          <td className="p-4 text-center">
+                            <span className="bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-md text-xs border border-blue-100">
+                              {row.directs} Direct
+                            </span>
+                          </td>
+                          
+                          <td className="p-4 text-center text-slate-700 font-bold">
+                            ${row.daily}
+                          </td>
+                          
+                          
+                          
+                          <td className="p-4 text-right text-emerald-600 font-black text-lg">
+                            ${row.income}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

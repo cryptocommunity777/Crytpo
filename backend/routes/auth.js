@@ -121,55 +121,54 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
   // 👉 EMAIL TEMPLATE
     try {
         await sendEmail({
-            email: user.email,
-            subject: '🎉 Welcome to USDT Boomers!',
-            html: `
-            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea;">
-                
-                <!-- Header part -->
-                <div style="background-color: #2b4450; padding: 40px 20px; text-align: center; color: #ffffff;">
-                    <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🚀 Welcome to USDT Boomers</h1>
-                    <p style="margin: 10px 0 0 0; font-size: 15px; color: #cccccc;">Your journey starts here</p>
-                </div>
-                
-                <!-- Body part -->
-                <div style="padding: 40px 30px; color: #333333;">
-                    <p style="font-size: 16px; margin-top: 0; margin-bottom: 20px;">Hello <strong>${user.name}</strong>,</p>
-                    <p style="font-size: 15px; line-height: 1.6; color: #555555; margin-bottom: 30px;">
-                        Congratulations! Your account has been successfully created. Please find your login details below.
-                    </p>
-                    
-                    <!-- Details Box -->
-                    <div style="background-color: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 35px;">
-                        <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
-                            <span style="display: inline-block; width: 25px;">👤</span> <strong>User ID:</strong> ${user.userId}
-                        </p>
-                        <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
-                            <span style="display: inline-block; width: 25px;">🔑</span> <strong>Password:</strong> ${user.password}
-                        </p>
-                        <p style="margin: 0; font-size: 16px; color: #333;">
-                            <span style="display: inline-block; width: 25px;">🔑</span> <strong>Transaction Password:</strong> ${user.transactionPassword}
-                        </p>
-                    </div>
-                    
-                    <!-- Login Button -->
-                    <div style="text-align: center; margin-bottom: 40px;">
-                        <a href="https://cryptocommunity.live/login" style="display: inline-block; background-color: #1e88e5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">🔐 Login to Dashboard</a>
-                    </div>
-                    
-                    <!-- Security Warning -->
-                    <p style="font-size: 14px; color: #d32f2f; margin: 0; display: flex; align-items: center;">
-                        ⚠️ Please do not share your login details with anyone for security reasons.
-                    </p>
-                </div>
-                
-                <!-- Footer part -->
-                <div style="background-color: #1a1a1a; padding: 20px; text-align: center; color: #888888; font-size: 13px;">
-                    © 2026 USDT Boomers. All rights reserved.
-                </div>
+    email: user.email,
+    subject: '🎉 Welcome to Crypto Community!',
+    html: `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea;">
+        
+        <div style="background-color: #2b4450; padding: 40px 20px; text-align: center; color: #ffffff;">
+            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🚀 Welcome to Crypto Community</h1>
+            <p style="margin: 10px 0 0 0; font-size: 15px; color: #cccccc;">Your journey to financial growth starts here</p>
+        </div>
+        
+        <div style="padding: 40px 30px; color: #333333;">
+            <p style="font-size: 16px; margin-top: 0; margin-bottom: 15px;">Hello <strong>${user.name}</strong>,</p>
+            
+            <p style="font-size: 15px; line-height: 1.6; color: #555555; margin-bottom: 20px;">
+                Congratulations! Your account has been successfully created. Get ready to build your global network, unlock exciting <strong>Single Leg rewards</strong>, and track your daily growth with our secure platform. We are thrilled to have you on board! 🌟
+            </p>
+            <p style="font-size: 15px; line-height: 1.6; color: #555555; margin-bottom: 30px;">
+                Please find your confidential login details below:
+            </p>
+            
+            <div style="background-color: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 35px; border-left: 4px solid #1e88e5;">
+                <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
+                    <span style="display: inline-block; width: 25px;">👤</span> <strong>User ID:</strong> ${user.userId}
+                </p>
+                <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
+                    <span style="display: inline-block; width: 25px;">🔑</span> <strong>Password:</strong> ${user.password}
+                </p>
+                <p style="margin: 0; font-size: 16px; color: #333;">
+                    <span style="display: inline-block; width: 25px;">🛡️</span> <strong>Transaction Password:</strong> ${user.transactionPassword}
+                </p>
             </div>
-            ` 
-        });
+            
+            <div style="text-align: center; margin-bottom: 40px;">
+                <a href="https://cryptocommunity.live/login" style="display: inline-block; background-color: #1e88e5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(30,136,229,0.3);">🔐 Login to Dashboard</a>
+            </div>
+            
+            <p style="font-size: 14px; color: #d32f2f; margin: 0; background-color: #ffebee; padding: 12px; border-radius: 6px;">
+                ⚠️ <strong>Security Alert:</strong> Please do not share your login or transaction passwords with anyone for your account's safety.
+            </p>
+        </div>
+        
+        <div style="background-color: #1a1a1a; padding: 20px; text-align: center; color: #888888; font-size: 13px;">
+            © 2026 Crypto Community. All rights reserved.<br>
+            <span style="font-size: 11px;">This is an automated message, please do not reply to this email.</span>
+        </div>
+    </div>
+    ` 
+});
     } catch (emailErr) { 
         console.error("Email failed:", emailErr); 
     }

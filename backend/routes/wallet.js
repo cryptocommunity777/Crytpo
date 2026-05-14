@@ -458,7 +458,8 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
         if (simRewardWallet < amt) return res.status(400).json({ message: "Insufficient Reward Income balance." });
         simRewardWallet -= amt;
       }
-      else if (item.source === "pool") {
+      // 🔥 MAGIC UPDATE: Ab agar source 'pool', 'pool_1', 'pool_12' kuch bhi ho, wo poolIncome se hi katega
+      else if (item.source.startsWith("pool")) {
         if (simPoolWallet < amt) return res.status(400).json({ message: "Insufficient Auto-Pool balance." });
         simPoolWallet -= amt; // ✨ Minus from simulated pool wallet
       } 
@@ -477,7 +478,7 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
       if (item.source === "direct") user.directIncome -= amt;
       else if (item.source === "level") user.levelIncome -= amt;
       else if (item.source === "reward") user.rewardIncome -= amt;
-      else if (item.source === "pool") user.poolIncome -= amt; // ✨ NAYA: Seedha daily wallet se minus
+      else if (item.source.startsWith("pool")) user.poolIncome -= amt; // ✨ NAYA MAGIC YAHAN BHI
 
       // 💎 SILENT 50/50 SPLIT
       const withdrawShare = amt * 0.50; // Aadha crypto withdrawal ke liye
@@ -497,7 +498,7 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
       // Create Record for Crypto Withdrawal
       await Withdrawal.create({
         userId: user.userId,
-        source: item.source, 
+        source: item.source.startsWith("pool") ? "pool" : item.source, // Backend reports me clean rakhne ke liye 'pool_1' ko 'pool' save karega
         grossAmount: withdrawShare,
         fee: withdrawFee, 
         netAmount: netWithdrawAmount,
@@ -507,14 +508,15 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
       });
 
       // Transaction History (Normal Text, No mention of split)
+      const cleanSourceName = item.source.startsWith("pool") ? "POOL" : item.source.toUpperCase();
       
       // 1. Withdrawal request log
       await Transaction.create({
         userId: user.userId,
         type: "withdrawal",
-        source: item.source,
+        source: item.source.startsWith("pool") ? "pool" : item.source,
         amount: withdrawShare,
-        description: `Withdrawal from ${item.source.toUpperCase()}`, // Normal text
+        description: `Withdrawal from ${cleanSourceName}`, // Normal text
         status: "pending"
       });
 
@@ -524,7 +526,7 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
         type: "credit",
         source: "system",
         amount: netWalletAmount,
-        description: `Wallet Credit from ${item.source.toUpperCase()}`, // Normal text
+        description: `Wallet Credit from ${cleanSourceName}`, // Normal text
         status: "success"
       });
     }

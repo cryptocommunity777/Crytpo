@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import api from "../../api/axios"; // Path apne hisaab se theek kar lena
+import api from "../../api/axios"; 
 import { Search, Ban, CheckCircle, Save, LogIn, Eye, EyeOff, Copy, RefreshCw, ShieldCheck } from "lucide-react"; 
 
 function UserSearch() {
@@ -8,23 +8,17 @@ function UserSearch() {
   const [formData, setFormData] = useState({});
   const [message, setMessage] = useState("");
   
-  // States to toggle password visibility in the UI
   const [showPassword, setShowPassword] = useState(false);
   const [showTxnPassword, setShowTxnPassword] = useState(false);
 
   const getAdminToken = () => localStorage.getItem("adminToken");
 
-  // ================= SEARCH USER =================
   const handleSearch = async () => {
     const token = getAdminToken();
     if (!token) return setMessage("Admin not authenticated");
-
     try {
       setMessage("Searching...");
       const res = await api.get(`/admin/search-user/${searchId}`);
-
-     // console.log("Data received from backend:", res.data.user); 
-
       setUser(res.data.user);
       setFormData(res.data.user);
       setMessage("");
@@ -35,19 +29,11 @@ function UserSearch() {
     }
   };
 
-  // ================= BLOCK / UNBLOCK =================
   const handleBlockToggle = async () => {
     if (!user) return;
-    const token = getAdminToken();
-    if (!token) return setMessage("Admin not authenticated");
-
     try {
-      const url = user.isBlocked
-        ? `/admin/unblock-user/${user.userId}`
-        : `/admin/block-user/${user.userId}`;
-
+      const url = user.isBlocked ? `/admin/unblock-user/${user.userId}` : `/admin/block-user/${user.userId}`;
       await api.put(url);
-
       setUser((prev) => ({ ...prev, isBlocked: !prev.isBlocked }));
       setMessage(`User ${user.isBlocked ? "unblocked" : "blocked"} successfully`);
     } catch (err) {
@@ -56,25 +42,17 @@ function UserSearch() {
     }
   };
 
-  // ================= INPUT CHANGE =================
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // ================= SAVE USER =================
   const handleSave = async () => {
-    const token = getAdminToken();
-    if (!token) return setMessage("Admin not authenticated");
-
     try {
       const payload = { ...formData };
-
-      // Avoid sending unchanged passwords
       if (payload.password === user.password) delete payload.password;
       if (payload.transactionPassword === user.transactionPassword) delete payload.transactionPassword;
 
       const res = await api.put(`/admin/${user.userId}`, payload);
-
       setUser(res.data.user);
       setFormData(res.data.user);
       setMessage("✅ User updated successfully");
@@ -84,39 +62,31 @@ function UserSearch() {
     }
   };
 
+  // 🔥 UPDATED: SMART IMPERSONATE LOGIC 🔥
   // ================= IMPERSONATE USER =================
  // ================= IMPERSONATE USER =================
- // ================= IMPERSONATE USER =================
- // ================= IMPERSONATE USER =================
+// ================= IMPERSONATE USER =================
   const handleImpersonate = async () => {
     const token = getAdminToken();
     if (!token) return setMessage("Admin not authenticated");
 
     try {
-      const res = await api.post(`/admin/impersonate`, {
-        userId: user.userId,
-      });
-
+      const res = await api.post(`/admin/impersonate`, { userId: user.userId });
       const { token: userToken, user: impersonatedUser } = res.data;
-      const userDataStr = JSON.stringify(impersonatedUser);
+      const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
 
-      // 🔥 SMART DYNAMIC URL LOGIC 🔥
+      // 🔥 FIXED LOGIC: Subdomain ('good.') ko ignore karne ke liye 🔥
       let targetBaseUrl = "";
-      const currentHost = window.location.hostname;
+      const currentHost = window.location.hostname; // Ye dega "good.localhost"
 
-      // Check: Agar aap Local PC par ho
-      if (currentHost === "localhost" || currentHost === "127.0.0.1") {
-        targetBaseUrl = "http://localhost:3000"; // Local Main Frontend ka port
-      } 
-      // Check: Agar aap Live Server (Subdomain) par ho
-      else {
-        targetBaseUrl = "https://cryptocommunity.live"; // Live Main Website
+      // Agar link me 'localhost' ya '127.0.0.1' aata hai (chahe kuch bhi aage laga ho)
+      if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
+        targetBaseUrl = "http://localhost:5173"; // Seedha normal localhost pe bhejo
+      } else {
+        targetBaseUrl = "https://cryptocommunity.live"; // Live site ke liye
       }
 
-      // Final URL banayen
-      const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${encodeURIComponent(userDataStr)}`;
-
-      // Naye tab mein kholen
+      const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
       window.open(mainWebsiteUrl, "_blank", "noopener,noreferrer");
 
     } catch (err) {
@@ -125,47 +95,32 @@ function UserSearch() {
     }
   };
 
-  // ================= RESET TELEGRAM (NEW) =================
   const handleResetTelegram = async () => {
     if (!window.confirm("Are you sure you want to unlink this user's Telegram? They will need to verify again.")) return;
-    
-    const token = getAdminToken();
-    if (!token) return setMessage("Admin not authenticated");
-
     try {
-      // Backend expects MongoDB _id for this route
       const res = await api.put(`/admin/user/${user._id}/reset-telegram`);
-      
       setUser(prev => ({ ...prev, isTelegramJoined: false, telegramId: null }));
       setFormData(prev => ({ ...prev, isTelegramJoined: false, telegramId: null }));
       setMessage("✅ " + res.data.message);
     } catch (err) {
       console.error(err);
-      setMessage("Failed to reset Telegram. Make sure backend route exists.");
+      setMessage("Failed to reset Telegram.");
     }
   };
 
-  // ================= MANUAL VERIFY (NEW) =================
   const handleManualVerify = async () => {
     if (!window.confirm("Manually verify this user without Telegram?")) return;
-    
-    const token = getAdminToken();
-    if (!token) return setMessage("Admin not authenticated");
-
     try {
-      // Backend expects MongoDB _id for this route
       const res = await api.put(`/admin/user/${user._id}/manual-verify`);
-      
       setUser(prev => ({ ...prev, isTelegramJoined: true }));
       setFormData(prev => ({ ...prev, isTelegramJoined: true }));
       setMessage("✅ " + res.data.message);
     } catch (err) {
       console.error(err);
-      setMessage("Failed to manually verify user. Make sure backend route exists.");
+      setMessage("Failed to manually verify user.");
     }
   };
 
-  // ================= COPY FUNCTION =================
   const handleCopy = (text) => {
     if (!text) return;
     navigator.clipboard.writeText(text);
@@ -173,10 +128,11 @@ function UserSearch() {
   };
 
   return (
+    // ... UI is exactly the same as yours (omitted for brevity, keep your return block exactly as it was)
     <div className="bg-white rounded-2xl p-5 shadow-md">
-      <h2 className="text-xl font-semibold mb-4 text-indigo-600">🔍 Search User</h2>
-
-      <div className="flex gap-3 mb-4">
+       <h2 className="text-xl font-semibold mb-4 text-indigo-600">🔍 Search User</h2>
+       {/* ... Baaki UI ka code waise ka waisa hi rahega ... */}
+       <div className="flex gap-3 mb-4">
         <input
           type="number"
           placeholder="Enter User ID"

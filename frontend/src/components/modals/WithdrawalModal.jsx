@@ -3,7 +3,8 @@ import api from "../../api/axios";
 import SuccessModal from "./SuccessModal";
 import MessageModal from "./MessageModal";
 import { useAuth } from "../../context/AuthContext";
-import { Wallet, Zap, Layers, Users, Trophy, X } from "lucide-react";
+import { Wallet, Zap, Layers, Users, Trophy, X, UserCog } from "lucide-react";
+import { Link } from "react-router-dom"; 
 
 // ✅ GLOBAL POOL CONFIG
 const GLOBAL_POOLS = [
@@ -55,7 +56,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
   const showMessage = (title, message, type = "error") =>
     setMessageModal({ open: true, title, message, type });
 
-  // --- LOGIC: Fetch Data & Calculate Individual Pools ---
+  // --- LOGIC: Fetch Data ---
   const fetchData = useCallback(async () => {
     try {
       const res = await api.get(`/wallet/withdrawable/${userId}`);
@@ -63,47 +64,76 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
       if (res.data) {
         setBalances({
-          walletBalance: res.data.walletBalance || 0,
-          direct: res.data.direct || 0, 
-          level: res.data.level || 0,
-          reward: res.data.reward || 0,
-          pool: res.data.pool || 0,
+          walletBalance: Number(res.data.walletBalance) || 0,
+          direct: Number(res.data.direct) || 0, 
+          level: Number(res.data.level) || 0,
+          reward: Number(res.data.reward) || 0,
+          pool: Number(res.data.pool) || 0,
           isUserToppedUp: res.data.isUserToppedUp || false
         });
       }
 
-      if (profileRes.data?.user) {
-        const u = profileRes.data.user;
+      // Safe user extraction
+      const u = profileRes.data?.user || profileRes.data;
+
+      if (u) {
         const addr = (u.walletAddress || "").trim();
         setWalletAddress(addr);
         setIsAddressMissing(!addr);
 
-        // 🔥 CALCULATE POOLS (SIRF WAHI DIKHAYEGA JISME PAISA BACHA HAI)
-        const userGlobal = u.globalTeamCount || 0;
-        const userDirects = u.directCount || 0;
-        let cumulative = 0;
-        let withdrawnPool = u.pendingWithdrawals || 0; 
-        let calculatedUnlocked = [];
+        // 🔥 THE ULTIMATE FOOLPROOF POOL CALCULATION 🔥
+        const userGlobal = Number(u.globalTeamCount) || 0;
+        const userDirects = Number(u.directCount) || 0;
+        const activePoolsData = u.activePools || []; 
+        let actualAvailablePool = Number(res.data?.pool) || 0; 
+        
+        let cumulativeGlobal = 0;
+        let unlockedLevelsTemp = [];
 
-        GLOBAL_POOLS.forEach(lvl => {
-            cumulative += lvl.globalTeam;
-            if (userGlobal >= cumulative && userDirects >= lvl.reqDirects) {
-                let available = lvl.earning;
-                
-                let deducted = Math.min(available, withdrawnPool);
-                withdrawnPool -= deducted;
-                available -= deducted;
-
-                // ✅ SIRF TABHI BOX BANAYEGA JAB AVAILABLE BALANCE 0 SE ZYADA HO
-                if (available > 0) {
-                    calculatedUnlocked.push({
-                        level: lvl.level,
-                        earning: lvl.earning,
-                        available: available
-                    });
-                }
+        // 1. Find all Unlocked Levels
+        for (const lvl of GLOBAL_POOLS) {
+            cumulativeGlobal += lvl.globalTeam;
+            if (userGlobal >= cumulativeGlobal && userDirects >= lvl.reqDirects) {
+                unlockedLevelsTemp.push({ ...lvl });
+            } else {
+                break; // Aage wale locked hain
             }
+        }
+
+        // 2. Calculate generated amount for each unlocked box
+        let totalGenerated = 0;
+        let boxData = unlockedLevelsTemp.map(lvl => {
+            const p = activePoolsData.find(ap => Number(ap.level) === Number(lvl.level));
+            const generated = p ? (Number(p.daysPaid) || 0) * (Number(p.dailyAmount) || 0) : 0;
+            totalGenerated += generated;
+            return { ...lvl, generated };
         });
+
+        // 3. 🚨 BULLETPROOF FALLBACK: Agar API ne activePools data nahi bheja, par total pool balance $2 hai
+        // toh us $2 ko automatically in boxes me distribute kar do!
+        if (totalGenerated === 0 && actualAvailablePool > 0 && boxData.length > 0) {
+            let splitAmt = actualAvailablePool / boxData.length;
+            boxData = boxData.map(b => ({ ...b, generated: splitAmt }));
+            totalGenerated = actualAvailablePool;
+        }
+
+        // 4. Calculate kitna nikal chuka hai (Total Generated minus Current Available)
+        let alreadyWithdrawn = Math.max(0, totalGenerated - actualAvailablePool);
+
+        // 5. Finalize boxes data with exact available balance
+        let calculatedUnlocked = boxData.map(box => {
+            let deducted = Math.min(box.generated, alreadyWithdrawn);
+            alreadyWithdrawn -= deducted;
+            
+            let available = box.generated - deducted;
+
+            return {
+                level: box.level,
+                earning: box.earning,
+                available: available > 0 ? available : 0 // Ensure no negative values
+            };
+        });
+        
         setUnlockedLevels(calculatedUnlocked);
       }
     } catch (err) {
@@ -115,7 +145,8 @@ const WithdrawalModal = ({ userId, onClose }) => {
     fetchData();
   }, [fetchData]);
 
-  // --- HANDLERS ---
+  const totalAvailable = balances.direct + balances.level + balances.reward + balances.pool;
+
   const handleInputChange = (e, source) => {
     const value = e.target.value;
     if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
@@ -132,6 +163,10 @@ const WithdrawalModal = ({ userId, onClose }) => {
     try {
       if (!balances.isUserToppedUp && !isPromo) {
          return showMessage("Top-up Required", "You must activate your Node to withdraw funds.");
+      }
+
+      if (!walletAddress.trim() && isAddressMissing) {
+         return showMessage("Address Missing", "Please set your withdrawal address in your Profile first.");
       }
 
       let items = [];
@@ -153,6 +188,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
       checkAndPush("level", withdrawals.level, balances.level, "Level Income");
       checkAndPush("reward", withdrawals.reward, balances.reward, "Team Reward");
 
+      // Pool Withdrawals calculate kar rahe hain
       unlockedLevels.forEach(lvl => {
         const amt = Number(withdrawals[`pool_${lvl.level}`] || 0);
         if (amt > 0) {
@@ -170,14 +206,9 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
       if (totalRequested === 0) return showMessage("Warning", "Enter amount to withdraw.");
       if (!isPromo && totalRequested < 5) return showMessage("Warning", "Minimum total withdrawal amount is $5.");
-      if (!walletAddress.trim()) return showMessage("Warning", "Please enter your USDT BEP20 Wallet Address.");
       if (!transactionPassword.trim()) return showMessage("Warning", "Enter transaction password.");
 
       setLoading(true);
-
-      if (isAddressMissing) {
-        try { await api.put(`/user/${userId}`, { walletAddress }); } catch (e) { }
-      }
 
       const endpoint = isPromo ? "/wallet/promo-withdraw" : "/wallet/withdraw";
 
@@ -203,30 +234,31 @@ const WithdrawalModal = ({ userId, onClose }) => {
     }
   };
 
-  // 🔥 UPDATE: UI Made More Compact
   const IncomeBox = ({ title, icon: Icon, iconColor, source, balance, val, overrideMax }) => (
-      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">
+      <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">
         <div className="flex justify-between items-end mb-1.5 px-1">
             <h3 className="text-slate-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
                 <Icon size={12} className={iconColor} /> {title}
             </h3>
-            <span className="text-black text-[9px] font-bold bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-sm">
-                Avail: ${balance.toFixed(2)}
+            <span className="text-black text-[9px] font-bold bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                Avail: ${Number(balance).toFixed(2)}
             </span>
         </div>
-        <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-inner">
-            <span className={`${iconColor} font-bold text-sm pl-1`}>$</span>
+        <div className="flex items-center gap-2 bg-white p-1.5 rounded-lg border border-slate-200 shadow-inner">
+            <span className={`${iconColor} font-bold text-base pl-1`}>$</span>
             <input 
                 type="number" 
                 placeholder="0.00" 
-                className="flex-1 bg-transparent border-none text-slate-800 text-sm font-black outline-none w-full placeholder-slate-300"
+                className="flex-1 bg-transparent border-none text-slate-800 text-sm font-black outline-none w-full placeholder-slate-300 py-0.5"
                 value={val || ""} 
                 onChange={e => handleInputChange(e, source)} 
                 max={balance} 
+                disabled={balance === 0}
             />
             <button 
                 onClick={() => overrideMax !== undefined ? setMaxAmount(source, overrideMax) : setMaxAmount(source)}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-600 text-[8px] font-bold px-2 py-1 rounded transition-colors border border-slate-200"
+                disabled={balance === 0}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-600 text-[9px] font-bold px-2 py-1 rounded-md transition-colors border border-slate-200 disabled:opacity-50"
             >MAX</button>
         </div>
       </div>
@@ -236,13 +268,13 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
   return (
     <>
-      {/* Scrollbar CSS clean ki hai taaki width kam le */}
       <style>{`
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
         .custom-scroll { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
       `}</style>
 
       {successOpen && (
@@ -256,16 +288,15 @@ const WithdrawalModal = ({ userId, onClose }) => {
       {!successOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1000] flex justify-center items-center p-4">
           
-          {/* 🔥 UPDATE: Max-Width kam kiya (460px) aur Max-Height (85vh) fix kiya */}
-          <div className="bg-white w-full mt-10 max-w-[460px] rounded-[24px] border border-slate-200 shadow-2xl flex flex-col max-h-[85vh] relative overflow-hidden">
+          <div className="bg-white w-full max-w-[480px] rounded-[20px] border border-slate-200 shadow-2xl flex flex-col max-h-[85vh] relative overflow-hidden animate-in zoom-in duration-300">
             
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-100 blur-[50px] pointer-events-none rounded-full"></div>
 
             {/* Header */}
-            <div className="px-5 py-3.5 border-b border-slate-200 bg-slate-50 flex justify-between items-center z-10 shrink-0">
-              <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 m-0">
+            <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center z-10 shrink-0">
+              <h2 className="text-[12px] md:text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 m-0">
                 <div className="bg-green-100 p-1.5 rounded-lg">
-                  <Wallet size={16} className="text-green-600" /> 
+                  <Wallet size={14} className="text-green-600" /> 
                 </div>
                 Withdraw Funds
               </h2>
@@ -275,29 +306,52 @@ const WithdrawalModal = ({ userId, onClose }) => {
             </div>
 
             {/* Body */}
-            <div className="p-3.5 md:p-4 overflow-y-auto custom-scroll flex-1 flex flex-col gap-3 bg-white relative z-10">
+            <div className="p-3 overflow-y-auto custom-scroll flex-1 flex flex-col gap-2 bg-white relative z-10">
               
-              {/* 🔥 SIRF WAHI DIKHEGA JISME BALANCE HAI */}
+              <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl flex items-center justify-between shadow-sm">
+                 <div>
+                    <p className="text-black text-[9px] font-bold uppercase tracking-widest">Total Income Available</p>
+                    <h3 className="text-lg font-black text-slate-800">${totalAvailable.toFixed(2)}</h3>
+                 </div>
+                 <div className="text-right">
+                    <p className="text-black text-[9px] font-bold uppercase tracking-widest">Main Wallet</p>
+                    <h3 className="text-base font-black text-emerald-600">${balances.walletBalance.toFixed(2)}</h3>
+                 </div>
+              </div>
+
+              {isAddressMissing ? (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                  <p className="text-[10px] md:text-xs text-red-700 font-bold m-0 w-3/5">
+                    No withdrawal address found! You must set it before withdrawing.
+                  </p>
+                  <Link 
+                    to="/profile" 
+                    onClick={onClose}
+                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition-colors whitespace-nowrap"
+                  >
+                    <UserCog size={12} /> Go To Profile
+                  </Link>
+                </div>
+              ) : (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 flex flex-col">
+                  <p className="text-[9px] text-emerald-800 font-bold uppercase tracking-widest mb-0.5">Your Saved Address</p>
+                  <p className="text-xs font-mono text-emerald-600 font-black truncate">{walletAddress}</p>
+                </div>
+              )}
+
+              {/* MAIN INCOMES */}
               {hasMainIncome && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1">
                     {balances.direct > 0 && <IncomeBox title="Direct" icon={Zap} iconColor="text-amber-500" source="direct" balance={balances.direct} val={withdrawals.direct} />}
                     {balances.level > 0 && <IncomeBox title="Level" icon={Users} iconColor="text-blue-500" source="level" balance={balances.level} val={withdrawals.level} />}
                     {balances.reward > 0 && <IncomeBox title="Team Reward" icon={Trophy} iconColor="text-indigo-500" source="reward" balance={balances.reward} val={withdrawals.reward} />}
                   </div>
               )}
 
-              {/* INDIVIDUAL AUTO-POOL LEVELS */}
+              {/* 🔥 INDIVIDUAL AUTO-POOL LEVELS BOXES 🔥 */}
               <div className="mt-1">
-                 <h3 className="text-black text-[10px] font-black uppercase tracking-widest mb-2 border-b border-slate-100 pb-1.5 flex items-center gap-1.5">
-                    <Layers size={12} className="text-green-600" /> Leg Community Incomes
-                 </h3>
-                 
-                 {unlockedLevels.length === 0 ? (
-                    <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-200 text-black text-[10px] font-bold uppercase tracking-widest">
-                        No Leg Community Incomes Available
-                    </div>
-                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                 {unlockedLevels.length > 0 && (
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {unlockedLevels.map(lvl => (
                             <IncomeBox 
                                 key={lvl.level}
@@ -310,48 +364,46 @@ const WithdrawalModal = ({ userId, onClose }) => {
                                 overrideMax={lvl.available}
                             />
                         ))}
-                    </div>
+                     </div>
                  )}
               </div>
 
-              {/* WALLET ADDRESS & SECURITY */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3 mt-1">
-              
-                <div>
+              {/* SECURITY */}
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mt-1">
                   <label className="text-[9px] text-black block mb-1 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
                   <input 
                     type="password" 
                     autoComplete="new-password"
-                    placeholder="Enter Password" 
-                    className="w-full bg-white border border-slate-200 text-slate-800 p-2.5 rounded-lg outline-none font-mono text-xs shadow-inner focus:border-green-400"
+                    placeholder="Enter Transaction Password" 
+                    className="w-full bg-white border border-slate-200 text-slate-800 p-2.5 rounded-lg outline-none font-mono text-xs transition-all shadow-inner focus:border-green-400 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
                     value={transactionPassword} 
                     onChange={e => setTransactionPassword(e.target.value)} 
                   />
-                </div>
               </div>
 
             </div>
 
-            {/* 🔥 NEW: 2 BUTTONS AT BOTTOM (CANCEL + WITHDRAW) */}
-            <div className="px-4 py-3 border-t border-slate-200 bg-slate-50 z-10 shrink-0 flex gap-2">
-              <button 
-                onClick={onClose} 
-                disabled={loading}
-                className="w-1/3 p-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 transition-all"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleWithdraw} 
-                disabled={loading} 
-                className={`w-2/3 p-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
-                  loading 
-                    ? 'bg-slate-200 text-black cursor-not-allowed border border-slate-300' 
-                    : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5'
-                }`}
-              >
-                {loading ? "PROCESSING..." : "WITHDRAW FUNDS"}
-              </button>
+            {/* ACTION BUTTONS */}
+            <div className="p-3 border-t border-slate-200 bg-slate-50 z-10 shrink-0">
+              <div className="flex gap-2">
+                 <button 
+                   onClick={onClose} 
+                   className="w-1/3 py-2.5 rounded-lg font-bold text-[11px] bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors shadow-sm uppercase tracking-wider"
+                 >
+                    Cancel
+                 </button>
+                 <button 
+                   onClick={handleWithdraw} 
+                   disabled={loading || isAddressMissing} 
+                   className={`w-2/3 py-2.5 rounded-lg font-black text-[11px] md:text-xs uppercase tracking-widest transition-all ${
+                     (loading || isAddressMissing)
+                       ? 'bg-slate-200 text-black cursor-not-allowed border border-slate-300' 
+                       : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-[0_4px_10px_rgba(34,197,94,0.3)] hover:-translate-y-0.5 active:scale-95'
+                   }`}
+                 >
+                   {loading ? "PROCESSING..." : "WITHDRAW FUNDS"}
+                 </button>
+              </div>
             </div>
 
           </div>

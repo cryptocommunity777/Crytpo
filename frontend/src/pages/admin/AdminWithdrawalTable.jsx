@@ -49,26 +49,23 @@ const AdminWithdrawalTable = () => {
         Swal.close();
         
         const { token: userToken, user: impersonatedUser } = res.data;
-        const userDataStr = JSON.stringify(impersonatedUser);
+        const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
 
-        // 🔥 SMART DYNAMIC URL LOGIC 🔥
+        // 🔥 FIXED LOGIC: Subdomain ('good.') ignore aur port 5173 ke liye 🔥
         let targetBaseUrl = "";
         const currentHost = window.location.hostname;
 
-        // Check: Agar aap Local PC par ho
-        if (currentHost === "localhost" || currentHost === "127.0.0.1") {
-          targetBaseUrl = "http://localhost:3000"; // Local Main Frontend ka port
-        } 
-        // Check: Agar aap Live Server par ho
-        else {
-          targetBaseUrl = "https://cryptocommunity.live"; // Live Main Website
+        // Agar domain me 'localhost' aata hai (jaise good.localhost) ya IP 127.0.0.1 hai
+        if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
+          targetBaseUrl = "http://localhost:5173"; // Hamesha clean local URL pe bheje
+        } else {
+          targetBaseUrl = "https://cryptocommunity.live"; // Live website
         }
 
         // Final URL banayen
-        const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${encodeURIComponent(userDataStr)}`;
+        const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
 
         // 🚀 POPUP BLOCKER FIX: Hidden link banakar click karwana 
-        // (window.open() API ke baad block ho jata hai, isliye a tag better hai)
         const link = document.createElement('a');
         link.href = mainWebsiteUrl;
         link.target = '_blank';

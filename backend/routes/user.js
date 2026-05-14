@@ -1301,17 +1301,28 @@ router.get('/:userId', async (req, res) => {
 // ---------------------------
 // Update user
 // Update user - REPLACE YOUR EXISTING router.put('/:userId' ...) WITH THIS:
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\user.js
+
+const sanitizeUser = require('../utils/sanitizeUser'); // Isko top par check kar lena
+
 router.put('/:userId', authMiddleware, async (req, res) => {
   try {
-    const { walletAddress, oldTxnPassword } = req.body;
+    const { walletAddress, oldTxnPassword, name, email, mobile } = req.body;
+    
+    // 1. Find User
     const user = await User.findOne({ userId: Number(req.params.userId) });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // 🔥 LOCK LOGIC: Check if any withdrawal is pending
-    // Hum Withdrawal model me ja kar check karenge ki is user ki koi "pending" request hai ya nahi
-    const Withdrawal = require('../models/Withdrawal'); // Model import ensure karein
+    // 2. 🔥 SECURITY CHECK: Transaction Password verify karna zaroori hai
+    if (!oldTxnPassword || oldTxnPassword !== user.transactionPassword) {
+      return res.status(403).json({ message: 'Invalid Transaction Password.' });
+    }
+
+    // 3. LOCK LOGIC: Check if any withdrawal is pending
+    const Withdrawal = require('../models/Withdrawal'); 
     const pendingRequest = await Withdrawal.findOne({ userId: user.userId, status: 'pending' });
 
+    // 4. Wallet Address Update Logic
     if (walletAddress && walletAddress !== user.walletAddress) {
       if (pendingRequest) {
         return res.status(403).json({ 
@@ -1319,17 +1330,34 @@ router.put('/:userId', authMiddleware, async (req, res) => {
         });
       }
 
-      // Baaki uniqueness check...
-      const exists = await User.findOne({ walletAddress });
-      if (exists) return res.status(403).json({ message: 'Address already in use.' });
+      // Check uniqueness
+      const exists = await User.findOne({ walletAddress, userId: { $ne: user.userId } });
+      if (exists) return res.status(403).json({ message: 'Address already in use by another user.' });
 
       user.walletAddress = walletAddress;
+      
+      // Address change tracking (Important)
+      user.walletAddressChangeCount = (user.walletAddressChangeCount || 0) + 1;
+      user.walletAddressChangeWindowStart = new Date();
     }
 
-    // Baaki profile update logic...
+    // 5. UPDATE OTHER FIELDS (Optional: agar user name/email change karna chahe)
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (mobile) user.mobile = mobile;
+
+    // 6. 🔥 SAVE TO DATABASE
     await user.save();
-    res.json({ user });
+
+    // 7. 🔥 RESPONSE: Sanitize karke bhejo taaki Frontend/LocalStorage update ho jaye
+    res.json({ 
+      success: true,
+      message: "Profile updated successfully",
+      user: sanitizeUser(user) 
+    });
+
   } catch (err) {
+    console.error("Profile Update Error:", err);
     res.status(500).json({ message: 'Server error' });
   }
 });

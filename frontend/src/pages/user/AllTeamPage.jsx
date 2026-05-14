@@ -110,37 +110,10 @@ const AllTeamPage = () => {
       `}</style>
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
-             <Globe2 className="text-green-500" size={28} /> Global Downline
-          </h2>
-          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">Track your entire network structure</p>
-        </div>
-      </div>
+      
 
       {/* Top Stats Cards */}
-      <div className="grid grid-cols-2 gap-4 md:gap-6 mb-8">
-        <div className="bg-white shadow-sm backdrop-blur-md rounded-2xl border border-slate-200 p-5 md:p-6 shadow-[0_0_30px_rgba(249,115,22,0.1)] relative overflow-hidden flex flex-col justify-center">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 blur-[30px]"></div>
-          <h3 className="text-gray-500 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 mb-2">
-             <UserPlus size={14} className="text-blue-500" /> Total Downline
-          </h3>
-          <p className="text-3xl md:text-4xl font-black text-slate-900 drop-shadow-md">
-            {stats.totalTeam}
-          </p>
-        </div>
-
-        <div className="bg-white shadow-sm backdrop-blur-md rounded-2xl border border-slate-200 p-5 md:p-6 shadow-[0_0_30px_rgba(249,115,22,0.1)] relative overflow-hidden flex flex-col justify-center">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 blur-[30px]"></div>
-          <h3 className="text-gray-500 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 mb-2">
-             <Activity size={14} className="text-green-500" /> Active Users
-          </h3>
-          <p className="text-3xl md:text-4xl font-black text-slate-900 drop-shadow-md">
-            {stats.activeTeam}
-          </p>
-        </div>
-      </div>
+     
 
       {/* Filters (Search & Entries) */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between items-center bg-white shadow-sm p-4 rounded-2xl border border-slate-200">
@@ -158,19 +131,7 @@ const AllTeamPage = () => {
            />
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-           <span className="text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Show:</span>
-           <select
-             value={entriesPerPage}
-             onChange={handleEntriesChange}
-             className="w-full sm:w-auto bg-white border border-slate-200 text-slate-900 text-sm font-bold rounded-xl px-4 py-3 focus:border-green-500 focus:outline-none transition-all appearance-none cursor-pointer"
-           >
-             <option value={10}>10 Entries</option>
-             <option value={25}>25 Entries</option>
-             <option value={50}>50 Entries</option>
-             <option value={100}>100 Entries</option>
-           </select>
-        </div>
+        
       </div>
 
       {/* Table */}
