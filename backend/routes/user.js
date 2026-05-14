@@ -421,7 +421,7 @@ router.put(
       };
 
       // =======================================================
-      // 🔹 3. 🔥 MAGIC LOGIC: DIRECT & REWARD ENGINE 🔥
+      // 🔹 3. 🔥 MAGIC LOGIC: DIRECT, LEVEL & REWARD ENGINE 🔥
       // =======================================================
       let isFirstTopup = false;
       
@@ -430,18 +430,17 @@ router.put(
         targetUser.isToppedUp = true;
         targetUser.topUpDate = new Date();
 
-        // 🌟 MAGIC 2: SPONSOR DIRECT COUNT & DIRECT INCOME
+        // 🌟 SPONSOR DIRECT COUNT & DIRECT INCOME (Level 1)
         if (targetUser.sponsorId) {
             const sponsor = await User.findOne({ userId: targetUser.sponsorId });
             if (sponsor) {
                 // 1. Direct Count badhao
                 sponsor.directCount = (sponsor.directCount || 0) + 1;
                 
-                // 2. DIRECT INCOME BHEJO (10% of $30 = $3)
-                const DIRECT_BONUS_PERCENTAGE = 10; 
-                const directBonusAmount = (amount * DIRECT_BONUS_PERCENTAGE) / 100; 
+                // 2. DIRECT INCOME BHEJO (10% of amount)
+                const DIRECT_PERCENT = 10; 
+                const directBonusAmount = (amount * DIRECT_PERCENT) / 100; 
 
-                // Stats ke sath WALLET BALANCE bhi badhaya!
                 sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
                 sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
  
@@ -452,31 +451,23 @@ router.put(
                     source: "direct",
                     amount: directBonusAmount,
                     fromUserId: targetUser.userId,
-                    description: `Direct Bonus from ${targetUser.name}'s Node Activation`,
+                    description: `Direct Bonus (10%) from ${targetUser.name}'s Node Activation`,
                     status: 'success'
                 });
 
                 // =======================================================
-                // 🏆 NEW: TEAM REWARD (BONANZA) SYSTEM CHECK (STRONG/OTHER)
+                // 🏆 TEAM REWARD (BONANZA) SYSTEM CHECK (STRONG/OTHER)
                 // =======================================================
                 const legStats = await getLegStats(sponsor.userId);
-                
                 if (!sponsor.claimedRewards) sponsor.claimedRewards = [];
 
                 for (let milestone of REWARD_MILESTONES) {
-                    // ✅ CHECK: Strong Leg aur Other Legs dono ka target cross hona chahiye
                     if (legStats.strongLeg >= milestone.strongLeg && legStats.otherLegs >= milestone.otherLegs) {
-                        
-                        // Check karo ki pehle se reward le toh nahi liya
                         if (!sponsor.claimedRewards.includes(milestone.target)) {
-                            
-                            // Wallet aur Stats update
                             sponsor.rewardIncome = (sponsor.rewardIncome || 0) + milestone.reward;
                             sponsor.totalRewardIncome = (sponsor.totalRewardIncome || 0) + milestone.reward;
-                            sponsor.walletBalance = (sponsor.walletBalance || 0) + milestone.reward;
-                            sponsor.claimedRewards.push(milestone.target);
+                             sponsor.claimedRewards.push(milestone.target);
                             
-                            // Transaction Entry
                             await createTransaction({
                                 userId: sponsor.userId,
                                 type: "reward_income", 
@@ -485,11 +476,59 @@ router.put(
                                 description: `Bonanza Reward Unlocked: ${milestone.title}`,
                                 status: 'success'
                             });
-                            console.log(`[BONANZA] Sponsor ${sponsor.userId} won $${milestone.reward}! (Strong: ${legStats.strongLeg}, Others: ${legStats.otherLegs})`);
                         }
                     }
                 }
                 await sponsor.save();
+            }
+
+            // =======================================================
+            // 🌟 NEW: 20 LEVEL INCOME ENGINE 🔥
+            // =======================================================
+            const LEVEL_PERCENTAGES = [
+                0,      // Level 1 (Already handled as Direct)
+                5,      // Level 2
+                3,      // Level 3
+                1,      // Level 4
+                1,      // Level 5
+                0.5, 0.5, 0.5, 0.5, 0.5, // Level 6-10 (0.50% each)
+                0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25 // Level 11-20 (0.25% each)
+            ];
+
+            let currentUplineId = targetUser.sponsorId; 
+            let currentLevel = 1;
+
+            while (currentUplineId && currentLevel <= 20) {
+                const upline = await User.findOne({ userId: currentUplineId });
+                if (!upline) break;
+
+                // Level 2 se Level 20 tak distribution
+                if (currentLevel > 1) {
+                    const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
+                    const levelAmount = (amount * percentage) / 100;
+
+                    // Condition: Upline active hona chahiye tabhi paisa milega
+                    if (levelAmount > 0 && upline.isToppedUp) {
+                        upline.levelIncome = (upline.levelIncome || 0) + levelAmount;
+                        upline.totalLevelIncome = (upline.totalLevelIncome || 0) + levelAmount;
+ 
+                        await upline.save();
+
+                        await createTransaction({
+                            userId: upline.userId,
+                            type: "level_income",
+                            source: "level",
+                            amount: levelAmount,
+                            fromUserId: targetUser.userId,
+                            description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation`,
+                            status: 'success'
+                        });
+                    }
+                }
+
+                // Move to next upline
+                currentUplineId = upline.sponsorId;
+                currentLevel++;
             }
         }
       }
@@ -606,7 +645,7 @@ router.put(
       };
 
       // =======================================================
-      // 🔹 3. RESTRICTED REWARD ENGINE
+      // 🔹 3. RESTRICTED REWARD ENGINE & LEVEL INCOME
       // =======================================================
       let isFirstTopup = false;
       
@@ -615,7 +654,7 @@ router.put(
         targetUser.isToppedUp = true;
         targetUser.topUpDate = new Date();
 
-        // Target user ke sponsor ko dhundo
+        // Target user ke sponsor ko dhundo (Level 1)
         if (targetUser.sponsorId) {
             const sponsor = await User.findOne({ userId: targetUser.sponsorId });
             if (sponsor) {
@@ -626,7 +665,7 @@ router.put(
                 const isRestrictedLeader = sponsor.role === 'leader' && sponsor.directCount < 100;
 
                 if (!isRestrictedLeader) {
-                    // 👉 Restriction NAHI hai: Normal Direct Income Do
+                    // 👉 Restriction NAHI hai: Normal Direct Income Do (Level 1 -> 10%)
                     const DIRECT_BONUS_PERCENTAGE = 10; 
                     const directBonusAmount = (amount * DIRECT_BONUS_PERCENTAGE) / 100; 
 
@@ -640,7 +679,7 @@ router.put(
                         source: "direct",
                         amount: directBonusAmount,
                         fromUserId: targetUser.userId,
-                        description: `Direct Bonus from ${targetUser.name}'s Node Activation`,
+                        description: `Direct Bonus (10%) from ${targetUser.name}'s Node Activation`,
                         status: 'success'
                     });
 
@@ -674,10 +713,79 @@ router.put(
                 await sponsor.save();
             }
         }
+
+        // =======================================================
+        // 🌟 MAGIC 4: 20 LEVEL INCOME ENGINE 🔥
+        // =======================================================
+        // Percentages exactly as you requested
+        const LEVEL_PERCENTAGES = [
+            0,      // Level 1 (10% already distributed as Direct Income)
+            5,      // Level 2 -> 5%
+            3,      // Level 3 -> 3%
+            1,      // Level 4 -> 1%
+            1,      // Level 5 -> 1%
+            0.5,    // Level 6 -> 0.5%
+            0.5,    // Level 7 -> 0.5%
+            0.5,    // Level 8 -> 0.5%
+            0.5,    // Level 9 -> 0.5%
+            0.5,    // Level 10 -> 0.5%
+            0.25,   // Level 11 -> 0.25%
+            0.25,   // Level 12 -> 0.25%
+            0.25,   // Level 13 -> 0.25%
+            0.25,   // Level 14 -> 0.25%
+            0.25,   // Level 15 -> 0.25%
+            0.25,   // Level 16 -> 0.25%
+            0.25,   // Level 17 -> 0.25%
+            0.25,   // Level 18 -> 0.25%
+            0.25,   // Level 19 -> 0.25%
+            0.25    // Level 20 -> 0.25%
+        ];
+
+        let currentUplineId = targetUser.sponsorId; 
+        let currentLevel = 1;
+
+        while (currentUplineId && currentLevel <= 20) {
+            const upline = await User.findOne({ userId: currentUplineId });
+            if (!upline) break; 
+
+            // Process from Level 2 to 20
+            if (currentLevel > 1) {
+                const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
+                const levelAmount = (amount * percentage) / 100;
+
+                // Restriction rule checking for uplines too (jaise direct me tha)
+                const isRestrictedLeader = upline.role === 'leader' && (upline.directCount || 0) < 100;
+
+                // Upline active (isToppedUp) hona chahiye aur restricted nahi hona chahiye
+                if (levelAmount > 0 && upline.isToppedUp && !isRestrictedLeader) {
+                    
+                    upline.levelIncome = (upline.levelIncome || 0) + levelAmount;
+                    upline.totalLevelIncome = (upline.totalLevelIncome || 0) + levelAmount;
+                    upline.walletBalance = (upline.walletBalance || 0) + levelAmount; // Main wallet me add kiya
+
+                    await upline.save();
+
+                    await createTransaction({
+                        userId: upline.userId,
+                        type: "level_income",
+                        source: "level",
+                        amount: levelAmount,
+                        fromUserId: targetUser.userId,
+                        description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Node Activation`,
+                        status: 'success'
+                    });
+                }
+            }
+
+            // Agle level par jaane ke liye is upline ka sponsor pakdo
+            currentUplineId = upline.sponsorId;
+            currentLevel++;
+        }
+        // ================= END LEVEL INCOME =================
       }
 
       // =======================================================
-      // 🔹 4. Target User Profile Update
+      // 🔹 5. Target User Profile Update
       // =======================================================
       if (!targetUser.packages) targetUser.packages = [];
       targetUser.packages.push({

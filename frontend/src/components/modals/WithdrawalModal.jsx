@@ -316,21 +316,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
               {/* WALLET ADDRESS & SECURITY */}
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3 mt-1">
-                <div>
-                  <label className="text-[9px] text-black block mb-1 font-bold uppercase tracking-widest ml-1">
-                    USDT (BEP20) ADDRESS
-                    {!isAddressMissing && <span className="text-emerald-600 ml-1">(Locked)</span>}
-                  </label>
-                  <input 
-                    type="text" 
-                    placeholder="Enter BEP20 Address" 
-                    className="w-full bg-white border border-slate-200 text-slate-800 p-2.5 rounded-lg outline-none font-mono text-xs shadow-inner focus:border-green-400"
-                    style={{ cursor: !isAddressMissing ? 'not-allowed' : 'text', opacity: !isAddressMissing ? 0.6 : 1 }} 
-                    value={walletAddress} 
-                    onChange={e => setWalletAddress(e.target.value)} 
-                    disabled={!isAddressMissing} 
-                  />
-                </div>
+              
                 <div>
                   <label className="text-[9px] text-black block mb-1 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
                   <input 

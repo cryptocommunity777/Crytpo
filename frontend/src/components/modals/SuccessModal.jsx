@@ -195,7 +195,7 @@ const SuccessModal = ({
                 <span className="text-5xl font-black text-amber-500">
                   ${reward}
                 </span>
-             </div>
+             </div>a
           </SuccessLayout>
         );
 
