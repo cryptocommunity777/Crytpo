@@ -2,8 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from "../../api/axios";
 import { 
-  ArrowLeftCircle, Save, Lock, User, Mail, Smartphone, 
-  Wallet, Key, ShieldCheck, AlertTriangle, BadgeInfo
+  ArrowLeft, Save, Lock, User, Mail, Smartphone, 
+  Wallet, Key, ShieldCheck, AlertTriangle, BadgeInfo,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import MessageModal from '../../components/modals/MessageModal';
@@ -11,6 +12,9 @@ import MessageModal from '../../components/modals/MessageModal';
 function UserProfile() {
   const navigate = useNavigate();
   const { user, updateUser, token } = useAuth();
+
+  /* ================= TABS STATE ================= */
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile' or 'security'
 
   /* ================= STATES ================= */
   const [formData, setFormData] = useState({
@@ -150,184 +154,167 @@ function UserProfile() {
   }
 
   return (
-   <div className="min-h-screen bg-slate-50 text-slate-200 relative overflow-hidden font-sans pb-20 pt-20 md:pt-28 selection:bg-green-500/30">
+   <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-20 pt-6 md:pt-10 selection:bg-green-500/30">
       
-      {/* --- BACKGROUND EFFECTS --- */}
-      <style>{`
-        .bg-grid-dark { background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 30px 30px; }
-      `}</style>
-      <div className="absolute inset-0 bg-grid-dark pointer-events-none"></div>
-      <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-green-600/10 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-red-800/10 blur-[120px] rounded-full pointer-events-none"></div>
-
-      <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10">
+      <div className="max-w-3xl mx-auto px-4 md:px-6">
           
           {/* Header & Back Button */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-             <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-slate-500 hover:text-green-500 transition-colors font-bold group">
-                <ArrowLeftCircle size={22} className="group-hover:-translate-x-1 transition-transform" /> Back to Dashboard
+          <div className="flex items-center gap-4 mb-6">
+             <button onClick={() => navigate('/dashboard')} className="p-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-green-600 transition-all shadow-sm">
+                <ArrowLeft size={20} />
              </button>
-             <h1 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide drop-shadow-md">
-                My Profile
+             <h1 className="text-xl md:text-2xl font-black text-slate-800 uppercase tracking-wide">
+                Account Settings
              </h1>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-             
-             {/* =========================================
-                 LEFT: Profile Info Card
-             ========================================= */}
-             <div className="bg-white shadow-sm backdrop-blur-xl border border-slate-200 rounded-[2rem] p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] h-fit relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 blur-[50px]"></div>
+          {/* User Basic Info Card (Always Visible) */}
+          <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center sm:items-start gap-4 md:gap-6 mb-6">
+             <div className="w-20 h-20 shrink-0 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-3xl font-black text-white shadow-md border-4 border-white">
+                {user.name?.charAt(0).toUpperCase() || "U"}
+             </div>
+             <div className="text-center sm:text-left flex-1">
+                <h2 className="text-2xl font-black text-slate-900">{user.name}</h2>
+                <p className="text-sm font-bold text-slate-500 mt-0.5">{user.email}</p>
                 
-                <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-orange-400 to-red-600 flex items-center justify-center text-4xl font-black text-slate-900 shadow-[0_0_30px_rgba(249,115,22,0.4)] mb-4 border-4 border-black relative z-10">
-                   {user.name?.charAt(0).toUpperCase() || "U"}
-                </div>
-                
-                <h2 className="text-center text-2xl font-black text-slate-900">{user.name}</h2>
-                <p className="text-center text-sm font-bold text-slate-500 mt-1 mb-6">{user.email}</p>
-                
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 space-y-4">
-                   <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-                      <span className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-1.5"><BadgeInfo size={14} className="text-green-500" /> User ID</span>
-                      <span className="text-sm font-black text-slate-900 bg-white/5 px-2 py-1 rounded">{user.userId}</span>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-4">
+                   <div className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                      <BadgeInfo size={14} className="text-green-500" />
+                      <span className="text-[10px] uppercase font-bold text-slate-500">User ID:</span>
+                      <span className="text-sm font-black text-slate-800">{user.userId}</span>
                    </div>
-                   <div className="flex justify-between items-center">
-                      <span className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-1.5"><User size={14} className="text-blue-400" /> Sponsor ID</span>
-                      <span className="text-sm font-black text-slate-900 bg-white/5 px-2 py-1 rounded">{user.sponsorId || 'N/A'}</span>
+                   <div className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                      <User size={14} className="text-blue-500" />
+                      <span className="text-[10px] uppercase font-bold text-slate-500">Sponsor:</span>
+                      <span className="text-sm font-black text-slate-800">{user.sponsorId || 'N/A'}</span>
                    </div>
                 </div>
              </div>
+          </div>
 
-             {/* =========================================
-                 CENTER: Edit Profile Form
-             ========================================= */}
-             <div className="bg-white shadow-sm backdrop-blur-xl border border-slate-200 rounded-[2rem] p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-32 h-32 bg-red-500/10 blur-[50px]"></div>
+          {/* ================= TABS NAVIGATION ================= */}
+          <div className="flex items-center gap-2 mb-6 bg-slate-200/50 p-1 rounded-xl">
+             <button 
+                onClick={() => setActiveTab('profile')}
+                className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'profile' ? 'bg-white text-green-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+             >
+                <User size={16} /> Profile Details
+             </button>
+             <button 
+                onClick={() => setActiveTab('security')}
+                className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'security' ? 'bg-white text-green-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+             >
+                <Settings size={16} /> Security
+             </button>
+          </div>
+
+          {/* ================= TAB 1: PROFILE DETAILS ================= */}
+          {activeTab === 'profile' && (
+             <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-5 md:p-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 
-                <div className="flex items-center gap-2 text-lg font-black text-slate-900 mb-6 uppercase tracking-wide border-b border-slate-100 pb-4 relative z-10">
-                   <User size={22} className="text-green-500" /> Personal Details
-                </div>
-                
-                <div className="space-y-4 relative z-10">
-                   {/* NAME (Non-editable) */}
-                   <div>
-                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-1.5">Full Name</label>
-                      <div className="relative group opacity-60">
-                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><User size={16} className="text-gray-500" /></div>
-                         <input name="name" value={formData.name} readOnly disabled className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3.5 pl-11 text-slate-500 font-bold cursor-not-allowed outline-none" />
+                <div className="space-y-5">
+                   
+                   {/* Non-Editable Fields */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                         <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Full Name</label>
+                         <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><User size={16} className="text-slate-400" /></div>
+                            <input name="name" value={formData.name} readOnly disabled className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pl-10 text-slate-500 font-bold cursor-not-allowed outline-none text-sm" />
+                         </div>
+                      </div>
+                      <div>
+                         <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Mobile Number</label>
+                         <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Smartphone size={16} className="text-slate-400" /></div>
+                            <input name="mobile" value={formData.mobile} readOnly disabled className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pl-10 text-slate-500 font-bold cursor-not-allowed outline-none text-sm" />
+                         </div>
                       </div>
                    </div>
 
-                   {/* EMAIL (Non-editable) */}
-                   <div>
-                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-1.5">Email Address</label>
-                      <div className="relative group opacity-60">
-                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Mail size={16} className="text-gray-500" /></div>
-                         <input name="email" value={formData.email} readOnly disabled className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3.5 pl-11 text-slate-500 font-bold cursor-not-allowed outline-none" />
-                      </div>
-                   </div>
-
-                   {/* MOBILE (Non-editable) */}
-                   <div>
-                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-1.5">Mobile Number</label>
-                      <div className="relative group opacity-60">
-                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Smartphone size={16} className="text-gray-500" /></div>
-                         <input name="mobile" value={formData.mobile} readOnly disabled className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3.5 pl-11 text-slate-500 font-bold cursor-not-allowed outline-none" />
-                      </div>
-                   </div>
-
-                   {/* WALLET ADDRESS */}
-                   <div>
-                      <label className="block text-[10px] font-black text-green-400 uppercase tracking-widest ml-1 mb-1.5">USDT Wallet Address (BEP20)</label>
-                      <div className={`relative group ${isWalletLocked ? 'opacity-60' : ''}`}>
-                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <Wallet size={16} className={isWalletLocked ? "text-gray-500" : "text-green-500"} />
+                   {/* Editable Wallet Address */}
+                   <div className="pt-2 border-t border-slate-100">
+                      <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1 mb-1.5">USDT Wallet Address (BEP20)</label>
+                      <div className="relative group">
+                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <Wallet size={16} className={isWalletLocked ? "text-slate-400" : "text-emerald-500"} />
                          </div>
                          <input 
-                           name="walletAddress" 
-                           value={formData.walletAddress} 
-                           onChange={handleChange} 
-                           disabled={isWalletLocked}
-                           placeholder="Enter your BEP-20 Wallet Address"
-                           className={`w-full bg-white border ${isWalletLocked ? 'border-slate-100 cursor-not-allowed' : 'border-slate-200 focus:border-green-500 text-slate-900'} rounded-xl px-4 py-3.5 pl-11 font-bold outline-none transition-all`} 
+                            name="walletAddress" 
+                            value={formData.walletAddress} 
+                            onChange={handleChange} 
+                            disabled={isWalletLocked}
+                            placeholder="Enter your BEP-20 Wallet Address"
+                            className={`w-full bg-white border ${isWalletLocked ? 'border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed' : 'border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-slate-900'} rounded-xl px-4 py-3.5 pl-10 font-bold outline-none transition-all text-sm`} 
                          />
                       </div>
                       {isWalletLocked && (
-                         <div className="mt-2 bg-red-500/10 border border-red-500/20 p-3 rounded-xl flex items-start gap-2 text-red-400 text-[10px] md:text-xs font-bold leading-relaxed">
-                            <Lock size={14} className="shrink-0 mt-0.5" /> <span>{walletLockReason}</span>
+                         <div className="mt-2.5 bg-red-50 border border-red-200 p-3 rounded-xl flex items-start gap-2 text-red-600 text-[10px] md:text-xs font-bold leading-relaxed shadow-sm">
+                            <Lock size={14} className="shrink-0 mt-0.5 text-red-500" /> <span>{walletLockReason}</span>
                          </div>
                       )}
                    </div>
 
-                   {/* SUBMIT SECTION */}
-                   <div className="pt-6 mt-4 border-t border-slate-100">
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Confirm with Transaction Password</label>
-                      <div className="relative group mb-4">
-                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Key size={16} className="text-gray-500 group-focus-within:text-green-500 transition-colors" /></div>
+                   {/* Save Section */}
+                   <div className="pt-4 border-t border-slate-100">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Transaction Password to Save</label>
+                      <div className="relative mb-4">
+                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Key size={16} className="text-slate-400" /></div>
                          <input 
-                           type="password" 
-                           placeholder="Enter Txn Password to Save"
-                           value={profileTxnPassword} 
-                           onChange={e => setProfileTxnPassword(e.target.value)} 
-                           className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-11 text-slate-900 focus:border-green-500 outline-none transition-all" 
+                            type="password" 
+                            placeholder="Enter Txn Password"
+                            value={profileTxnPassword} 
+                            onChange={e => setProfileTxnPassword(e.target.value)} 
+                            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 pl-10 text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all text-sm" 
                          />
                       </div>
                       <button 
-                        onClick={handleSaveProfile} 
-                        className="w-full py-4 rounded-xl bg-gradient-to-r from-green-500 to-red-600 text-slate-900 font-black text-sm uppercase tracking-wider shadow-[0_5px_15px_rgba(249,115,22,0.4)] hover:shadow-[0_5px_25px_rgba(249,115,22,0.6)] hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-center gap-2"
+                         onClick={handleSaveProfile} 
+                         className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-wider shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
                       >
-                         <Save size={18} /> Save Profile Changes
+                         <Save size={18} /> Update Wallet Address
                       </button>
                    </div>
 
                 </div>
              </div>
+          )}
 
-             {/* =========================================
-                 RIGHT: Security Settings
-             ========================================= */}
-             <div className="flex flex-col gap-6 lg:gap-8">
+          {/* ================= TAB 2: SECURITY SETTINGS ================= */}
+          {activeTab === 'security' && (
+             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                  
                  {/* Login Password Card */}
-                 <div className="bg-white shadow-sm backdrop-blur-xl border border-slate-200 rounded-[2rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
-                    <div className="flex items-center gap-2 text-sm md:text-base font-black text-slate-900 mb-5 uppercase tracking-wide border-b border-slate-100 pb-3">
-                       <ShieldCheck size={20} className="text-blue-500" /> Login Password
+                 <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-5 md:p-6">
+                    <div className="flex items-center gap-2 text-sm font-black text-slate-800 mb-4 uppercase tracking-wide border-b border-slate-100 pb-3">
+                       <ShieldCheck size={18} className="text-blue-500" /> Change Login Password
                     </div>
                     <div className="space-y-3">
-                       <div className="relative group">
-                          <input type="password" placeholder="Current Password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:border-blue-500 outline-none text-sm" />
-                       </div>
-                       <div className="relative group">
-                          <input type="password" placeholder="New Password" value={newLoginPassword} onChange={e => setNewLoginPassword(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:border-blue-500 outline-none text-sm" />
-                       </div>
-                       <button onClick={() => handleChangePassword('login')} className="w-full py-3.5 rounded-xl bg-blue-600/10 text-blue-500 border border-blue-600/30 hover:bg-blue-600 hover:text-slate-900 font-black text-xs uppercase tracking-wider transition-all">
+                       <input type="password" placeholder="Current Login Password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:border-blue-500 outline-none text-sm" />
+                       <input type="password" placeholder="New Login Password" value={newLoginPassword} onChange={e => setNewLoginPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:border-blue-500 outline-none text-sm" />
+                       <button onClick={() => handleChangePassword('login')} className="w-full py-3 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200 font-black text-xs uppercase tracking-wider transition-all mt-2">
                           Update Login Password
                        </button>
                     </div>
                  </div>
 
                  {/* Transaction Password Card */}
-                 <div className="bg-white shadow-sm backdrop-blur-xl border border-slate-200 rounded-[2rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
-                    <div className="flex items-center gap-2 text-sm md:text-base font-black text-slate-900 mb-5 uppercase tracking-wide border-b border-slate-100 pb-3">
-                       <Lock size={20} className="text-purple-500" /> Transaction Password
+                 <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-5 md:p-6">
+                    <div className="flex items-center gap-2 text-sm font-black text-slate-800 mb-4 uppercase tracking-wide border-b border-slate-100 pb-3">
+                       <Lock size={18} className="text-purple-500" /> Change Transaction Password
                     </div>
                     <div className="space-y-3">
-                       <div className="relative group">
-                          <input type="password" placeholder="Current Txn Password" value={currentTxnPassword} onChange={e => setCurrentTxnPassword(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:border-purple-500 outline-none text-sm" />
-                       </div>
-                       <div className="relative group">
-                          <input type="password" placeholder="New Txn Password" value={newTxnPassword} onChange={e => setNewTxnPassword(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:border-purple-500 outline-none text-sm" />
-                       </div>
-                       <button onClick={() => handleChangePassword('txn')} className="w-full py-3.5 rounded-xl bg-purple-600/10 text-purple-400 border border-purple-600/30 hover:bg-purple-600 hover:text-slate-900 font-black text-xs uppercase tracking-wider transition-all">
+                       <input type="password" placeholder="Current Txn Password" value={currentTxnPassword} onChange={e => setCurrentTxnPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:border-purple-500 outline-none text-sm" />
+                       <input type="password" placeholder="New Txn Password" value={newTxnPassword} onChange={e => setNewTxnPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:border-purple-500 outline-none text-sm" />
+                       <button onClick={() => handleChangePassword('txn')} className="w-full py-3 rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white border border-purple-200 font-black text-xs uppercase tracking-wider transition-all mt-2">
                           Update Txn Password
                        </button>
                     </div>
                  </div>
 
              </div>
+          )}
 
-          </div>
       </div>
 
       {/* Message Modal */}

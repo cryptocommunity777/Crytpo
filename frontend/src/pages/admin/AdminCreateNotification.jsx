@@ -123,7 +123,7 @@ const deleteHandler = async (id) => {
               <h3 className="font-semibold mt-2">{n.title}</h3>
               <p className="text-gray-600 text-sm">{n.message}</p>
 
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-black mt-1">
                 Target: {n.target} •{' '}
                 {new Date(n.createdAt).toLocaleString()}
               </p>

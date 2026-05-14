@@ -74,7 +74,7 @@ const IncomeSummary = ({ income = {}, user = {} }) => {
                 <h3 className={`text-xl md:text-2xl font-black ${item.color} tracking-tight`}>
                     {item.value}
                 </h3>
-                <p className="text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-wider mt-1">
+                <p className="text-black text-[10px] md:text-xs font-bold uppercase tracking-wider mt-1">
                     {item.label}
                 </p>
               </div>

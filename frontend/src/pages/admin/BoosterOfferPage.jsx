@@ -227,7 +227,7 @@ const BoosterOfferPage = () => {
                                         
                                         <td className="px-4 py-3 text-center whitespace-nowrap">
                                             <span className="font-bold text-lg text-indigo-600">{user.directCount}</span> 
-                                            <span className="text-sm text-slate-500"> / 5</span>
+                                            <span className="text-sm text-black"> / 5</span>
                                         </td>
 
                                         {/* 🔥 FIX: Directs List Layout */}
@@ -246,7 +246,7 @@ const BoosterOfferPage = () => {
                                             {user.achievedDate ? (
                                                 <span className="text-green-600 font-semibold text-xs">{formatDate(user.achievedDate)}</span>
                                             ) : (
-                                                <span className="text-slate-500 text-xs italic">Pending</span>
+                                                <span className="text-black text-xs italic">Pending</span>
                                             )}
                                         </td>
 
@@ -269,7 +269,7 @@ const BoosterOfferPage = () => {
                                                 <button 
                                                     onClick={() => handleOpenModal(user._id, user.directCount)}
                                                     disabled={user.directCount < 5 || loading}
-                                                    className={`py-1.5 px-4 rounded-lg font-bold transition shadow-sm ${user.directCount >= 5 ? 'bg-indigo-600 hover:bg-indigo-700 text-slate-900 transform hover:scale-105' : 'bg-gray-100 text-slate-500 border border-gray-200 cursor-not-allowed'}`}
+                                                    className={`py-1.5 px-4 rounded-lg font-bold transition shadow-sm ${user.directCount >= 5 ? 'bg-indigo-600 hover:bg-indigo-700 text-slate-900 transform hover:scale-105' : 'bg-gray-100 text-black border border-gray-200 cursor-not-allowed'}`}
                                                 >
                                                     Send $30
                                                 </button>
@@ -289,7 +289,7 @@ const BoosterOfferPage = () => {
                     <button 
                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                         disabled={currentPage === 1}
-                        className={`px-3 md:px-4 py-2 rounded font-semibold transition text-sm ${currentPage === 1 ? 'bg-gray-100 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 text-slate-900 hover:bg-indigo-700 shadow-sm'}`}
+                        className={`px-3 md:px-4 py-2 rounded font-semibold transition text-sm ${currentPage === 1 ? 'bg-gray-100 text-black cursor-not-allowed' : 'bg-indigo-600 text-slate-900 hover:bg-indigo-700 shadow-sm'}`}
                     >
                         Prev
                     </button>
@@ -299,7 +299,7 @@ const BoosterOfferPage = () => {
                     <button 
                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                         disabled={currentPage === totalPages}
-                        className={`px-3 md:px-4 py-2 rounded font-semibold transition text-sm ${currentPage === totalPages ? 'bg-gray-100 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 text-slate-900 hover:bg-indigo-700 shadow-sm'}`}
+                        className={`px-3 md:px-4 py-2 rounded font-semibold transition text-sm ${currentPage === totalPages ? 'bg-gray-100 text-black cursor-not-allowed' : 'bg-indigo-600 text-slate-900 hover:bg-indigo-700 shadow-sm'}`}
                     >
                         Next
                     </button>

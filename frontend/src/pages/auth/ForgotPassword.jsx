@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import api from 'api/axios';
+import api from '../../api/axios';
 import { Link } from 'react-router-dom';
-import { User, ArrowRight, ShieldQuestion } from 'lucide-react';
+import { User, ArrowRight, ShieldQuestion, Globe, Lock } from 'lucide-react';
 
 const ForgotPassword = () => {
   // --- STATE ---
@@ -30,66 +30,75 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans selection:bg-yellow-500/30 overflow-hidden flex items-center justify-center p-4 relative">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-start p-4 pt-24 md:pt-32 relative overflow-hidden font-sans selection:bg-emerald-500/30">
       
-      {/* --- GLOBAL STYLES & ANIMATIONS --- */}
+      {/* --- GLOBAL STYLES & ANIMATIONS (Matching Login/Register) --- */}
       <style>{`
-        @keyframes float {
-          0% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-          100% { transform: translateY(0px); }
-        }
-        .animate-float { animation: float 4s ease-in-out infinite; }
-        
-        .bg-grid-pattern {
-          background-image: radial-gradient(#334155 1px, transparent 1px);
-          background-size: 30px 30px;
-          opacity: 0.2;
-        }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
+        @keyframes pulseGlow { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.1); } }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .animate-pulse-glow { animation: pulseGlow 5s ease-in-out infinite; }
+        .glass-panel { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.5); }
       `}</style>
 
-      {/* Background Grid */}
-      <div className="fixed inset-0 bg-grid-pattern pointer-events-none"></div>
+      {/* Abstract Glowing Orbs */}
+      <div className="fixed top-[-10%] left-[-5%] w-[40vw] h-[40vw] bg-emerald-400/20 blur-[100px] rounded-full pointer-events-none animate-pulse-glow"></div>
+      <div className="fixed bottom-[-10%] right-[-5%] w-[40vw] h-[40vw] bg-green-500/15 blur-[100px] rounded-full pointer-events-none animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
+
+      {/* Navbar */}
+      <nav className="fixed top-0 left-0 w-full z-50 glass-panel shadow-sm px-4 md:px-8 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-3 no-underline group">
+            <span className="text-xl md:text-2xl font-black text-slate-900 tracking-wider">
+              CRYPTO<span className="text-emerald-500">COMMUNITY</span>
+            </span>
+          </Link>
+          <Link to="/login" className="bg-emerald-50 text-emerald-600 font-bold py-2.5 px-6 rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-sm flex items-center gap-2 border border-emerald-100 hover:border-emerald-500">
+            <Lock size={16} /> <span className="hidden sm:inline">Secure Login</span><span className="sm:hidden">Login</span>
+          </Link>
+        </div>
+      </nav>
 
       {/* --- MAIN CONTAINER --- */}
-      <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-slate-700 rounded-3xl shadow-2xl p-8 md:p-10 relative z-10 animate-in fade-in zoom-in duration-500">
+      <div className="w-full max-w-md bg-white border border-slate-100 rounded-[2.5rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] p-6 md:p-10 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700 mt-4">
         
         {/* Header Section */}
         <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-800/80 mb-6 animate-float border border-slate-700 shadow-xl overflow-hidden p-4 text-yellow-500">
-                <ShieldQuestion size={40} strokeWidth={1.5} />
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-50 mb-6 animate-float border border-emerald-100 shadow-[0_10px_25px_rgba(16,185,129,0.15)] text-emerald-500 relative">
+                <div className="absolute inset-0 bg-emerald-400/20 rounded-full animate-ping"></div>
+                <ShieldQuestion size={40} strokeWidth={2} className="relative z-10" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Forgot Password?</h2>
-            <p className="text-slate-400 text-slate-900 mt-2 text-sm">Enter your User ID to reset your password</p>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Forgot Password?</h2>
+            <p className="text-slate-500 font-medium text-sm">Enter your User ID to reset your password</p>
         </div>
 
         {/* Messages */}
         {message && (
-          <div className="mb-6 bg-green-500/10 border border-slate-200 text-green-400 px-4 py-3 rounded-xl text-sm text-center font-medium animate-pulse">
-            {message}
+          <div className="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-600 px-4 py-3 rounded-xl text-sm text-center font-bold animate-in zoom-in duration-300 shadow-sm">
+            ✅ {message}
           </div>
         )}
         {error && (
-          <div className="mb-6 bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm text-center font-medium animate-pulse">
-            {error}
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm text-center font-bold animate-in zoom-in duration-300 shadow-sm">
+            ⚠️ {error}
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handleForgotPassword} className="space-y-6">
+        <form onSubmit={handleForgotPassword} className="space-y-5">
             
             {/* User ID Input */}
-            <div className="relative text-slate-900 group">
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5 ml-1 tracking-wider transition-colors group-focus-within:text-yellow-500">User ID</label>
+            <div className="relative group">
+                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2">User ID</label>
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-slate-500 group-focus-within:text-yellow-500 transition-colors duration-300" />
+                        <User className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                     </div>
                     <input
                         type="text"
                         value={userId}
-                        onChange={(e) => setUserId(e.target.value)}
-                        className="w-full bg-slate-950/50 border border-slate-700/50 text-black rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 transition-all placeholder-slate-600 shadow-inner"
+                        onChange={(e) => setUserId(e.target.value.replace(/\D/g, ''))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-bold focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all placeholder-slate-400"
                         placeholder="Enter your User ID"
                         required
                     />
@@ -100,21 +109,21 @@ const ForgotPassword = () => {
             <button 
                 type="submit" 
                 disabled={loading}
-                className={`w-full py-4 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-black font-bold text-lg shadow-lg shadow-amber-500/20 transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2
-                 ${loading ? 'opacity-70 cursor-not-allowed' : ''}
+                className={`w-full py-4 mt-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-lg shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)] hover:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.7)] transition-all flex items-center justify-center gap-2
+                 ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:-translate-y-1 active:scale-95'}
                 `}
             >
                 {loading ? (
-                    <span className="flex items-center gap-2">
-                        <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <span className="flex items-center gap-2 text-sm tracking-widest uppercase">
+                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Submitting...
+                        SENDING...
                     </span>
                 ) : (
                     <>
-                        Send Reset Link <ArrowRight size={20} strokeWidth={3} />
+                        <span className="text-sm tracking-widest uppercase font-black">Send Reset Link</span> <ArrowRight size={20} strokeWidth={3} />
                     </>
                 )}
             </button>
@@ -122,13 +131,13 @@ const ForgotPassword = () => {
         </form>
 
         {/* Back to Login Link */}
-        <p className="text-center mt-8 text-slate-900 text-slate-400 text-sm">
+        <p className="text-center mt-8 text-slate-500 text-sm font-medium">
             Remembered your password?{' '}
             <Link 
                 to="/login" 
-                className="text-slate-900 hover:text-yellow-400 font-bold transition-all hover:underline decoration-yellow-500/50 underline-offset-4"
+                className="text-emerald-600 hover:text-emerald-700 font-bold transition-all hover:underline decoration-emerald-500/30 underline-offset-4"
             >
-                Login now
+                Login Instead
             </Link>
         </p>
 

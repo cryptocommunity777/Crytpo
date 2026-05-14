@@ -127,31 +127,7 @@ const Dashboard = () => {
       <div className="space-y-6 md:space-y-8 relative z-10">
         
         {/* 🔥 NEW UPDATE: Welcome & Active/Inactive Status Section */}
-        <section className="flex justify-between items-center bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200">
-            <div>
-                <h1 className="text-lg md:text-xl font-black text-slate-800 tracking-tight">
-                    Hi, {user?.name || "User"} 👋
-                </h1>
-                <p className="text-xs md:text-sm font-bold text-slate-500 font-mono mt-0.5 tracking-widest">
-                    ID: {user?.userId}
-                </p>
-            </div>
-            
-            {/* Status Badge */}
-            <div>
-                {user?.isToppedUp ? (
-                    <div className="flex items-center gap-1.5 bg-green-50 px-3 py-1.5 md:px-4 md:py-2 rounded-xl border border-green-200 shadow-sm transition-all">
-                        <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-                        <span className="text-xs md:text-sm font-black text-green-600 uppercase tracking-widest">Active</span>
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-1.5 bg-red-50 px-3 py-1.5 md:px-4 md:py-2 rounded-xl border border-red-200 shadow-sm transition-all">
-                        <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-red-500"></div>
-                        <span className="text-xs md:text-sm font-black text-red-600 uppercase tracking-widest">Inactive</span>
-                    </div>
-                )}
-            </div>
-        </section>
+      
 
         {/* Wallet Balance Container */}
  {/* Wallet Balance Container */}
@@ -160,8 +136,9 @@ const Dashboard = () => {
 </section>
          
         {/* Total System Users Container */}
+      {/* Total System Users Container */}
         <section>
-           <TotalSystemUsers />
+           <TotalSystemUsers user={user} />
         </section>
 
         {/* Referral Link Container */}

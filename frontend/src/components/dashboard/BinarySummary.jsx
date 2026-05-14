@@ -93,7 +93,7 @@
 //           </tbody>
 //         </table>
 
-//         <div className="text-xs text-slate-500 mt-4 space-y-1">
+//         <div className="text-xs text-black mt-4 space-y-1">
 //           <p>ℹ️ Binary income is calculated on the <b>weak leg</b>. Strong leg business is carried forward.</p>
 
 //           <p className={hasWithdrawn100 ? "text-green-400" : "text-red-400"}>

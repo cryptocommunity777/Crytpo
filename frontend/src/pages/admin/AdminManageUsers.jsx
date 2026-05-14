@@ -137,7 +137,7 @@ const AdminManageUsers = () => {
 
         <div className="flex flex-col md:flex-row gap-2 w-full xl:w-auto">
           <div className="relative">
-            <Search size={16} className="absolute top-3 left-3 text-slate-500" />
+            <Search size={16} className="absolute top-3 left-3 text-black" />
             <input type="text" className="border border-gray-300 text-black rounded px-3 py-2 pl-9 w-full md:w-64" placeholder="Search Name / ID" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <select className="border border-gray-300 text-black rounded px-3 py-2 bg-white" value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}>
@@ -215,7 +215,7 @@ const AdminManageUsers = () => {
           <div className="bg-white border p-6 rounded-xl w-full max-w-md shadow-2xl">
              <div className="flex justify-between items-center mb-6">
                 <h3 className="text-gray-800 text-lg font-black uppercase flex items-center gap-2"><ShieldAlert className="text-green-500" /> Change Role</h3>
-                <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-red-500"><X size={24}/></button>
+                <button onClick={() => setIsModalOpen(false)} className="text-black hover:text-red-500"><X size={24}/></button>
              </div>
              <form onSubmit={handleUpdateRole} className="space-y-4">
                 <div>

@@ -116,7 +116,7 @@ const WalletTransferModal = ({ onClose }) => {
           `}</style>
 
           {/* 🔥 UPDATE: Pura kaala dabba hata kar seedha solid 'bg-white' use kiya */}
-          <div className="bg-white w-full max-w-md rounded-3xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden animate-in zoom-in duration-300 transform scale-100">
+          <div className="bg-white  mt-8 w-full max-w-md rounded-3xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden animate-in zoom-in duration-300 transform scale-100">
             
             {/* Ambient Glow */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-100 blur-[60px] pointer-events-none rounded-full"></div>
@@ -130,7 +130,7 @@ const WalletTransferModal = ({ onClose }) => {
                   </div>
                   <div>
                     <h2 className="text-slate-800 font-black text-lg uppercase tracking-wide">P2P Transfer</h2>
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Send funds to user</p>
+                    <p className="text-black text-[10px] font-bold uppercase tracking-widest mt-0.5">Send funds to user</p>
                   </div>
                </div>
                {/* 🔥 UPDATE: Close button to red light style */}
@@ -161,7 +161,7 @@ const WalletTransferModal = ({ onClose }) => {
                  
                  {/* Recipient User ID */}
                  <div>
-                   <label className="block text-[10px] font-bold text-slate-500 mb-1.5 ml-1 uppercase tracking-wider">Recipient User ID</label>
+                   <label className="block text-[10px] font-bold text-black mb-1.5 ml-1 uppercase tracking-wider">Recipient User ID</label>
                    <div className="relative group">
                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                        <User className="h-4 w-4 text-slate-400 group-focus-within:text-green-600 transition-colors" />
@@ -194,7 +194,7 @@ const WalletTransferModal = ({ onClose }) => {
 
                  {/* Amount */}
                  <div>
-                   <label className="block text-[10px] font-bold text-slate-500 mb-1.5 ml-1 uppercase tracking-wider">Amount ($)</label>
+                   <label className="block text-[10px] font-bold text-black mb-1.5 ml-1 uppercase tracking-wider">Amount ($)</label>
                    <div className="relative group">
                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                        <span className="text-slate-400 group-focus-within:text-green-600 font-black text-lg">$</span>
@@ -217,7 +217,7 @@ const WalletTransferModal = ({ onClose }) => {
 
                  {/* Transaction Password */}
                  <div>
-                   <label className="block text-[10px] font-bold text-slate-500 mb-1.5 ml-1 uppercase tracking-wider">Transaction Password</label>
+                   <label className="block text-[10px] font-bold text-black mb-1.5 ml-1 uppercase tracking-wider">Transaction Password</label>
                    <div className="relative group">
                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                        <Lock className="h-4 w-4 text-slate-400 group-focus-within:text-green-600 transition-colors" />

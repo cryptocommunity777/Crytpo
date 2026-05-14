@@ -80,7 +80,7 @@ const WalletHistory = () => {
     
     return transactions.map(txn => {
       let mathImpact = 0;
-      let colorStyle = "text-slate-500"; 
+      let colorStyle = "text-black"; 
       let operator = "";
       let finalDescription = txn.description || ""; 
       let displayTypeUI = "UNKNOWN";
@@ -163,7 +163,7 @@ const WalletHistory = () => {
           } else { 
             // Kisi aur ne aapki ID topup ki (Aapke wallet par koi farq nahi, Impact = 0)
             mathImpact = 0; 
-            colorStyle = "text-slate-500"; 
+            colorStyle = "text-black"; 
             operator = ""; 
           }
           break;
@@ -224,7 +224,7 @@ const WalletHistory = () => {
           <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
              <History className="text-green-500" size={28} /> Wallet Ledger
           </h2>
-          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
+          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
             Main Wallet Transaction History
           </p>
         </div>
@@ -350,11 +350,11 @@ const WalletHistory = () => {
                          ${txn.balance}
                       </td>
 
-                      <td className="p-4 font-mono text-slate-500 text-xs">
+                      <td className="p-4 font-mono text-black text-xs">
                         {partyInfo !== "-" ? <span className="bg-white/5 px-2 py-1 border border-slate-200 rounded">{partyInfo}</span> : "-"}
                       </td>
 
-                      <td className="p-4 text-slate-500 text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={txn.description || "-"}>
+                      <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={txn.description || "-"}>
                         {txn.description || "-"}
                       </td>
 

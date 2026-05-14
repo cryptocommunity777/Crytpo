@@ -86,7 +86,7 @@ const DirectTeamPage = () => {
              </div>
              Direct Team
           </h2>
-          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-2">Manage your direct referrals</p>
+          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-2">Manage your direct referrals</p>
         </div>
       </div>
 
@@ -94,7 +94,7 @@ const DirectTeamPage = () => {
       <div className="grid grid-cols-2 gap-4 md:gap-6 mb-8">
         <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6 shadow-sm relative overflow-hidden flex flex-col justify-center">
           <div className="absolute top-0 right-0 w-24 h-24 bg-green-100 blur-[30px]"></div>
-          <h3 className="text-slate-500 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 mb-2 relative z-10">
+          <h3 className="text-black text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 mb-2 relative z-10">
              <UserPlus size={14} className="text-green-600" /> My Directs
           </h3>
           <p className="text-3xl md:text-4xl font-black text-slate-800 relative z-10">
@@ -104,7 +104,7 @@ const DirectTeamPage = () => {
 
         <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6 shadow-sm relative overflow-hidden flex flex-col justify-center">
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100 blur-[30px]"></div>
-          <h3 className="text-slate-500 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 mb-2 relative z-10">
+          <h3 className="text-black text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 mb-2 relative z-10">
              <Users size={14} className="text-blue-600" /> Total Team
           </h3>
           <p className="text-3xl md:text-4xl font-black text-slate-800 relative z-10">
@@ -130,7 +130,7 @@ const DirectTeamPage = () => {
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto">
-           <span className="text-xs font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">Show:</span>
+           <span className="text-xs font-bold text-black uppercase tracking-widest whitespace-nowrap">Show:</span>
            <select
              value={entriesPerPage}
              onChange={handleEntriesChange}
@@ -166,13 +166,13 @@ const DirectTeamPage = () => {
                 <tr>
                   <td colSpan="8" className="text-center py-10">
                      <svg className="animate-spin h-8 w-8 text-green-500 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                     <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Loading Team Data...</span>
+                     <span className="text-xs font-bold uppercase tracking-widest text-black">Loading Team Data...</span>
                   </td>
                 </tr>
               ) : currentItems.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="text-center py-10">
-                    <span className="text-slate-500 font-bold text-sm uppercase tracking-widest">No Direct Referrals Found</span>
+                    <span className="text-black font-bold text-sm uppercase tracking-widest">No Direct Referrals Found</span>
                   </td>
                 </tr>
               ) : (
@@ -181,7 +181,7 @@ const DirectTeamPage = () => {
                     key={member._id || index}
                     className="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-white"
                   >
-                    <td className="p-4 font-bold text-slate-500 text-center">
+                    <td className="p-4 font-bold text-black text-center">
                       {indexOfFirst + index + 1}
                     </td>
                     <td className="p-4 font-black text-slate-800">
@@ -231,7 +231,7 @@ const DirectTeamPage = () => {
                       </div>
                     </td>
 
-                    <td className="p-4 text-slate-500 font-mono text-xs text-right">
+                    <td className="p-4 text-black font-mono text-xs text-right">
                       {member.createdAt
                         ? new Date(member.createdAt).toLocaleDateString("en-GB")
                         : "-"}
@@ -246,7 +246,7 @@ const DirectTeamPage = () => {
         {/* Pagination Footer */}
         {totalPages > 0 && (
            <div className="p-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4">
-              <span className="text-slate-500 text-[10px] md:text-xs font-black uppercase tracking-widest">
+              <span className="text-black text-[10px] md:text-xs font-black uppercase tracking-widest">
                 Showing {indexOfFirst + 1} to {Math.min(indexOfLast, filtered.length)} of {filtered.length} Entries
               </span>
               

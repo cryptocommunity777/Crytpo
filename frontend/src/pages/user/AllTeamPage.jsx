@@ -115,7 +115,7 @@ const AllTeamPage = () => {
           <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
              <Globe2 className="text-green-500" size={28} /> Global Downline
           </h2>
-          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">Track your entire network structure</p>
+          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">Track your entire network structure</p>
         </div>
       </div>
 
@@ -244,11 +244,11 @@ const AllTeamPage = () => {
                       {u.name || "-"}
                     </td>
 
-                    <td className="p-4 text-slate-500">
+                    <td className="p-4 text-black">
                       {u.country || "-"}
                     </td>
 
-                    <td className="p-4 text-slate-500 font-mono text-xs text-right">
+                    <td className="p-4 text-black font-mono text-xs text-right">
                       {u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-GB") : "-"}
                     </td>
                   </tr>

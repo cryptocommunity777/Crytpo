@@ -61,7 +61,7 @@ const SuccessModal = ({
       </div>
 
       <div className="mt-6 flex flex-col items-center justify-center gap-1">
-        <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+        <span className="text-black text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
            <ShieldCheck size={14} className="text-emerald-500"/> Secured Transaction
         </span>
         <span className="text-slate-600 text-xs font-mono bg-slate-50 px-3 py-1 rounded-lg border border-slate-200 mt-1">
@@ -94,11 +94,11 @@ const SuccessModal = ({
           <SuccessLayout title={wTitle} icon={Landmark} colorClass="text-emerald-600" iconBg="bg-emerald-100">
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 w-full shadow-sm mt-2">
               <div className="flex justify-between items-center border-b border-slate-200 pb-3 mb-3">
-                 <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">User ID</span>
+                 <span className="text-black text-xs font-bold uppercase tracking-widest">User ID</span>
                  <span className="text-slate-800 font-black font-mono text-sm bg-white px-2 py-0.5 rounded border border-slate-200">{userId}</span>
               </div>
               <div className="flex flex-col items-center pt-2">
-                 <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Amount Processed</span>
+                 <span className="text-black text-[10px] font-bold uppercase tracking-widest mb-1">Amount Processed</span>
                  <span className="text-4xl sm:text-5xl font-black text-emerald-600">
                    ${amount}
                  </span>
@@ -111,7 +111,7 @@ const SuccessModal = ({
         return (
           <SuccessLayout title="Deposit Successful" icon={ArrowDownLeft} colorClass="text-emerald-600" iconBg="bg-emerald-100">
              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 w-full shadow-sm mt-2 text-center">
-                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest block mb-2">Fund Added</span>
+                <span className="text-black text-[10px] font-bold uppercase tracking-widest block mb-2">Fund Added</span>
                 <span className="text-4xl sm:text-5xl font-black text-emerald-600">
                   + ${amount}
                 </span>
@@ -125,12 +125,12 @@ const SuccessModal = ({
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 w-full shadow-sm mt-2">
               {source && (
                  <div className="flex justify-between items-center border-b border-slate-200 pb-3 mb-3">
-                   <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Source</span>
+                   <span className="text-black text-xs font-bold uppercase tracking-widest">Source</span>
                    <span className="text-slate-700 font-bold text-xs bg-white px-2 py-0.5 rounded border border-slate-200 capitalize">{source}</span>
                  </div>
               )}
               <div className="flex flex-col items-center pt-1">
-                 <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Amount Added</span>
+                 <span className="text-black text-[10px] font-bold uppercase tracking-widest mb-1">Amount Added</span>
                  <span className="text-4xl font-black text-emerald-600">
                    + ${amount}
                  </span>
@@ -144,11 +144,11 @@ const SuccessModal = ({
           <SuccessLayout title="Transfer Done" icon={ArrowRightLeft} colorClass="text-emerald-600" iconBg="bg-emerald-100">
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 w-full shadow-sm mt-2">
               <div className="flex justify-between items-center border-b border-slate-200 pb-3 mb-3">
-                 <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Sent To</span>
+                 <span className="text-black text-xs font-bold uppercase tracking-widest">Sent To</span>
                  <span className="text-slate-800 font-black font-mono text-sm bg-white px-2 py-0.5 rounded border border-slate-200">{userId}</span>
               </div>
               <div className="flex flex-col items-center pt-1">
-                 <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Transfer Amount</span>
+                 <span className="text-black text-[10px] font-bold uppercase tracking-widest mb-1">Transfer Amount</span>
                  <span className="text-4xl font-black text-emerald-600">
                    ${amount}
                  </span>
@@ -162,11 +162,11 @@ const SuccessModal = ({
           <SuccessLayout title="Node Activated" icon={Zap} colorClass="text-amber-500" iconBg="bg-amber-100">
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 w-full shadow-sm mt-2">
               <div className="flex justify-between items-center border-b border-slate-200 pb-3 mb-3">
-                 <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Target ID</span>
+                 <span className="text-black text-xs font-bold uppercase tracking-widest">Target ID</span>
                  <span className="text-slate-800 font-black font-mono text-sm bg-white px-2 py-0.5 rounded border border-slate-200">{userId}</span>
               </div>
               <div className="flex flex-col items-center pt-1">
-                 <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Activation Value</span>
+                 <span className="text-black text-[10px] font-bold uppercase tracking-widest mb-1">Activation Value</span>
                  <span className="text-4xl sm:text-5xl font-black text-amber-500">
                    ${amount}
                  </span>
@@ -179,7 +179,7 @@ const SuccessModal = ({
         return (
           <SuccessLayout title="Spins Purchased" icon={Gift} colorClass="text-emerald-600" iconBg="bg-emerald-100">
              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 w-full shadow-sm mt-2 text-center">
-                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest block mb-2">Cost: ${amount}</span>
+                <span className="text-black text-[10px] font-bold uppercase tracking-widest block mb-2">Cost: ${amount}</span>
                 <span className="text-4xl font-black text-emerald-600">
                   {spinQuantity} Spins
                 </span>
@@ -191,7 +191,7 @@ const SuccessModal = ({
         return (
           <SuccessLayout title="Spin Reward" icon={Gift} colorClass="text-amber-500" iconBg="bg-amber-100">
              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 w-full shadow-sm mt-2 text-center">
-                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest block mb-2">You Won</span>
+                <span className="text-black text-[10px] font-bold uppercase tracking-widest block mb-2">You Won</span>
                 <span className="text-5xl font-black text-amber-500">
                   ${reward}
                 </span>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Activity, Globe2, Target } from "lucide-react";
 
-// Target nikalne ke liye config
+// Backend ke GLOBAL_POOLS ke hisaab se exact match
 const globalPoolConfig = {
   levels: [
     { level: 1, globalTeam: 20 },
@@ -19,116 +18,88 @@ const globalPoolConfig = {
   ]
 };
 
-// 🔥 Dashboard se user prop aayega
 const TotalSystemUsers = ({ user }) => {
   const [totalSystemUsers, setTotalSystemUsers] = useState(0);
   const [displayGlobalTeam, setDisplayGlobalTeam] = useState(0);
 
-  // 1. Backend se My Community set karna
-  useEffect(() => {
-    if (user?.globalTeamCount !== undefined) {
-      setDisplayGlobalTeam(user.globalTeamCount);
-    }
-  }, [user?.globalTeamCount]);
+  // 🔥 ROBUST CHECK: Top-up check
+  const isUserActive = user?.isToppedUp === true || user?.isToppedUp === "true" || (user?.topUpAmount && user?.topUpAmount > 0);
 
-  // 2. LIVE TICKERS
+  // TICKERS & SYNC LOGIC
   useEffect(() => {
     const LAUNCH_DATE = new Date("2026-05-12T12:00:00Z").getTime();
+    
+    const initialGlobalTeam = user?.globalTeamCount || 0;
+    const MOUNT_TIME = Date.now(); 
 
-    const updateSystemUsers = () => {
+    const updateTickers = () => {
       const now = Date.now();
-      const minutesPassed = Math.max(0, (now - LAUNCH_DATE) / 60000);
-      const synchronizedTotal = Math.floor(minutesPassed * 1.5);
-      setTotalSystemUsers(synchronizedTotal);
+
+      // 1. Total System Users
+      const systemMinutesPassed = Math.max(0, (now - LAUNCH_DATE) / 60000);
+      setTotalSystemUsers(Math.floor(systemMinutesPassed * 1.5));
+
+      // 2. My Community
+      if (isUserActive) {
+        const userMinutesPassed = Math.floor(Math.max(0, (now - MOUNT_TIME) / 60000));
+        setDisplayGlobalTeam(initialGlobalTeam + userMinutesPassed);
+      } else {
+        setDisplayGlobalTeam(initialGlobalTeam);
+      }
     };
 
-    updateSystemUsers(); 
-
-    const interval = setInterval(() => {
-        updateSystemUsers(); 
-        // My Community live update (Agar ID active hai)
-        if (user?.isToppedUp) {
-            setDisplayGlobalTeam(prev => prev + 1);
-        }
-    }, 60000);
+    updateTickers(); 
+    const interval = setInterval(updateTickers, 10000);
 
     return () => clearInterval(interval);
-  }, [user?.isToppedUp]);
+  }, [user?.globalTeamCount, isUserActive]);
 
   // Next Level Target Finder
   const nextLevelObj = globalPoolConfig.levels.find(l => {
-      let cum = 0;
-      const idx = globalPoolConfig.levels.indexOf(l);
-      for(let i=0; i<=idx; i++) cum += globalPoolConfig.levels[i].globalTeam;
-      return cum > displayGlobalTeam;
+    let cum = 0;
+    const idx = globalPoolConfig.levels.indexOf(l);
+    for(let i=0; i<=idx; i++) cum += globalPoolConfig.levels[i].globalTeam;
+    return cum > displayGlobalTeam;
   });
 
   return (
-    // 🔥 Ek hi line me (grid-cols-2) same height ke boxes
-    <div className="grid grid-cols-2 gap-3 md:gap-4 mb-6">
+    <div className="grid grid-cols-2 gap-3 md:gap-4 w-full mb-4">
       
-      {/* BOX 1: TOTAL COMMUNITY */}
-      <div className="relative overflow-hidden p-4 md:p-5 rounded-2xl border border-green-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-300 group flex flex-col justify-between h-full">
-        <div className="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-green-100 blur-[30px] group-hover:blur-[40px] transition-all duration-500 opacity-60 pointer-events-none"></div>
+      {/* ==========================================
+          BOX 1: TOTAL COMMUNITY
+      ========================================== */}
+      <div className="bg-white p-5 md:p-6 rounded-[20px] border border-emerald-50 shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px]">
         
-        <div className="flex items-center justify-between mb-3 relative z-10">
-          <div className="p-2 md:p-3 rounded-xl bg-green-50 text-green-600 border border-green-100 shadow-inner relative">
-            <Activity className="w-5 h-5 md:w-6 md:h-6" strokeWidth={2.5} />
-            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-            </span>
-          </div>
-        </div>
+        {/* Label (Top) */}
+        <p className="text-slate-500 text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
+          Total Community
+        </p>
 
-        <div className="relative z-10">
-          <h3 className="text-xl md:text-3xl font-black text-emerald-600 tracking-tight">
-            {totalSystemUsers.toLocaleString()}
-          </h3>
-          <p className="text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-wider mt-1">
-            Total Community
-          </p>
-        </div>
+        {/* Value (Bottom) */}
+        <h2 className="text-[28px] sm:text-3xl md:text-[40px] font-black text-emerald-600 tracking-tight leading-none">
+          {totalSystemUsers.toLocaleString()}
+        </h2>
+
       </div>
 
-      {/* BOX 2: MY COMMUNITY (Shifted here) */}
-      <div className="relative overflow-hidden p-4 md:p-5 rounded-2xl border border-emerald-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-300 group flex flex-col justify-between h-full">
-        <div className="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-emerald-100 blur-[30px] group-hover:blur-[40px] transition-all duration-500 opacity-60 pointer-events-none"></div>
+      {/* ==========================================
+          BOX 2: MY COMMUNITY (Downline Team)
+      ========================================== */}
+      <div className={`bg-white p-5 md:p-6 rounded-[20px] border shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px] ${isUserActive ? 'border-emerald-50' : 'border-red-50'}`}>
         
-        <div className="flex items-center justify-between mb-3 relative z-10">
-          <div className="p-2 md:p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-inner relative">
-            <Globe2 className="w-5 h-5 md:w-6 md:h-6" strokeWidth={2.5} />
-            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-            </span>
-          </div>
-        </div>
+        {/* Label (Top) */}
+        <p className="text-slate-500 text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
+          My Community
+        </p>
+        
+        {/* Value (Middle/Bottom) */}
+        <h2 className="text-[28px] sm:text-3xl md:text-[40px] font-black text-emerald-600 tracking-tight leading-none">
+          {displayGlobalTeam.toLocaleString()}
+        </h2>
 
-        <div className="relative z-10">
-          <h3 className="text-xl md:text-3xl font-black text-emerald-600 tracking-tight">
-            {displayGlobalTeam.toLocaleString()}
-          </h3>
-          <p className="text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-wider mt-1">
-            My Community
-          </p>
-          
-          {/* Target logic for My Community */}
-          {user?.isToppedUp ? (
-             nextLevelObj && (
-                <div className="mt-2 pt-1.5 border-t border-slate-100 flex items-center gap-1">
-                   <Target size={10} className="text-slate-400" />
-                   <span className="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-wide">
-                      Next: {nextLevelObj.globalTeam} IDs
-                   </span>
-                </div>
-             )
-          ) : (
-             <p className="text-red-600 text-[8px] md:text-[9px] font-bold mt-1 bg-red-50 px-1.5 py-0.5 rounded border border-red-200 inline-block">
-                Top-up to unlock
-             </p>
-          )}
-        </div>
+        {/* Target / Top-up Logic (Extra Bottom) */}
+      
+
       </div>
 
     </div>

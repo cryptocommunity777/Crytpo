@@ -91,7 +91,7 @@
 
 //               <div className="overflow-x-auto">
 //                 {withdrawals.length === 0 ? (
-//                   <p className="text-slate-500 p-4 text-center">Waiting for live transactions...</p>
+//                   <p className="text-black p-4 text-center">Waiting for live transactions...</p>
 //                 ) : (
 //                   <table className="w-full text-left min-w-[700px] whitespace-nowrap">
 //                     <thead>
@@ -158,14 +158,14 @@
 //                     <button 
 //                       onClick={handlePrevPage} 
 //                       disabled={currentPage === 1}
-//                       className={`px-3 py-1 text-sm rounded ${currentPage === 1 ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-slate-600 text-slate-900 hover:bg-slate-500 transition-colors'}`}
+//                       className={`px-3 py-1 text-sm rounded ${currentPage === 1 ? 'bg-slate-700 text-black cursor-not-allowed' : 'bg-slate-600 text-slate-900 hover:bg-slate-500 transition-colors'}`}
 //                     >
 //                       Previous
 //                     </button>
 //                     <button 
 //                       onClick={handleNextPage} 
 //                       disabled={currentPage === totalPages || totalPages === 0}
-//                       className={`px-3 py-1 text-sm rounded ${currentPage === totalPages || totalPages === 0 ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-slate-600 text-slate-900 hover:bg-slate-500 transition-colors'}`}
+//                       className={`px-3 py-1 text-sm rounded ${currentPage === totalPages || totalPages === 0 ? 'bg-slate-700 text-black cursor-not-allowed' : 'bg-slate-600 text-slate-900 hover:bg-slate-500 transition-colors'}`}
 //                     >
 //                       Next
 //                     </button>

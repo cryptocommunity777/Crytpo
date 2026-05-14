@@ -72,7 +72,7 @@ const MyTransfers = () => {
           <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
              <ArrowRightLeft className="text-green-500" size={28} /> P2P Transfers
           </h2>
-          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
+          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
             Manage your sent and received funds
           </p>
         </div>

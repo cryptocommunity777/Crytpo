@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { TrendingUp } from "lucide-react";
 
-// Target nikalne ke liye config (Income Summary wala same logic)
+// Target nikalne ke liye config (IncomeSummary wala same logic)
 const globalPoolConfig = {
   levels: [
     { level: 1, globalTeam: 20, requiredDirects: 1, earning: 10 },
@@ -20,17 +19,19 @@ const globalPoolConfig = {
   ]
 };
 
-// 🔥 Dashboard se ab 'income' prop aayega calculations ke liye
 const WalletBalance = ({ income = {} }) => {
   const { user } = useAuth();
   const [globalGrowthIncome, setGlobalGrowthIncome] = useState(0);
 
-  // 1. Incomes Fetching (Same as IncomeSummary)
+  // 🔥 ID Active/Inactive Check
+  const isUserActive = user?.isToppedUp === true || user?.isToppedUp === "true" || (user?.topUpAmount && user?.topUpAmount > 0);
+
+  // 1. Incomes Fetching
   const directIncome = Number(income.totalDirectIncome) || Number(income.directIncome) || 0;
   const levelIncome = Number(income.totalLevelIncome) || Number(income.levelIncome) || 0;
   const rewardIncome = Number(income.totalRewardIncome) || Number(income.rewardIncome) || Number(user?.rewardIncome) || 0;
 
-  // 2. GLOBAL GROWTH INCOME CALCULATION
+  // 2. COMMUNITY EARNING (Global Growth) CALCULATION (Same as IncomeSummary)
   useEffect(() => {
     if (!user) return;
     const userDirects = user?.directCount || 0; 
@@ -47,33 +48,47 @@ const WalletBalance = ({ income = {} }) => {
     setGlobalGrowthIncome(totalFrontendAchieved);
   }, [user]);
 
-  // 3. 🔥 FINAL CALCULATION: Sab incomes ko jod kar Total Earning banana
+  // 3. TOTAL EARNING CALCULATION (Exact sum of all 4 boxes from IncomeSummary)
   const totalEarning = directIncome + levelIncome + rewardIncome + globalGrowthIncome;
   
   const format = (val) => `$${Number(val || 0).toFixed(2)}`;
 
   return (
-    <div className="bg-white p-5 md:p-6 rounded-2xl border border-emerald-200 shadow-sm hover:shadow-md transition-shadow duration-300 flex items-center justify-between w-full relative overflow-hidden">
+    // Ek hi line me 2 boxes ke liye Grid layout
+    <div className="grid grid-cols-2 gap-3 md:gap-4 w-full">
       
-      {/* Subtle Background Glow */}
-      <div className="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-emerald-100 blur-[30px] opacity-60 pointer-events-none"></div>
-
-      <div className="relative z-10">
-        <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-wider mb-1">
+      {/* ==========================================
+          BOX 1: TOTAL EARNING 
+      ========================================== */}
+      <div className="bg-white p-5 md:p-6 rounded-[20px] border border-emerald-50 shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px]">
+        
+        {/* Label (Top) */}
+        <p className="text-slate-500 text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
           Total Earning
         </p>
-        <h2 className="text-3xl md:text-4xl font-black text-emerald-600 tracking-tight">
+
+        {/* Amount (Bottom) */}
+        <h2 className="text-[28px] sm:text-3xl md:text-[40px] font-black text-emerald-600 tracking-tight leading-none">
            {format(totalEarning)}
         </h2>
+
       </div>
 
-      <div className="relative z-10 p-3 md:p-4 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-inner">
-        <TrendingUp className="w-6 h-6 md:w-8 md:h-8" strokeWidth={2.5} />
-        {/* Live Ping Indicator */}
-        <span className="absolute -top-1 -right-1 flex h-3 w-3">
-           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-           <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-        </span>
+      {/* ==========================================
+          BOX 2: ACCOUNT STATUS
+      ========================================== */}
+      <div className={`bg-white p-5 md:p-6 rounded-[20px] border shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px] ${isUserActive ? 'border-emerald-50' : 'border-red-50'}`}>
+        
+        {/* Label (Top) */}
+        <p className="text-slate-500 text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
+          Account Status
+        </p>
+
+        {/* Status (Bottom) */}
+        <h2 className={`text-[28px] sm:text-3xl md:text-[40px] font-black tracking-tight leading-none uppercase ${isUserActive ? 'text-emerald-600' : 'text-red-500'}`}>
+           {isUserActive ? 'ACTIVE' : 'INACTIVE'}
+        </h2>
+
       </div>
 
     </div>

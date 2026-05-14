@@ -68,7 +68,7 @@ const QuickActions = ({
             </div>
 
             {/* Chhota Text (Neeche Naam) */}
-            <span className="text-[9px] md:text-[11px] font-bold tracking-tight uppercase text-center text-slate-500 group-hover:text-slate-800 transition-colors leading-tight">
+            <span className="text-[9px] md:text-[11px] font-bold tracking-tight uppercase text-center text-black group-hover:text-slate-800 transition-colors leading-tight">
               {action.label}
             </span>
           </button>

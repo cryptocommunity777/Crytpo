@@ -239,13 +239,13 @@
                                      
 //                                      {/* Limit */}
 //                                      <div className="col-span-1">
-//                                          <span className="block text-[10px] text-slate-500 uppercase font-bold">Limit (2x)</span>
+//                                          <span className="block text-[10px] text-black uppercase font-bold">Limit (2x)</span>
 //                                          <span className="text-slate-900 font-bold">${pkg.maxWithdraw}</span>
 //                                      </div>
 
 //                                      {/* Withdrawn */}
 //                                      <div className="col-span-1 text-right">
-//                                          <span className="block text-[10px] text-slate-500 uppercase font-bold">Withdrawn</span>
+//                                          <span className="block text-[10px] text-black uppercase font-bold">Withdrawn</span>
 //                                          <span className={`font-bold ${pkg.withdrawn > 0 ? 'text-emerald-400' : 'text-slate-400'}`}>
 //                                             ${pkg.withdrawn.toFixed(2)}
 //                                          </span>
@@ -256,7 +256,7 @@
 
 //                                      {/* Remaining */}
 //                                      <div className="col-span-2 flex justify-between items-center">
-//                                          <span className="text-[10px] text-slate-500 uppercase font-bold">Remaining</span>
+//                                          <span className="text-[10px] text-black uppercase font-bold">Remaining</span>
 //                                          <span className="text-lg font-bold text-yellow-400">
 //                                             ${(pkg.maxWithdraw - pkg.withdrawn).toFixed(2)}
 //                                          </span>
@@ -272,7 +272,7 @@
 //              /* Empty State */
 //              <div className="col-span-full flex flex-col items-center justify-center py-16 px-4 bg-slate-800/30 rounded-3xl border border-slate-700/50 text-center">
 //                  <div className="bg-slate-800 p-4 rounded-full mb-4 animate-pulse">
-//                     <ShieldAlert size={48} className="text-slate-500" />
+//                     <ShieldAlert size={48} className="text-black" />
 //                  </div>
 //                  <h3 className="text-xl font-bold text-slate-900 mb-2">No Active Packages</h3>
 //                  <p className="text-slate-400 max-w-md mx-auto text-sm">

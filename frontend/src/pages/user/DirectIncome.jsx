@@ -82,7 +82,7 @@ const DirectIncome = () => {
           <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
              <DollarSign className="text-green-500" size={28} /> Direct Income
           </h2>
-          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
+          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
             Track your earnings from direct referrals
           </p>
         </div>
@@ -202,7 +202,7 @@ const DirectIncome = () => {
                       </td>
 
                       {/* Description */}
-                      <td className="p-4 text-slate-500 text-[11px] md:text-xs font-bold tracking-wide capitalize">
+                      <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize">
                         {txn.description || "Direct income"}
                       </td>
 

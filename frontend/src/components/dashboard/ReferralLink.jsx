@@ -23,7 +23,7 @@ const ReferralLinkBox = ({ link }) => {
       <div className="relative z-10">
         
         {/* HEADER */}
-        <h3 className="text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+        <h3 className="text-black text-[10px] md:text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
           <div className="bg-green-50 p-1.5 rounded-lg border border-green-100">
             <Share2 size={16} className="text-green-600" />
           </div>

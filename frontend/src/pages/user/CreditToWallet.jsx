@@ -88,7 +88,7 @@ const CreditToWalletHistory = () => {
           <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
              <Wallet className="text-green-500" size={28} /> Credit To Wallet
           </h2>
-          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
+          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
             Track your internal fund credits and binary income
           </p>
         </div>
@@ -190,7 +190,7 @@ const CreditToWalletHistory = () => {
                         </span>
                       </td>
 
-                      <td className="p-4 font-bold text-slate-500 capitalize">
+                      <td className="p-4 font-bold text-black capitalize">
                         {txn.source || "-"}
                       </td>
 

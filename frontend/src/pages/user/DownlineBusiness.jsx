@@ -115,7 +115,7 @@ const DownlineBusiness = () => {
           <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
              <TrendingUp className="text-green-500" size={28} /> Downline Business
           </h2>
-          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
+          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
             Track your team's node top-up performance
           </p>
         </div>

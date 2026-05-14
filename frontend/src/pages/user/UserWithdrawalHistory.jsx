@@ -89,7 +89,7 @@ function UserWithdrawalHistory() {
     if (s === "pending") return { label: item.status, color: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30" };
     if (s === "rejected" || s === "failed") return { label: item.status, color: "bg-red-500/10 text-red-400 border-red-500/30" };
     
-    return { label: item.status || "UNKNOWN", color: "bg-white/5 text-slate-500 border-slate-200" };
+    return { label: item.status || "UNKNOWN", color: "bg-white/5 text-black border-slate-200" };
   };
 
   return (
@@ -108,7 +108,7 @@ function UserWithdrawalHistory() {
           <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
              <Banknote className="text-green-500" size={28} /> Withdrawal History
           </h2>
-          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
+          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
             Track all your fund withdrawals and schedules
           </p>
         </div>
@@ -205,7 +205,7 @@ function UserWithdrawalHistory() {
                         <td className="p-4 font-bold text-gray-500 text-center">
                           {startIdx + idx + 1}
                         </td>
-                        <td className="p-4 font-bold text-slate-500">
+                        <td className="p-4 font-bold text-black">
                           ${Number(item.grossAmount || 0).toFixed(2)}
                         </td>
                         <td className="p-4 text-red-400 font-bold">
@@ -214,10 +214,10 @@ function UserWithdrawalHistory() {
                         <td className="p-4 font-black text-green-400">
                           ${Number(item.netAmount || 0).toFixed(2)}
                         </td>
-                        <td className="p-4 text-slate-500 capitalize">
+                        <td className="p-4 text-black capitalize">
                           {item.source || "-"}
                         </td>
-                        <td className="p-4 text-slate-500 font-mono text-[10px] sm:text-xs">
+                        <td className="p-4 text-black font-mono text-[10px] sm:text-xs">
                           {item.walletAddress ? (
                             <span className="bg-white/5 px-2 py-1 rounded border border-slate-200">{item.walletAddress}</span>
                           ) : "N/A"}
@@ -253,7 +253,7 @@ function UserWithdrawalHistory() {
                               
                               <div className="overflow-x-auto rounded-xl border border-slate-100">
                                 <table className="w-full text-[10px] sm:text-xs text-left whitespace-nowrap">
-                                  <thead className="bg-white/5 text-slate-500 uppercase tracking-widest">
+                                  <thead className="bg-white/5 text-black uppercase tracking-widest">
                                     <tr>
                                       <th className="p-3 font-bold border-b border-slate-100 text-center">Sr.</th>
                                       <th className="p-3 font-bold border-b border-slate-100">Date</th>
@@ -270,7 +270,7 @@ function UserWithdrawalHistory() {
                                       const statusClass = 
                                         sLower === "approved" || sLower === "success" ? "text-green-400" :
                                         sLower === "pending" ? "text-yellow-400" :
-                                        sLower === "rejected" || sLower === "failed" ? "text-red-400" : "text-slate-500";
+                                        sLower === "rejected" || sLower === "failed" ? "text-red-400" : "text-black";
                                       
                                       const StatusIcon = 
                                         sLower === "approved" || sLower === "success" ? CheckCircle2 :
@@ -280,10 +280,10 @@ function UserWithdrawalHistory() {
                                       return (
                                         <tr key={dayIdx} className="border-b border-slate-100 hover:bg-white/5 transition-colors">
                                           <td className="p-3 text-center text-gray-500 font-bold">{dayIdx + 1}</td>
-                                          <td className="p-3 font-mono text-slate-500">
+                                          <td className="p-3 font-mono text-black">
                                             {new Date(day.date).toLocaleDateString("en-GB")}
                                           </td>
-                                          <td className="p-3 font-bold text-slate-500">${Number(day.grossAmount || 0).toFixed(2)}</td>
+                                          <td className="p-3 font-bold text-black">${Number(day.grossAmount || 0).toFixed(2)}</td>
                                           <td className="p-3 text-red-400/80 font-medium">-${Number(day.fee || 0).toFixed(2)}</td>
                                           <td className="p-3 font-black text-slate-900">${Number(day.netAmount || 0).toFixed(2)}</td>
                                           <td className="p-3 text-green-400 font-bold">{(day.percent || 0) * 2}%</td>

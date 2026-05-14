@@ -116,7 +116,7 @@ export default function Plan() {
         <div className="flex flex-row gap-2 md:gap-4 mb-4 md:mb-6">
            <div className="flex-1 bg-white border border-slate-200 p-3 md:p-5 rounded-xl md:rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
               <div>
-                <p className="text-slate-500 text-[9px] md:text-xs font-bold uppercase tracking-widest mb-0.5"> My Community</p>
+                <p className="text-black text-[9px] md:text-xs font-bold uppercase tracking-widest mb-0.5"> My Community</p>
                 <h3 className="text-xl md:text-3xl font-black text-slate-900 flex items-center gap-2">
                   {userGlobalTeam.toLocaleString()}
                   {isToppedUp && (
@@ -134,7 +134,7 @@ export default function Plan() {
 
            <div className="flex-1 bg-white border border-slate-200 p-3 md:p-5 rounded-xl md:rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
               <div>
-                <p className="text-slate-500 text-[9px] md:text-xs font-bold uppercase tracking-widest mb-0.5">Direct Referrals</p>
+                <p className="text-black text-[9px] md:text-xs font-bold uppercase tracking-widest mb-0.5">Direct Referrals</p>
                 <h3 className="text-xl md:text-3xl font-black text-slate-900">
                   {userDirects}
                 </h3>
@@ -159,8 +159,7 @@ export default function Plan() {
                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Lvl</th>
                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Global Team</th>
                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Directs</th>
-                      <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Daily</th>
-                      <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Total</th>
+                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Total</th>
                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Status</th>
                     </tr>
                   </thead>
@@ -184,11 +183,11 @@ export default function Plan() {
                         <td className="py-2.5 px-2 md:py-3 md:px-4 text-center">
                           <div className="flex flex-col items-center justify-center gap-0.5">
                             <div className="flex items-center gap-1.5">
-                              {lvl.isBigPlan ? <Rocket size={14} className="text-emerald-600" /> : <Users size={14} className="text-slate-500" />}
+                              {lvl.isBigPlan ? <Rocket size={14} className="text-emerald-600" /> : <Users size={14} className="text-black" />}
                               <span className="font-black text-slate-800 text-xs md:text-sm">{lvl.globalTeam.toLocaleString()}</span>
                             </div>
                             {lvl.status === "TEAM_PENDING" && (
-                              <div className="text-[9px] md:text-[10px] text-slate-500 font-mono font-bold mt-0.5 bg-slate-100 px-1.5 rounded">
+                              <div className="text-[9px] md:text-[10px] text-black font-mono font-bold mt-0.5 bg-slate-100 px-1.5 rounded">
                                 ({lvl.currentLevelProgress} / {lvl.globalTeam})
                               </div>
                             )}
@@ -203,14 +202,7 @@ export default function Plan() {
                         </td>
 
                         {/* DAILY INCOME & DAYS */}
-                        <td className="py-2.5 px-2 md:py-3 md:px-4 text-center">
-                          <div className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-1.5">
-                            <span className="text-slate-900 font-black text-xs md:text-sm">${lvl.daily}</span> 
-                            <span className="bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded text-[9px] md:text-[11px] border border-slate-200">
-                              x{lvl.days}d
-                            </span>
-                          </div>
-                        </td>
+                     
 
                         {/* TOTAL EARNING */}
                         <td className="py-2.5 px-2 md:py-3 md:px-4 font-black text-center text-sm md:text-lg text-emerald-600">
@@ -230,7 +222,7 @@ export default function Plan() {
                             </div>
                           )}
                           {lvl.status === "TEAM_PENDING" && (
-                            <div className="inline-flex items-center justify-center gap-1 text-slate-500 bg-slate-100 px-2.5 py-1 rounded border border-slate-200 font-black text-[9px] md:text-[11px] uppercase tracking-wide">
+                            <div className="inline-flex items-center justify-center gap-1 text-black bg-slate-100 px-2.5 py-1 rounded border border-slate-200 font-black text-[9px] md:text-[11px] uppercase tracking-wide">
                               <Lock size={12} strokeWidth={3} /> {lvl.currentLevelProgress === 0 ? "Locked" : "Wait"}
                             </div>
                           )}

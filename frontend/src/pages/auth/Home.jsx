@@ -173,7 +173,7 @@ const Home = () => {
                 <div className="text-theme-green text-4xl md:text-5xl font-black mb-2 drop-shadow-sm">
                   <AnimatedCounter end={stat.end} prefix={stat.prefix} suffix={stat.suffix} decimals={stat.decimals} />
                 </div>
-                <div className="text-slate-500 text-sm uppercase tracking-widest font-bold">{stat.label}</div>
+                <div className="text-black text-sm uppercase tracking-widest font-bold">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -266,7 +266,7 @@ const Home = () => {
               <span className="text-2xl font-black tracking-tight text-slate-900">CRYPTO<span className="text-green-600">COMMUNITY</span></span>
               <p className="text-emerald-700 text-xs font-bold tracking-[0.2em]">LEARN • CONNECT • EARN • LEAD</p>
           </div>
-          <p className="text-slate-500 text-sm max-w-md mx-auto mb-4 leading-relaxed">
+          <p className="text-black text-sm max-w-md mx-auto mb-4 leading-relaxed">
             Together, Growing, Earning. The global standard for community-driven networking. Build wealth seamlessly and infinitely.
           </p>
           <div className="w-16 h-1 bg-green-500/30 mx-auto rounded-full mb-4"></div>

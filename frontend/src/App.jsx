@@ -101,7 +101,7 @@ function AppContent() {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-900">
       <div className="flex flex-col items-center gap-4">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-500"></div>
-        <p className="text-slate-500 text-sm font-medium">Initializing Crypto Network...</p>
+        <p className="text-black text-sm font-medium">Initializing Crypto Network...</p>
       </div>
     </div>
   );
@@ -203,7 +203,7 @@ function AppWithAuthReady() {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-900">
       <div className="flex flex-col items-center gap-4">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-500"></div>
-        <p className="text-slate-500 text-sm">Authenticating Node...</p>
+        <p className="text-black text-sm">Authenticating Node...</p>
       </div>
     </div>
   );

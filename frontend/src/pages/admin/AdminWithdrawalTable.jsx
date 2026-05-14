@@ -462,7 +462,7 @@ if (!value) return 'Transaction hash is required!';
       </thead>
       <tbody className="divide-y divide-gray-200">
         {paginatedData.length === 0 ? (
-          <tr><td colSpan={11} className="text-center py-10 text-slate-500">No withdrawals found.</td></tr>
+          <tr><td colSpan={11} className="text-center py-10 text-black">No withdrawals found.</td></tr>
         ) : (
           paginatedData.map((w, idx) => (
             <tr key={w._id} className="hover:bg-gray-50 transition">
@@ -481,7 +481,7 @@ if (!value) return 'Transaction hash is required!';
 
                   {/* Copy Button */}
                   <FaCopy 
-                    className="cursor-pointer text-slate-500 hover:text-gray-800 transition" 
+                    className="cursor-pointer text-black hover:text-gray-800 transition" 
                     onClick={() => handleCopy(w.userId)} 
                     title="Copy User ID"
                   />
@@ -503,7 +503,7 @@ if (!value) return 'Transaction hash is required!';
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
                   <span className="text-gray-600 font-mono text-xs">{w.walletAddress.slice(0,6)}...{w.walletAddress.slice(-4)}</span>
-                  <FaCopy className="cursor-pointer text-slate-500 hover:text-blue-600" onClick={() => handleCopy(w.walletAddress)} />
+                  <FaCopy className="cursor-pointer text-black hover:text-blue-600" onClick={() => handleCopy(w.walletAddress)} />
                 </div>
               </td>
               

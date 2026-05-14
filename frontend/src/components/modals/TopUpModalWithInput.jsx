@@ -124,52 +124,51 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-hidden">
       
-      {/* 🔥 FIX: Changed bg to solid white (bg-white) so no dark colors bleed through */}
-      <div className="bg-white w-full max-w-md flex flex-col rounded-3xl border border-slate-200 shadow-2xl overflow-hidden relative">
+      {/* Modal Container - Height Compact & Scrollable */}
+      <div className="bg-white w-full max-w-md flex flex-col rounded-3xl border border-slate-200 shadow-2xl overflow-hidden relative max-h-[90vh] animate-in zoom-in duration-300">
         
-        {/* Header */}
-        <div className="bg-slate-50 border-b border-slate-200 p-5 flex justify-between items-center z-20">
+        {/* Header - Padding Reduced */}
+        <div className="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center z-20 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="bg-green-100 p-2 rounded-lg border border-green-200">
-               <Zap size={20} className="text-green-600" />
+            <div className="bg-green-100 p-2 rounded-xl border border-green-200">
+               <Zap size={18} className="text-green-600" />
             </div>
             <div>
-              <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Activate <span className="text-green-600">Node</span></h1>
+              <h1 className="text-lg md:text-xl font-black text-slate-800 tracking-tight">Activate <span className="text-green-600">Node</span></h1>
             </div>
           </div>
-          <button onClick={onClose} className="group bg-white hover:bg-red-50 p-2 rounded-full transition-all border border-slate-200 hover:border-red-200 shadow-sm">
-             <X size={20} className="text-slate-400 group-hover:text-red-500" />
+          <button onClick={onClose} className="group bg-white hover:bg-red-50 p-1.5 md:p-2 rounded-full transition-all border border-slate-200 hover:border-red-200 shadow-sm cursor-pointer">
+             <X size={18} className="text-slate-400 group-hover:text-red-500" />
           </button>
         </div>
 
-        {/* Content Body */}
-        {/* 🔥 FIX: bg-white explicitly set here too */}
-        <div className="flex-1 p-5 md:p-6 space-y-6 z-10 bg-white">
+        {/* Content Body - Scrollable & Padding Reduced */}
+        <div className="flex-1 p-4 md:p-5 space-y-4 z-10 bg-white overflow-y-auto custom-scroll">
           
           {/* Top Info Bar */}
-          <div className="flex justify-between items-center bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <div className="flex justify-between items-center bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
              <div>
-                <span className="text-slate-500 text-[10px] uppercase tracking-wider font-bold block mb-1">Your Balance</span>
-                <div className="text-lg md:text-xl font-black text-slate-800 font-mono">
-                  {walletBalance !== null ? `$${walletBalance.toFixed(2)}` : "Loading..."}
+                <span className="text-black text-[9px] uppercase tracking-wider font-bold block mb-0.5">Your Balance</span>
+                <div className="text-base md:text-lg font-black text-slate-800 font-mono">
+                  {walletBalance !== null ? `$${walletBalance.toFixed(2)}` : "..."}
                 </div>
              </div>
              <div className="text-right">
-                <span className="text-slate-500 text-[10px] uppercase tracking-wider font-bold block mb-1">Package</span>
-                <div className="text-lg md:text-xl font-black text-green-600 font-mono">
+                <span className="text-black text-[9px] uppercase tracking-wider font-bold block mb-0.5">Package</span>
+                <div className="text-base md:text-lg font-black text-green-600 font-mono">
                   ${PACKAGE_AMOUNT}
                 </div>
              </div>
           </div>
 
           {/* User ID Input Section */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Target Node ID</label>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-black uppercase tracking-widest ml-1">Target Node ID</label>
             <div className="flex gap-2">
               <div className="relative flex-1">
                 {isPromoUser ? (
-                  <div className="w-full bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-4 py-3.5 font-bold flex items-center gap-2 shadow-sm">
-                    <ShieldCheck size={18} /> Auto-Generate Demo ID
+                  <div className="w-full bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-3 py-2.5 font-bold flex items-center gap-2 shadow-sm text-xs md:text-sm">
+                    <ShieldCheck size={16} /> Auto-Generate Demo ID
                   </div>
                 ) : (
                   <>
@@ -178,13 +177,13 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
                       placeholder="Enter Node ID"
                       value={userId}
                       onChange={(e) => setUserId(e.target.value)}
-                      className={`w-full bg-slate-50 text-slate-800 rounded-xl px-4 py-3.5 outline-none transition-all placeholder-slate-400 font-mono shadow-inner ${
+                      className={`w-full bg-slate-50 text-slate-800 rounded-xl px-4 py-2.5 md:py-3 outline-none transition-all placeholder-slate-400 font-mono shadow-inner text-xs md:text-sm ${
                           userInfo ? 'border border-green-500 ring-2 ring-green-100' : 'border border-slate-200 focus:border-green-400 focus:ring-2 focus:ring-green-100'
                       }`}
                     />
                     {userInfo && (
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500">
-                        <CheckCircle size={20} />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+                        <CheckCircle size={18} />
                       </div>
                     )}
                   </>
@@ -192,7 +191,7 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
               </div>
               
               {!isPromoUser && !userInfo && (
-                <button onClick={() => fetchUser(userId, true)} className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 px-5 rounded-xl font-bold transition-all shadow-sm">
+                <button onClick={() => fetchUser(userId, true)} className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 px-4 rounded-xl font-bold transition-all shadow-sm text-xs md:text-sm">
                   Check
                 </button>
               )}
@@ -200,54 +199,53 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
 
             {/* Fetched User Info Area */}
             {!isPromoUser && (
-              <div className="mt-2 min-h-[60px]">
+              <div className="mt-1 min-h-[50px]">
                 {userInfo ? (
-                  <div className={`border rounded-xl p-3 flex justify-between items-center transition-all shadow-sm ${isBought ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
+                  <div className={`border rounded-xl p-2.5 flex justify-between items-center transition-all shadow-sm ${isBought ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
                     <div>
-                      <div className="text-slate-800 font-black text-sm">{userInfo.name}</div>
-                      <div className="text-xs font-mono text-slate-500 mt-0.5">ID: {userInfo.userId}</div>
+                      <div className="text-slate-800 font-black text-[11px] md:text-xs">{userInfo.name}</div>
+                      <div className="text-[10px] font-mono text-black mt-0.5">ID: {userInfo.userId}</div>
                     </div>
                     <div className="text-right">
                       {isBought ? (
-                        <div className="text-green-600 font-black text-xs uppercase flex items-center gap-1">
-                           <CheckCircle size={14}/> Active
+                        <div className="text-green-600 font-black text-[10px] uppercase flex items-center gap-1">
+                           <CheckCircle size={12}/> Active
                         </div>
                       ) : (
-                        <div className="text-slate-500 font-bold text-xs uppercase">
+                        <div className="text-black font-bold text-[10px] uppercase">
                            Pending
                         </div>
                       )}
                     </div>
                   </div>
                 ) : (
-                  userId.length > 0 && <div className="text-xs text-slate-400 italic px-2">Checking ID details...</div>
+                  userId.length > 0 && <div className="text-[10px] text-slate-400 italic px-2 pt-1">Checking ID details...</div>
                 )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Footer (Payment Action) */}
-        <div className="bg-slate-50 border-t border-slate-200 p-5 shrink-0 z-20">
-          <div className="space-y-4">
+        {/* Footer (Payment Action) - Padding Reduced & Cancel Added */}
+        <div className="bg-slate-50 border-t border-slate-200 p-4 shrink-0 z-20">
+          <div className="space-y-3">
              <div className="relative">
                 <input
                   type="password"
                   placeholder="Transaction Password"
                   value={transactionPassword}
                   onChange={(e) => setTransactionPassword(e.target.value)}
-                  className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-green-100 focus:border-green-400 outline-none transition-all placeholder-slate-400 font-mono shadow-sm"
+                  className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-4 py-2.5 md:py-3 focus:ring-2 focus:ring-green-100 focus:border-green-400 outline-none transition-all placeholder-slate-400 font-mono shadow-sm text-xs md:text-sm"
                 />
              </div>
              
-             {/* 🔥 FIX: Disabled button looking more clear, Active button looking bold */}
              <button 
                onClick={handleTopUp} 
                disabled={loading || isBought || (!isPromoUser && !userInfo)}
                className={`
-                 w-full py-4 rounded-xl font-black text-lg flex items-center justify-center gap-2 transition-all shadow-sm
+                 w-full py-3 rounded-xl font-black text-sm md:text-base flex items-center justify-center gap-2 transition-all shadow-sm
                  ${loading || isBought || (!isPromoUser && !userInfo) 
-                    ? 'bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300' 
+                    ? 'bg-slate-200 text-black cursor-not-allowed border border-slate-300' 
                     : 'bg-green-600 hover:bg-green-700 text-white shadow-[0_4px_15px_rgba(34,197,94,0.4)] hover:shadow-[0_6px_20px_rgba(34,197,94,0.6)] hover:-translate-y-0.5'}
                `}
              >
@@ -256,6 +254,14 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
                    ACTIVATE NOW <span className={loading || isBought || (!isPromoUser && !userInfo) ? "text-slate-400" : "text-green-200"}>($30)</span>
                  </>
                )}
+             </button>
+
+             {/* 🔥 NEW: Cancel Button added */}
+             <button 
+               onClick={onClose} 
+               className="w-full py-2.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shadow-sm"
+             >
+                Cancel
              </button>
           </div>
         </div>

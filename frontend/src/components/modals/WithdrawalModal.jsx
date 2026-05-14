@@ -163,7 +163,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
       });
 
       if (poolRequestedTotal > 0) {
-          if (!isPromo && poolRequestedTotal > balances.pool) return showMessage("Insufficient Funds", "Total Auto-Pool requested exceeds available balance.");
+          if (!isPromo && poolRequestedTotal > balances.pool) return showMessage("Insufficient Funds", "Total Single leg requested exceeds available balance.");
           items.push({ source: "pool", amount: poolRequestedTotal });
           totalRequested += poolRequestedTotal;
       }
@@ -210,7 +210,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
             <h3 className="text-slate-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
                 <Icon size={12} className={iconColor} /> {title}
             </h3>
-            <span className="text-slate-500 text-[9px] font-bold bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-sm">
+            <span className="text-black text-[9px] font-bold bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-sm">
                 Avail: ${balance.toFixed(2)}
             </span>
         </div>
@@ -288,13 +288,13 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
               {/* INDIVIDUAL AUTO-POOL LEVELS */}
               <div className="mt-1">
-                 <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2 border-b border-slate-100 pb-1.5 flex items-center gap-1.5">
-                    <Layers size={12} className="text-green-600" /> Auto-Pool Incomes
+                 <h3 className="text-black text-[10px] font-black uppercase tracking-widest mb-2 border-b border-slate-100 pb-1.5 flex items-center gap-1.5">
+                    <Layers size={12} className="text-green-600" /> Leg Community Incomes
                  </h3>
                  
                  {unlockedLevels.length === 0 ? (
-                    <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
-                        No Auto-Pool Available
+                    <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-200 text-black text-[10px] font-bold uppercase tracking-widest">
+                        No Leg Community Incomes Available
                     </div>
                  ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -317,7 +317,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
               {/* WALLET ADDRESS & SECURITY */}
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3 mt-1">
                 <div>
-                  <label className="text-[9px] text-slate-500 block mb-1 font-bold uppercase tracking-widest ml-1">
+                  <label className="text-[9px] text-black block mb-1 font-bold uppercase tracking-widest ml-1">
                     USDT (BEP20) ADDRESS
                     {!isAddressMissing && <span className="text-emerald-600 ml-1">(Locked)</span>}
                   </label>
@@ -332,7 +332,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] text-slate-500 block mb-1 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
+                  <label className="text-[9px] text-black block mb-1 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
                   <input 
                     type="password" 
                     autoComplete="new-password"
@@ -360,7 +360,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
                 disabled={loading} 
                 className={`w-2/3 p-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
                   loading 
-                    ? 'bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300' 
+                    ? 'bg-slate-200 text-black cursor-not-allowed border border-slate-300' 
                     : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5'
                 }`}
               >

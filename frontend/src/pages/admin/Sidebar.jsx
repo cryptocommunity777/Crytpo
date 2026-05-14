@@ -95,7 +95,7 @@ const Sidebar = () => {
 
             {/* 🔥 SECURITY SECTION 🔥 */}
             <div className="pt-2 pb-1">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-2">Security</p>
+                <p className="text-xs font-bold text-black uppercase tracking-wider ml-2">Security</p>
             </div>
             
             <NavLink to={`${BASE_PATH}/security`} className={linkClass} onClick={toggleSidebar}>
@@ -108,7 +108,7 @@ const Sidebar = () => {
             </NavLink>
 
             <div className="pt-2 pb-1">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-2">Analytics & Logs</p>
+                <p className="text-xs font-bold text-black uppercase tracking-wider ml-2">Analytics & Logs</p>
             </div>
 
             <NavLink to={`${BASE_PATH}/login-stats`} className={linkClass} onClick={toggleSidebar}>
@@ -120,7 +120,7 @@ const Sidebar = () => {
             </NavLink>
 
             <div className="pt-2 pb-1">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-2">Finance</p>
+                <p className="text-xs font-bold text-black uppercase tracking-wider ml-2">Finance</p>
             </div>
 
             <NavLink to={`${BASE_PATH}/topups`} className={linkClass} onClick={toggleSidebar}>
@@ -157,7 +157,7 @@ const Sidebar = () => {
             </NavLink>
 
             <div className="pt-2 pb-1">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-2">System</p>
+                <p className="text-xs font-bold text-black uppercase tracking-wider ml-2">System</p>
             </div>
 
             <NavLink to={`${BASE_PATH}/add-user`} className={linkClass} onClick={toggleSidebar}>

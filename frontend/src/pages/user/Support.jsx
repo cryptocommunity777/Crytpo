@@ -89,7 +89,7 @@ const Support = () => {
           <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
              <LifeBuoy className="text-green-500" size={28} /> Support Center
           </h2>
-          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
+          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
             We are here to help you 24/7
           </p>
         </div>
@@ -110,7 +110,7 @@ const Support = () => {
               
               {/* Message Input (Mandatory) */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                <label className="block text-xs font-bold text-black uppercase tracking-widest mb-2">
                   Your Message <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
@@ -131,7 +131,7 @@ const Support = () => {
 
               {/* Wallet Address Input (Optional) */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                <label className="block text-xs font-bold text-black uppercase tracking-widest mb-2">
                   Wallet Address <span className="text-gray-600 text-[10px]">(Optional)</span>
                 </label>
                 <div className="relative group">
@@ -151,7 +151,7 @@ const Support = () => {
 
               {/* Optional Info Input */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                <label className="block text-xs font-bold text-black uppercase tracking-widest mb-2">
                   Additional Info <span className="text-gray-600 text-[10px]">(Optional)</span>
                 </label>
                 <div className="relative group">
@@ -221,7 +221,7 @@ const Support = () => {
                 userMessages.map((m) => {
                   
                   // Status UI Logic
-                  let statusColor = "bg-white/5 text-slate-500 border-slate-200";
+                  let statusColor = "bg-white/5 text-black border-slate-200";
                   let StatusIcon = Clock;
                   
                   if (m.status === "Pending") {
@@ -252,13 +252,13 @@ const Support = () => {
                       
                       <div className="flex flex-col gap-1.5">
                         {m.walletAddress && (
-                          <p className="text-[10px] md:text-xs text-slate-500 flex items-center gap-2">
+                          <p className="text-[10px] md:text-xs text-black flex items-center gap-2">
                             <Wallet size={12} className="text-gray-500"/>
                             <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded text-slate-600 font-mono truncate max-w-[200px] sm:max-w-xs">{m.walletAddress}</span>
                           </p>
                         )}
                         {m.optional && (
-                          <p className="text-[10px] md:text-xs text-slate-500 flex items-center gap-2">
+                          <p className="text-[10px] md:text-xs text-black flex items-center gap-2">
                             <Info size={12} className="text-gray-500"/>
                             <span className="text-slate-600 capitalize">{m.optional}</span>
                           </p>

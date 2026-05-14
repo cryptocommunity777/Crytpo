@@ -263,7 +263,7 @@ const UserListTable = () => {
                       <button 
                         onClick={() => handleCopy(user.userId.toString())}
                         title="Copy User ID"
-                        className="text-slate-500 hover:text-gray-700 transition"
+                        className="text-black hover:text-gray-700 transition"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
@@ -289,7 +289,7 @@ const UserListTable = () => {
                         <button 
                           onClick={() => handleCopy(user.depositAddress)}
                           title="Copy Address"
-                          className="text-slate-500 hover:text-gray-700"
+                          className="text-black hover:text-gray-700"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
@@ -338,7 +338,7 @@ const UserListTable = () => {
               disabled={currentPage === 1}
               className={`px-3 py-1 border rounded ${
                 currentPage === 1 
-                  ? 'bg-gray-100 text-slate-500 cursor-not-allowed' 
+                  ? 'bg-gray-100 text-black cursor-not-allowed' 
                   : 'bg-white hover:bg-gray-50 text-gray-700'
               }`}
             >
@@ -354,7 +354,7 @@ const UserListTable = () => {
               disabled={currentPage === totalPages}
               className={`px-3 py-1 border rounded ${
                 currentPage === totalPages 
-                  ? 'bg-gray-100 text-slate-500 cursor-not-allowed' 
+                  ? 'bg-gray-100 text-black cursor-not-allowed' 
                   : 'bg-white hover:bg-gray-50 text-gray-700'
               }`}
             >

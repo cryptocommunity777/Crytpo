@@ -58,10 +58,10 @@
 //           <Clock size={14} className="animate-pulse" /> Time Remaining
 //         </div>
 //         <div className="flex gap-2 text-slate-900 font-mono text-xl font-bold">
-//           <div className="flex flex-col items-center"><span className="text-red-500">{timeLeft.days}</span><span className="text-[10px] text-slate-500 font-sans font-medium uppercase mt-0.5">Days</span></div><span className="text-slate-600">:</span>
-//           <div className="flex flex-col items-center"><span className="text-slate-900">{timeLeft.hours.toString().padStart(2, '0')}</span><span className="text-[10px] text-slate-500 font-sans font-medium uppercase mt-0.5">Hrs</span></div><span className="text-slate-600">:</span>
-//           <div className="flex flex-col items-center"><span className="text-slate-900">{timeLeft.minutes.toString().padStart(2, '0')}</span><span className="text-[10px] text-slate-500 font-sans font-medium uppercase mt-0.5">Min</span></div><span className="text-slate-600">:</span>
-//           <div className="flex flex-col items-center"><span className="text-red-400">{timeLeft.seconds.toString().padStart(2, '0')}</span><span className="text-[10px] text-slate-500 font-sans font-medium uppercase mt-0.5">Sec</span></div>
+//           <div className="flex flex-col items-center"><span className="text-red-500">{timeLeft.days}</span><span className="text-[10px] text-black font-sans font-medium uppercase mt-0.5">Days</span></div><span className="text-slate-600">:</span>
+//           <div className="flex flex-col items-center"><span className="text-slate-900">{timeLeft.hours.toString().padStart(2, '0')}</span><span className="text-[10px] text-black font-sans font-medium uppercase mt-0.5">Hrs</span></div><span className="text-slate-600">:</span>
+//           <div className="flex flex-col items-center"><span className="text-slate-900">{timeLeft.minutes.toString().padStart(2, '0')}</span><span className="text-[10px] text-black font-sans font-medium uppercase mt-0.5">Min</span></div><span className="text-slate-600">:</span>
+//           <div className="flex flex-col items-center"><span className="text-red-400">{timeLeft.seconds.toString().padStart(2, '0')}</span><span className="text-[10px] text-black font-sans font-medium uppercase mt-0.5">Sec</span></div>
 //         </div>
 //       </div>
 

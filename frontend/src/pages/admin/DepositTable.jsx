@@ -210,7 +210,7 @@ const DepositTable = () => {
                       ) : deposit.type === 'manual_credit' || deposit.description?.includes('Manual') ? (
                         <span className="italic text-green-500 font-semibold">Manual Deposit</span>
                       ) : (
-                        <span className="italic text-slate-500">System Deposit (No Hash)</span>
+                        <span className="italic text-black">System Deposit (No Hash)</span>
                       )}
                     </td>
 

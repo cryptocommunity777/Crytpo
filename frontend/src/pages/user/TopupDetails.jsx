@@ -100,7 +100,7 @@ const TopupDetails = () => {
           <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
              <RefreshCcw className="text-green-500" size={28} /> Node Top-Up Details
           </h2>
-          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
+          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
             Track all self and team node activations
           </p>
         </div>
@@ -192,7 +192,7 @@ const TopupDetails = () => {
                   } else if (senderId === user?.userId || descLower.includes("sent")) {
                     tagDetails = { icon: <ArrowUpRight size={12}/>, text: "SENT TOPUP", style: "bg-green-500/10 text-green-400 border-green-500/30" };
                   } else {
-                    tagDetails = { icon: <CheckCircle2 size={12}/>, text: "ACTIVATED", style: "bg-white/5 text-slate-500 border-slate-200" };
+                    tagDetails = { icon: <CheckCircle2 size={12}/>, text: "ACTIVATED", style: "bg-white/5 text-black border-slate-200" };
                   }
 
                   return (
@@ -222,7 +222,7 @@ const TopupDetails = () => {
                          <span className="text-green-400 drop-shadow-[0_0_5px_rgba(249,115,22,0.5)] text-base">${t.amount}</span>
                       </td>
 
-                      <td className="p-4 text-slate-500 text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={t.description || "Top-up package"}>
+                      <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={t.description || "Top-up package"}>
                         {t.description || "Top-up package"}
                       </td>
 

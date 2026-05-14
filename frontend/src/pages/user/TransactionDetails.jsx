@@ -90,7 +90,7 @@ const TransactionDetails = () => {
         colorClass = "text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.3)]"; 
         icon = <ArrowUpRight size={14} className="text-red-400" />;
       } else {
-        icon = <ArrowRightLeft size={14} className="text-slate-500" />;
+        icon = <ArrowRightLeft size={14} className="text-black" />;
       }
     } else if (isCreditType(type)) { 
       display = `+$${amt.toFixed(2)}`; 
@@ -124,7 +124,7 @@ const TransactionDetails = () => {
           <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
              <FileText className="text-green-500" size={28} /> All Transactions
           </h2>
-          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
+          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
             Complete master ledger of your account
           </p>
         </div>
@@ -132,7 +132,7 @@ const TransactionDetails = () => {
         {/* Total Records Badge */}
         <div className="bg-white shadow-sm border border-slate-200 px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg">
            <ListFilter size={16} className="text-green-500" />
-           <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Total Records:</span>
+           <span className="text-black text-xs font-bold uppercase tracking-widest">Total Records:</span>
            <span className="text-slate-900 font-black text-sm">{filtered.length}</span>
         </div>
       </div>
@@ -236,15 +236,15 @@ const TransactionDetails = () => {
                         {display}
                       </td>
 
-                      <td className="p-4 font-mono text-slate-500 text-[10px] sm:text-xs">
+                      <td className="p-4 font-mono text-black text-[10px] sm:text-xs">
                          {txn.fromUserId ? <span className="bg-white/5 px-2 py-1 border border-slate-200 rounded">{String(txn.fromUserId) === String(userId) ? "Self" : txn.fromUserId}</span> : "-"}
                       </td>
 
-                      <td className="p-4 font-mono text-slate-500 text-[10px] sm:text-xs">
+                      <td className="p-4 font-mono text-black text-[10px] sm:text-xs">
                          {txn.toUserId ? <span className="bg-white/5 px-2 py-1 border border-slate-200 rounded">{String(txn.toUserId) === String(userId) ? "Self" : txn.toUserId}</span> : "-"}
                       </td>
 
-                      <td className="p-4 text-slate-500 text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={txn.description || "-"}>
+                      <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={txn.description || "-"}>
                         {txn.description || "-"}
                       </td>
 

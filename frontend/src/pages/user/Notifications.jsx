@@ -45,7 +45,7 @@ const Notifications = () => {
       </h2>
 
       {notifications.length === 0 ? (
-        <p className="text-slate-500">No new notifications.</p>
+        <p className="text-black">No new notifications.</p>
       ) : (
         notifications.map((n) => (
        <div
@@ -98,7 +98,7 @@ backgroundPosition: "right center",
 
     <h3 className="font-semibold">{n.title}</h3>
     <p className="text-gray-200 text-sm mt-1">{n.message}</p>
-    <p className="text-xs text-slate-500 mt-2">
+    <p className="text-xs text-black mt-2">
       {new Date(n.createdAt).toLocaleString()}
     </p>
   </div>

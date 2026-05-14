@@ -60,7 +60,7 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
     setCredits(prev => ({ ...prev, [source]: maxVal }));
   };
 
-  // --- 🔥 UPDATED LOGIC: Handle Credit ---
+  // --- Handle Credit ---
   const handleCredit = async () => {
     let items = [];
     let totalAmount = 0;
@@ -114,23 +114,22 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
     }
   };
 
-  // 🔥 UPDATE: Inline styles removed! Fully converted to Tailwind CSS for Light Theme.
   const IncomeBox = ({ title, icon: Icon, iconColor, source, balance, val }) => (
-      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">
+      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">
         <div className="flex justify-between items-end mb-2 px-1">
-            <h3 className="text-slate-600 text-[11px] font-black uppercase tracking-widest flex items-center gap-1.5">
+            <h3 className="text-slate-600 text-[10px] md:text-[11px] font-black uppercase tracking-widest flex items-center gap-1.5">
                 <Icon size={12} className={iconColor} /> {title}
             </h3>
-            <span className="text-slate-500 text-[10px] font-bold bg-white px-2 py-0.5 rounded border border-slate-200">
+            <span className="text-black text-[9px] md:text-[10px] font-bold bg-white px-1.5 py-0.5 rounded border border-slate-200">
                 Avail: ${balance.toFixed(2)}
             </span>
         </div>
-        <div className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200 shadow-inner">
-            <span className={`${iconColor} font-bold text-lg pl-1`}>$</span>
+        <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-inner">
+            <span className={`${iconColor} font-bold text-base pl-1`}>$</span>
             <input 
                 type="number" 
                 placeholder="0.00" 
-                className="flex-1 bg-transparent border-none text-slate-800 text-base font-black outline-none w-full placeholder-slate-300"
+                className="flex-1 bg-transparent border-none text-slate-800 text-sm font-black outline-none w-full placeholder-slate-300"
                 value={val || ""} 
                 onChange={e => handleInputChange(e, source)} 
                 max={balance} 
@@ -139,7 +138,7 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
             <button 
                 onClick={() => setMaxAmount(source)}
                 disabled={balance === 0}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-600 text-[9px] font-bold px-2.5 py-1 rounded-md transition-colors border border-slate-200 disabled:opacity-50"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-600 text-[9px] font-bold px-2 py-1 rounded-md transition-colors border border-slate-200 disabled:opacity-50"
             >MAX</button>
         </div>
       </div>
@@ -147,7 +146,6 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
 
   return (
     <>
-      {/* 🔥 UPDATE: Light Theme Scrollbars */}
       <style>{`
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
@@ -168,41 +166,41 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
       {!successModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1000] flex justify-center items-center p-4">
           
-          {/* Main Modal Container - Light Theme */}
-          <div className="bg-white w-full max-w-[480px] rounded-[24px] border border-slate-200 shadow-2xl flex flex-col max-h-[95vh] relative overflow-hidden">
+          {/* Main Modal Container - Height Compact & Scrollable */}
+          <div className="bg-white mt-10 w-full max-w-[480px] rounded-[24px] border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden animate-in zoom-in duration-300">
             
             {/* Ambient Glow */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-100 blur-[50px] pointer-events-none rounded-full"></div>
 
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center z-10 shrink-0">
-              <h2 className="text-base font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 m-0">
+            {/* Header - Padding Reduced */}
+            <div className="px-4 py-3.5 border-b border-slate-200 bg-slate-50 flex justify-between items-center z-10 shrink-0">
+              <h2 className="text-[13px] md:text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 m-0">
                 <div className="bg-green-100 p-1.5 rounded-lg">
-                  <ArrowRightLeft size={18} className="text-green-600" /> 
+                  <ArrowRightLeft size={16} className="text-green-600" /> 
                 </div>
                 Credit To Wallet
               </h2>
-              <button onClick={onClose} className="group bg-white hover:bg-red-50 p-2 rounded-full transition-all border border-slate-200 hover:border-red-200 shadow-sm cursor-pointer">
-                 <X size={18} className="text-slate-400 group-hover:text-red-500" />
+              <button onClick={onClose} className="group bg-white hover:bg-red-50 p-1.5 rounded-full transition-all border border-slate-200 hover:border-red-200 shadow-sm cursor-pointer">
+                 <X size={16} className="text-slate-400 group-hover:text-red-500" />
               </button>
             </div>
 
-            {/* Body */}
-            <div className="p-4 md:p-5 overflow-y-auto custom-scroll flex-1 flex flex-col gap-4 bg-white relative z-10">
+            {/* Body - Padding Reduced & Gaps Shrinked */}
+            <div className="p-4 overflow-y-auto custom-scroll flex-1 flex flex-col gap-3 bg-white relative z-10">
               
-              <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
+              <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex items-center justify-between shadow-sm">
                  <div>
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Total Income Available</p>
-                    <h3 className="text-2xl font-black text-slate-800">${totalAvailable.toFixed(2)}</h3>
+                    <p className="text-black text-[9px] font-bold uppercase tracking-widest">Total Income Available</p>
+                    <h3 className="text-xl font-black text-slate-800">${totalAvailable.toFixed(2)}</h3>
                  </div>
                  <div className="text-right">
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Main Wallet</p>
-                    <h3 className="text-xl font-black text-emerald-600">${(available.walletBalance || 0).toFixed(2)}</h3>
+                    <p className="text-black text-[9px] font-bold uppercase tracking-widest">Main Wallet</p>
+                    <h3 className="text-lg font-black text-emerald-600">${(available.walletBalance || 0).toFixed(2)}</h3>
                  </div>
               </div>
 
               {/* INCOME BOXES */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1">
                   <IncomeBox title="Direct Income" icon={Zap} iconColor="text-amber-500" source="direct" balance={availDirect} val={credits.direct} />
                   <IncomeBox title="Level Income" icon={Users} iconColor="text-blue-500" source="level" balance={availLevel} val={credits.level} />
                   <IncomeBox title="Team Reward" icon={Trophy} iconColor="text-indigo-500" source="reward" balance={availReward} val={credits.reward} />
@@ -210,13 +208,13 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
               </div>
 
               {/* SECURITY */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-2">
-                  <label className="text-[10px] text-slate-500 block mb-1.5 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 mt-1">
+                  <label className="text-[9px] text-black block mb-1.5 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
                   <input 
                     type="password" 
                     autoComplete="new-password"
                     placeholder="Enter Transaction Password" 
-                    className="w-full bg-white border border-slate-200 text-slate-800 p-3.5 rounded-xl outline-none font-mono text-xs transition-all shadow-inner focus:border-green-400 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
+                    className="w-full bg-white border border-slate-200 text-slate-800 p-3 rounded-xl outline-none font-mono text-xs transition-all shadow-inner focus:border-green-400 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
                     value={transactionPassword} 
                     onChange={e => setTransactionPassword(e.target.value)} 
                   />
@@ -224,19 +222,29 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
 
             </div>
 
-            {/* ACTION BUTTON */}
-            <div className="px-5 py-4 border-t border-slate-200 bg-slate-50 z-10 shrink-0">
-              <button 
-                onClick={handleCredit} 
-                disabled={loading} 
-                className={`w-full p-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all ${
-                  loading 
-                    ? 'bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300' 
-                    : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-[0_4px_15px_rgba(34,197,94,0.4)] hover:shadow-[0_6px_20px_rgba(34,197,94,0.6)] hover:-translate-y-0.5 active:scale-95'
-                }`}
-              >
-                {loading ? "PROCESSING..." : "CREDIT TO WALLET"}
-              </button>
+            {/* ACTION BUTTONS & Footer */}
+            <div className="p-4 border-t border-slate-200 bg-slate-50 z-10 shrink-0">
+              <div className="space-y-3">
+                 <button 
+                   onClick={handleCredit} 
+                   disabled={loading} 
+                   className={`w-full py-3 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest transition-all ${
+                     loading 
+                       ? 'bg-slate-200 text-black cursor-not-allowed border border-slate-300' 
+                       : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-[0_4px_15px_rgba(34,197,94,0.4)] hover:shadow-[0_6px_20px_rgba(34,197,94,0.6)] hover:-translate-y-0.5 active:scale-95'
+                   }`}
+                 >
+                   {loading ? "PROCESSING..." : "CREDIT TO WALLET"}
+                 </button>
+
+                 {/* 🔥 NEW: Cancel Button */}
+                 <button 
+                   onClick={onClose} 
+                   className="w-full py-2.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shadow-sm"
+                 >
+                    Cancel
+                 </button>
+              </div>
             </div>
 
           </div>
