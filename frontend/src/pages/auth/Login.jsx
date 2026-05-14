@@ -109,7 +109,7 @@ const UserLogin = () => {
   };
 
   return (
-    // 🔥 Split Screen Layout matching Register Page
+    // 🔥 Split Screen Layout
     <div className="min-h-screen bg-white flex font-sans selection:bg-emerald-500/30">
       
       {/* --- LEFT SIDE: BRANDING (Hidden on Mobile, Visible on PC) --- */}
@@ -119,8 +119,8 @@ const UserLogin = () => {
          <div className="absolute bottom-[-10%] right-[-10%] w-[30vw] h-[30vw] bg-green-500/15 blur-[100px] rounded-full pointer-events-none"></div>
 
          <div className="relative z-10">
-            <Link to="/" className="flex items-center gap-3 no-underline group w-fit">
-              <span className="text-2xl font-black text-slate-900 tracking-widest flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-3 no-underline group w-fit hover:opacity-80 transition-opacity">
+              <span className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                 <Globe className="text-emerald-500" /> CRYPTO<span className="text-emerald-500">COMMUNITY</span>
               </span>
             </Link>
@@ -140,7 +140,7 @@ const UserLogin = () => {
          </div>
 
          <div className="relative z-10 flex items-center gap-4 text-slate-500 text-sm font-bold">
-            <span>© 2026 CryptoCommunity</span>
+            <span>© {new Date().getFullYear()} CryptoCommunity</span>
             <span>•</span>
             <span>256-Bit Encrypted</span>
          </div>
@@ -149,130 +149,132 @@ const UserLogin = () => {
       {/* --- RIGHT SIDE: FORM (Full width on Mobile, Half on PC) --- */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-4 sm:p-8 relative overflow-y-auto bg-white">
          
-         {/* Mobile Only Header (Logo -> Home) */}
-         <div className="lg:hidden w-full max-w-md mb-8 flex justify-between items-center mt-4">
-            <Link to="/" className="text-xl font-black text-slate-900 tracking-widest flex items-center gap-1.5 no-underline">
-              <Globe className="text-emerald-500" size={24} /> CRYPTO<span className="text-emerald-500">COM</span>
+         {/* Mobile Only Header (Logo & Register Link) */}
+         <div className="lg:hidden w-full max-w-md mb-8 flex flex-col sm:flex-row justify-between items-center gap-4 mt-4">
+            <Link to="/" className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-1.5 no-underline hover:opacity-80 transition-opacity">
+              <Globe className="text-emerald-500" size={26} /> CRYPTO<span className="text-emerald-500">COMMUNITY</span>
             </Link>
-            <Link to="/register" className="text-sm font-black text-emerald-600 hover:text-emerald-700">Create Account</Link>
+            <Link to="/register" className="text-sm font-black text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors">
+              Create Account
+            </Link>
          </div>
 
-         <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-700 mt-4 md:mt-0">
-           
-           {/* Desktop Header */}
-           <div className="hidden lg:flex justify-between items-center mb-8">
-              <Link to="/" className="text-xl font-black text-slate-900 tracking-wider flex items-center gap-1.5 no-underline">
-                <Globe className="text-emerald-500" size={24} />
-                CRYPTO <span className="text-emerald-500">COM</span>
-              </Link>
-              <Link to="/register" className="text-sm font-bold text-emerald-600 hover:text-emerald-700">
-                Create Account
-              </Link>
-           </div>
+         <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-700 mt-2 md:mt-0">
+            
+            {/* Desktop Header (Logo & Register Link) */}
+            <div className="hidden lg:flex justify-between items-center mb-10">
+               <Link to="/" className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5 no-underline hover:opacity-80 transition-opacity">
+                 <Globe className="text-emerald-500" size={24} />
+                 CRYPTO<span className="text-emerald-500">COMMUNITY</span>
+               </Link>
+               <Link to="/register" className="text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors">
+                 Create Account
+               </Link>
+            </div>
 
-           <div className="mb-6">
-             <h2 className="text-4xl font-black text-slate-900 mb-1">Sign In</h2>
-             <p className="text-slate-500 text-sm font-medium">Access your global network dashboard.</p>
-           </div>
+            <div className="mb-6 text-center lg:text-left">
+              <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-2">Sign In</h2>
+              <p className="text-slate-500 text-sm font-medium">Access your global network dashboard.</p>
+            </div>
 
-           {error && (
-             <div className="mb-6 bg-red-50 border border-red-200 text-red-600 text-xs p-3 rounded-xl font-bold flex items-center gap-2 animate-in slide-in-from-top-2 shadow-sm">
-                 ⚠️ {error}
-             </div>
-           )}
+            {error && (
+              <div className="mb-6 bg-red-50 border border-red-200 text-red-600 text-xs p-3 rounded-xl font-bold flex items-center gap-2 animate-in slide-in-from-top-2 shadow-sm">
+                  ⚠️ {error}
+              </div>
+            )}
 
-           <form onSubmit={handleLogin} className="space-y-4">
-             
-             {/* User ID Field with Saved Users Dropdown */}
-             <div ref={inputRef} className="relative z-20">
-               <div className="relative group">
-                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                     <User className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-                   </div>
-                   <input
-                     type="text"
-                     placeholder="User ID"
-                     value={userId}
-                     onChange={(e) => setUserId(e.target.value.replace(/\D/g, ''))}
-                     onFocus={() => setDropdownOpen(true)}
-                     className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-bold placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all"
-                     required
-                   />
-               </div>
+            <form onSubmit={handleLogin} className="space-y-4">
+              
+              {/* User ID Field with Saved Users Dropdown */}
+              <div ref={inputRef} className="relative z-20">
+                <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="User ID"
+                      value={userId}
+                      onChange={(e) => setUserId(e.target.value.replace(/\D/g, ''))}
+                      onFocus={() => setDropdownOpen(true)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-bold placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all"
+                      required
+                    />
+                </div>
 
-               {/* Dropdown Box */}
-               {dropdownOpen && filteredUsers.length > 0 && (
-                 <div className="absolute top-[105%] left-0 right-0 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden z-50 max-h-48 overflow-y-auto custom-scroll animate-in fade-in slide-in-from-top-2">
-                   {filteredUsers.map((u, idx) => (
-                     <div 
-                       key={idx} 
-                       className="flex items-center justify-between p-3 cursor-pointer hover:bg-emerald-50 border-b border-slate-100 last:border-0 transition-colors"
-                       onClick={() => handleUserSelect(u.id)}
-                     >
-                       <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                           <User size={14} />
-                         </div>
-                         <span className="text-slate-800 font-bold font-mono text-sm">{u.id}</span>
-                       </div>
-                       <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 border border-emerald-200 px-2 py-1 rounded uppercase tracking-wider">
-                         Saved
-                       </span>
-                     </div>
-                   ))}
-                 </div>
-               )}
-             </div>
+                {/* Dropdown Box */}
+                {dropdownOpen && filteredUsers.length > 0 && (
+                  <div className="absolute top-[105%] left-0 right-0 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden z-50 max-h-48 overflow-y-auto custom-scroll animate-in fade-in slide-in-from-top-2">
+                    {filteredUsers.map((u, idx) => (
+                      <div 
+                        key={idx} 
+                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-emerald-50 border-b border-slate-100 last:border-0 transition-colors"
+                        onClick={() => handleUserSelect(u.id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                            <User size={14} />
+                          </div>
+                          <span className="text-slate-800 font-bold font-mono text-sm">{u.id}</span>
+                        </div>
+                        <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 border border-emerald-200 px-2 py-1 rounded uppercase tracking-wider">
+                          Saved
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-             {/* Password Field */}
-             <div className="relative group z-10">
-               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                   <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-               </div>
-               <input
-                 type={showPassword ? 'text' : 'password'}
-                 placeholder="Password"
-                 value={password}
-                 onChange={(e) => setPassword(e.target.value)}
-                 className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 pr-12 text-slate-900 font-bold placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all font-mono"
-                 required
-               />
-               <button
-                 type="button"
-                 onClick={() => setShowPassword(!showPassword)}
-                 className="absolute right-3 top-3.5 text-slate-400 hover:text-emerald-500 transition-colors"
-               >
-                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-               </button>
-             </div>
+              {/* Password Field */}
+              <div className="relative group z-10">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 pr-12 text-slate-900 font-bold placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all font-mono"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3.5 text-slate-400 hover:text-emerald-500 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
 
-             {/* Remember Me & Forgot Password */}
-             <div className="flex items-center justify-between pt-1 pb-2">
-                 <label className="flex items-center gap-2.5 cursor-pointer group">
-                   <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${rememberMe ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'border-slate-300 group-hover:border-emerald-400'}`}>
-                     {rememberMe && <CheckCircle2 size={14} color="#fff" strokeWidth={3} />}
-                   </div>
-                   <span className="text-slate-600 text-sm font-bold select-none group-hover:text-slate-900 transition-colors">
-                     Remember me
-                   </span>
-                 </label>
+              {/* Remember Me & Forgot Password */}
+              <div className="flex items-center justify-between pt-1 pb-2">
+                  <label className="flex items-center gap-2.5 cursor-pointer group" onClick={() => setRememberMe(!rememberMe)}>
+                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${rememberMe ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'border-slate-300 group-hover:border-emerald-400'}`}>
+                      {rememberMe && <CheckCircle2 size={14} color="#fff" strokeWidth={3} />}
+                    </div>
+                    <span className="text-slate-600 text-sm font-bold select-none group-hover:text-slate-900 transition-colors">
+                      Remember me
+                    </span>
+                  </label>
 
-                 <Link to="/forgot-password" className="text-emerald-600 text-sm font-black hover:text-emerald-700 transition-colors">
-                     Forgot Password?
-                 </Link>
-             </div>
+                  <Link to="/forgot-password" className="text-emerald-600 text-sm font-black hover:text-emerald-700 transition-colors">
+                      Forgot Password?
+                  </Link>
+              </div>
 
-             <button type="submit" disabled={loading} className={`w-full py-4 mt-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black text-sm tracking-widest uppercase shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)] hover:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.7)] transition-all flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-wait' : 'hover:-translate-y-1 active:scale-95'}`}>
-               {loading ? (
-                 <>
-                   <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                   AUTHENTICATING...
-                 </>
-               ) : (
-                 <>SECURE LOGIN <ArrowRight size={18} strokeWidth={3} /></>
-               )}
-             </button>
-           </form>
+              <button type="submit" disabled={loading} className={`w-full py-4 mt-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black text-sm tracking-widest uppercase shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)] hover:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.7)] transition-all flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-wait' : 'hover:-translate-y-1 active:scale-95'}`}>
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    AUTHENTICATING...
+                  </>
+                ) : (
+                  <>SECURE LOGIN <ArrowRight size={18} strokeWidth={3} /></>
+                )}
+              </button>
+            </form>
          </div>
       </div>
     </div>

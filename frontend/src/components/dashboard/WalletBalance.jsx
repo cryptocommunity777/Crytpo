@@ -63,7 +63,7 @@ const WalletBalance = ({ income = {} }) => {
       <div className="bg-white p-5 md:p-6 rounded-[20px] border border-emerald-50 shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px]">
         
         {/* Label (Top) */}
-        <p className="text-slate-500 text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
+        <p className=" text-black text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
           Total Earning
         </p>
 
@@ -80,7 +80,7 @@ const WalletBalance = ({ income = {} }) => {
       <div className={`bg-white p-5 md:p-6 rounded-[20px] border shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px] ${isUserActive ? 'border-emerald-50' : 'border-red-50'}`}>
         
         {/* Label (Top) */}
-        <p className="text-slate-500 text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
+        <p className=" text-black text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
           Account Status
         </p>
 

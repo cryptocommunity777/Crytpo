@@ -18,7 +18,8 @@ const globalPoolConfig = {
   ]
 };
 
-const TotalSystemUsers = ({ user }) => {
+// 🔥 Maine "totalRealUsersFromDB" prop add kar diya hai taaki real users bhi Total mein add hon
+const TotalSystemUsers = ({ user, totalRealUsersFromDB = 0 }) => {
   const [totalSystemUsers, setTotalSystemUsers] = useState(0);
   const [displayGlobalTeam, setDisplayGlobalTeam] = useState(0);
 
@@ -27,32 +28,49 @@ const TotalSystemUsers = ({ user }) => {
 
   // TICKERS & SYNC LOGIC
   useEffect(() => {
-    const LAUNCH_DATE = new Date("2026-05-12T12:00:00Z").getTime();
+    // 🔥 TIME ABHI KA SET KAR DIYA HAI: May 14, 2026 (7:45 PM IST)
+    const LAUNCH_DATE = new Date("2026-05-14T14:15:00Z").getTime();
     
-    const initialGlobalTeam = user?.globalTeamCount || 0;
+    // Base Community Numbers
+    const BASE_TOTAL_USERS = 100; 
+    const initialGlobalTeam = user?.globalTeamCount || 0; // Isme backend se real+fake mix aayega
+    
     const MOUNT_TIME = Date.now(); 
 
     const updateTickers = () => {
       const now = Date.now();
 
-      // 1. Total System Users
-      const systemMinutesPassed = Math.max(0, (now - LAUNCH_DATE) / 60000);
-      setTotalSystemUsers(Math.floor(systemMinutesPassed * 1.5));
+      // Fake growth rate: 100 per day = 1 user every 864,000 milliseconds
+      const FAKE_INTERVAL_MS = 864000;
 
-      // 2. My Community
+      // ==========================================
+      // 1. TOTAL SYSTEM USERS (Common For All)
+      // ==========================================
+      const systemTimePassed = Math.max(0, now - LAUNCH_DATE);
+      const totalSystemFakeAdded = Math.floor(systemTimePassed / FAKE_INTERVAL_MS);
+      
+      // FORMULA: Base (24500) + Fake Since Launch + Actual Real Users from Database
+      setTotalSystemUsers(BASE_TOTAL_USERS + totalSystemFakeAdded + totalRealUsersFromDB);
+
+      // ==========================================
+      // 2. MY COMMUNITY (Downline Team)
+      // ==========================================
       if (isUserActive) {
-        const userMinutesPassed = Math.floor(Math.max(0, (now - MOUNT_TIME) / 60000));
-        setDisplayGlobalTeam(initialGlobalTeam + userMinutesPassed);
+        const userTimePassed = Math.max(0, now - MOUNT_TIME);
+        const myTeamLiveFakeAdded = Math.floor(userTimePassed / FAKE_INTERVAL_MS);
+        
+        // FORMULA: Backend's Initial Count (Real+Fake) + Live Fake Ticks (so it doesn't reset on refresh)
+        setDisplayGlobalTeam(initialGlobalTeam + myTeamLiveFakeAdded);
       } else {
         setDisplayGlobalTeam(initialGlobalTeam);
       }
     };
 
     updateTickers(); 
-    const interval = setInterval(updateTickers, 10000);
+    const interval = setInterval(updateTickers, 10000); // Check every 10 seconds
 
     return () => clearInterval(interval);
-  }, [user?.globalTeamCount, isUserActive]);
+  }, [user?.globalTeamCount, isUserActive, totalRealUsersFromDB]);
 
   // Next Level Target Finder
   const nextLevelObj = globalPoolConfig.levels.find(l => {
@@ -71,7 +89,7 @@ const TotalSystemUsers = ({ user }) => {
       <div className="bg-white p-5 md:p-6 rounded-[20px] border border-emerald-50 shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px]">
         
         {/* Label (Top) */}
-        <p className="text-slate-500 text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
+        <p className=" text-black text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
           Total Community
         </p>
 
@@ -88,7 +106,7 @@ const TotalSystemUsers = ({ user }) => {
       <div className={`bg-white p-5 md:p-6 rounded-[20px] border shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px] ${isUserActive ? 'border-emerald-50' : 'border-red-50'}`}>
         
         {/* Label (Top) */}
-        <p className="text-slate-500 text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
+        <p className=" text-black text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
           My Community
         </p>
         
@@ -96,9 +114,6 @@ const TotalSystemUsers = ({ user }) => {
         <h2 className="text-[28px] sm:text-3xl md:text-[40px] font-black text-emerald-600 tracking-tight leading-none">
           {displayGlobalTeam.toLocaleString()}
         </h2>
-
-        {/* Target / Top-up Logic (Extra Bottom) */}
-      
 
       </div>
 

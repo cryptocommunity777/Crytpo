@@ -23,58 +23,63 @@ const startGlobalGrowthCron = () => {
     // =========================================================================
     // 1. HAR 1 MINUTE WALI CRON (Sirf Top-up users ki team badhegi)
     // =========================================================================
-    cron.schedule('* * * * *', async () => {
-        try {
-            // 🔥 MAGIC LOGIC UPDATED: Sirf unki team badhegi jinka isToppedUp true hai!
+   cron.schedule('* * * * *', async () => {
+    try {
+        // 🔥 1. FAKE/SYSTEM GROWTH LOGIC (Target: ~100 per day)
+ // 🔥 Target: ~100 per day (Lagbhag 7% chance har minute)
+const shouldAddFakeUser = Math.random() < (100 / 1440);
+        if (shouldAddFakeUser) {
             await User.updateMany({ isToppedUp: true }, { $inc: { globalTeamCount: 1 } });
-            
-            // Unko dhoondo jinke paas kam se kam 1 direct hai aur ID topup hai
-            const eligibleUsers = await User.find({ directCount: { $gte: 1 }, isToppedUp: true });
-            const todayStr = new Date().toISOString().split('T')[0]; 
+        }
+        
+        // 🔥 2. INCOME DISTRIBUTION LOGIC (Ye hamesha check karega, chahe real user aaye ya fake)
+        // Unko dhoondo jinke paas kam se kam 1 direct hai aur ID topup hai
+        const eligibleUsers = await User.find({ directCount: { $gte: 1 }, isToppedUp: true });
+        const todayStr = new Date().toISOString().split('T')[0]; 
 
-            for (let user of eligibleUsers) {
-                let isUpdated = false;
-                let cumulativeGlobalTeam = 0;
+        for (let user of eligibleUsers) {
+            let isUpdated = false;
+            let cumulativeGlobalTeam = 0;
 
-                for (let lvl of GLOBAL_POOLS) {
-                    cumulativeGlobalTeam += lvl.globalTeam;
+            for (let lvl of GLOBAL_POOLS) {
+                cumulativeGlobalTeam += lvl.globalTeam;
 
-                    if (user.globalTeamCount >= cumulativeGlobalTeam && user.directCount >= lvl.reqDirects) {
-                        const existingPool = user.activePools?.find(p => p.level === lvl.level);
+                if (user.globalTeamCount >= cumulativeGlobalTeam && user.directCount >= lvl.reqDirects) {
+                    const existingPool = user.activePools?.find(p => p.level === lvl.level);
+                    
+                    if (!existingPool) {
+                        if (!user.activePools) user.activePools = [];
                         
-                        if (!existingPool) {
-                            if (!user.activePools) user.activePools = [];
-                            
-                            user.activePools.push({
-                                level: lvl.level,
-                                dailyAmount: lvl.daily,
-                                totalDays: lvl.days,
-                                daysPaid: 1, 
-                                lastPaidDate: todayStr, 
-                                status: 'ACTIVE'
-                            });
+                        user.activePools.push({
+                            level: lvl.level,
+                            dailyAmount: lvl.daily,
+                            totalDays: lvl.days,
+                            daysPaid: 1, 
+                            lastPaidDate: todayStr, 
+                            status: 'ACTIVE'
+                        });
 
-                            user.poolIncome = (user.poolIncome || 0) + lvl.daily;
-                            
-                            await Transaction.create({
-                                userId: user.userId, 
-                                type: 'credit',
-                                source: 'pool',
-                                amount: lvl.daily,
-                                description: `Auto-Pool Level ${lvl.level} Unlocked - Day 1 Income`,
-                                status: 'success'
-                            });
+                        user.poolIncome = (user.poolIncome || 0) + lvl.daily;
+                        
+                        await Transaction.create({
+                            userId: user.userId, 
+                            type: 'credit',
+                            source: 'pool',
+                            amount: lvl.daily,
+                            description: `Auto-Pool Level ${lvl.level} Unlocked - Day 1 Income`,
+                            status: 'success'
+                        });
 
-                            isUpdated = true;
-                        }
+                        isUpdated = true;
                     }
                 }
-                if (isUpdated) await user.save();
             }
-        } catch (err) {
-            console.error('[AUTO-GROWTH] Error:', err);
+            if (isUpdated) await user.save();
         }
-    });
+    } catch (err) {
+        console.error('[AUTO-GROWTH] Error:', err);
+    }
+});
 
     // =========================================================================
     // 2. DAILY MIDNIGHT CRON (Bache hue din ka paisa dene ke liye)
