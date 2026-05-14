@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const User = require('../models/User'); 
+const SystemStat = require('../models/SystemStat'); // 👈 Naya aur professional naam
 const Transaction = require('../models/Transaction'); 
 
 // ✅ 12 Levels Global Auto-Pool Plan Logic ($30)
@@ -21,65 +22,71 @@ const GLOBAL_POOLS = [
 const startGlobalGrowthCron = () => {
 
     // =========================================================================
-    // 1. HAR 1 MINUTE WALI CRON (Sirf Top-up users ki team badhegi)
+    // 1. HAR 1 MINUTE WALI CRON (Growth + Pool Unlock Logic)
     // =========================================================================
-   cron.schedule('* * * * *', async () => {
-    try {
-        // 🔥 1. FAKE/SYSTEM GROWTH LOGIC (Target: ~100 per day)
- // 🔥 Target: ~100 per day (Lagbhag 7% chance har minute)
-const shouldAddFakeUser = Math.random() < (100 / 1440);
-        if (shouldAddFakeUser) {
-            await User.updateMany({ isToppedUp: true }, { $inc: { globalTeamCount: 1 } });
-        }
-        
-        // 🔥 2. INCOME DISTRIBUTION LOGIC (Ye hamesha check karega, chahe real user aaye ya fake)
-        // Unko dhoondo jinke paas kam se kam 1 direct hai aur ID topup hai
-        const eligibleUsers = await User.find({ directCount: { $gte: 1 }, isToppedUp: true });
-        const todayStr = new Date().toISOString().split('T')[0]; 
+    cron.schedule('* * * * *', async () => {
+        try {
+            // 🔥 1. FAKE/SYSTEM GROWTH LOGIC (Target: ~100 per day)
+            // 1 Din = 1440 minutes. 100/1440 = 0.069 (Lagbhag 7% chance har minute)
+           const shouldAddFakeUser = Math.random() < (100 / 1440);
+             
+            if (shouldAddFakeUser) {
+                // A. Sabhi Active/Free Users ki downline badhao (+1) -> "My Community" sync
+                await User.updateMany({}, { $inc: { globalTeamCount: 1 } });
 
-        for (let user of eligibleUsers) {
-            let isUpdated = false;
-            let cumulativeGlobalTeam = 0;
+                // B. SYSTEM TOTAL FAKE COUNT BHI BADHAO (+1) -> "Total Community" sync
+                await SystemStat.findOneAndUpdate({}, { $inc: { globalFakeCount: 1 } }, { upsert: true, returnDocument: 'after' });            
+                
+                // 🔥 Ye terminal me batayega ki cron kaam kar raha hai
+                console.log("✅ Cron Success: +1 User added to Total & My Community!");
+            }        
+            // 🔥 2. POOL UNLOCK DISTRIBUTION LOGIC (Chahe fake aaye ya real)
+            const eligibleUsers = await User.find({ directCount: { $gte: 1 }, isToppedUp: true });
+            const todayStr = new Date().toISOString().split('T')[0]; 
 
-            for (let lvl of GLOBAL_POOLS) {
-                cumulativeGlobalTeam += lvl.globalTeam;
+            for (let user of eligibleUsers) {
+                let isUpdated = false;
+                let cumulativeGlobalTeam = 0;
 
-                if (user.globalTeamCount >= cumulativeGlobalTeam && user.directCount >= lvl.reqDirects) {
-                    const existingPool = user.activePools?.find(p => p.level === lvl.level);
-                    
-                    if (!existingPool) {
-                        if (!user.activePools) user.activePools = [];
+                for (let lvl of GLOBAL_POOLS) {
+                    cumulativeGlobalTeam += lvl.globalTeam;
+
+                    if (user.globalTeamCount >= cumulativeGlobalTeam && user.directCount >= lvl.reqDirects) {
+                        const existingPool = user.activePools?.find(p => p.level === lvl.level);
                         
-                        user.activePools.push({
-                            level: lvl.level,
-                            dailyAmount: lvl.daily,
-                            totalDays: lvl.days,
-                            daysPaid: 1, 
-                            lastPaidDate: todayStr, 
-                            status: 'ACTIVE'
-                        });
+                        if (!existingPool) {
+                            if (!user.activePools) user.activePools = [];
+                            
+                            user.activePools.push({
+                                level: lvl.level,
+                                dailyAmount: lvl.daily,
+                                totalDays: lvl.days,
+                                daysPaid: 1, 
+                                lastPaidDate: todayStr, 
+                                status: 'ACTIVE'
+                            });
 
-                        user.poolIncome = (user.poolIncome || 0) + lvl.daily;
-                        
-                        await Transaction.create({
-                            userId: user.userId, 
-                            type: 'credit',
-                            source: 'pool',
-                            amount: lvl.daily,
-                            description: `Auto-Pool Level ${lvl.level} Unlocked - Day 1 Income`,
-                            status: 'success'
-                        });
+                            user.poolIncome = (user.poolIncome || 0) + lvl.daily;
+                            
+                            await Transaction.create({
+                                userId: user.userId, 
+                                type: 'credit',
+                                source: 'pool',
+                                amount: lvl.daily,
+                                description: `Auto-Pool Level ${lvl.level} Unlocked - Day 1 Income`,
+                                status: 'success'
+                            });
 
-                        isUpdated = true;
+                            isUpdated = true;
+                        }
                     }
                 }
+                if (isUpdated) await user.save();
             }
-            if (isUpdated) await user.save();
+        } catch (err) {
+            console.error('[AUTO-GROWTH] Error:', err);
         }
-    } catch (err) {
-        console.error('[AUTO-GROWTH] Error:', err);
-    }
-});
+    });
 
     // =========================================================================
     // 2. DAILY MIDNIGHT CRON (Bache hue din ka paisa dene ke liye)
@@ -95,6 +102,7 @@ const shouldAddFakeUser = Math.random() < (100 / 1440);
                 for (let pool of user.activePools) {
                     if (pool.status === 'ACTIVE' && pool.daysPaid < pool.totalDays) {
                         
+                        // Agar aaj ka paisa pehle hi mil chuka hai (jaise unlock wale din), toh skip karo
                         if (pool.lastPaidDate === todayStr) {
                             continue; 
                         }
@@ -106,7 +114,7 @@ const shouldAddFakeUser = Math.random() < (100 / 1440);
                             type: 'credit',
                             source: 'pool',
                             amount: pool.dailyAmount,
-                            description: `Daily Auto-Pool Income Level ${pool.level} (Day ${pool.daysPaid + 1} of ${pool.totalDays})`,
+                            description: `Daily Single Leg Community Income Level ${pool.level} (Day ${pool.daysPaid + 1} of ${pool.totalDays})`,
                             status: 'success'
                         });
 

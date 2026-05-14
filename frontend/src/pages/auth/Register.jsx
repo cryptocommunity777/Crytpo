@@ -194,7 +194,7 @@ function Register() {
                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-green-600">Global Network</span>
             </h1>
             <p className="text-slate-600 text-lg leading-relaxed font-medium">
-               Join the most advanced auto-pool system. Secure, transparent, and built for massive scaling. 
+               Join the most advanced Single Leg Community system. Secure, transparent, and built for massive scaling. 
             </p>
          </div>
 
@@ -305,7 +305,7 @@ function Register() {
                         <Phone className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                     </div>
                     <input type="tel" placeholder="Mobile Number" value={mobile} onChange={handleMobileChange} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-bold placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all font-mono" />
-                    {country === 'India' && <span className="absolute right-3 top-4 text-[9px] md:text-[10px] text-emerald-700 font-black bg-emerald-100 px-2 py-1 rounded-md uppercase">10 Digits</span>}
+                    {country === 'India' }
                   </div>
               </div>
 

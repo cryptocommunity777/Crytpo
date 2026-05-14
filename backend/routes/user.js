@@ -12,13 +12,35 @@ const { bot } = require('../utils/telegramBot');
 
  const checkFeature = require("../middleware/checkFeatureEnabled");
 // Controllers
+// Controllers ko import kiya
 const {
   getUserById,
   blockUser,
   unblockUser,
   getAllUsers,
+  getSponsorName // 👈 Ye add kiya hai naye logic ke liye
 } = require('../controllers/userController');
 
+// ==========================================
+// 🚀 ROUTES DEFINITION
+// ==========================================
+
+// 📋 Get all users (Admin ke liye)
+router.get('/all', getAllUsers);
+
+// 👤 Get Sponsor Name (Register page par verification ke liye)
+router.get('/sponsor/:id', getSponsorName);
+
+// 🔒 Block user (Admin)
+router.put('/block/:id', blockUser);
+
+// 🔓 Unblock user (Admin)
+router.put('/unblock/:id', unblockUser);
+
+ 
+// 🔍 Get User By ID (Dashboard data, real + fake count yahan se jayega)
+// ⚠️ ISE SABSE NEECHE HI RAKHNA HAI
+router.get('/:id', getUserById);
 // ---------------------------
 // Helper: Check if target is in downline
 const isUserInDownline = async (rootUserId, targetUserId) => {
@@ -277,12 +299,9 @@ router.get('/wallet-history/:userId', async (req, res) => {
 });
 
  // Block/Unblock Users
-router.put('/block/:id', blockUser);
-router.put('/unblock/:id', unblockUser);
-
+ 
 // ---------------------------
 // All Users
-router.get('/', getAllUsers);
 
 // ---------------------------
   // ---------------------------

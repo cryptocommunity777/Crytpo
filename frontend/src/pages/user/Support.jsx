@@ -130,44 +130,10 @@ const Support = () => {
               </div>
 
               {/* Wallet Address Input (Optional) */}
-              <div>
-                <label className="block text-xs font-bold text-black uppercase tracking-widest mb-2">
-                  Wallet Address <span className="text-gray-600 text-[10px]">(Optional)</span>
-                </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                    <Wallet size={16} className="text-gray-500 group-focus-within:text-green-500 transition-colors" />
-                  </div>
-                  <input
-                    type="text"
-                    value={walletAddress}
-                    onChange={(e) => setWalletAddress(e.target.value)}
-                    placeholder="Enter wallet address if applicable..."
-                    className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-medium rounded-xl px-4 py-3 pl-10 focus:border-green-500 focus:outline-none transition-all placeholder-slate-400 disabled:opacity-50"
-                    disabled={loading}
-                  />
-                </div>
-              </div>
+            
 
               {/* Optional Info Input */}
-              <div>
-                <label className="block text-xs font-bold text-black uppercase tracking-widest mb-2">
-                  Additional Info <span className="text-gray-600 text-[10px]">(Optional)</span>
-                </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                    <Info size={16} className="text-gray-500 group-focus-within:text-green-500 transition-colors" />
-                  </div>
-                  <input
-                    type="text"
-                    value={optional}
-                    onChange={(e) => setOptional(e.target.value)}
-                    placeholder="Txn ID, references, etc."
-                    className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-medium rounded-xl px-4 py-3 pl-10 focus:border-green-500 focus:outline-none transition-all placeholder-slate-400 disabled:opacity-50"
-                    disabled={loading}
-                  />
-                </div>
-              </div>
+           
 
               {statusMsg.text && statusMsg.type === "error" && (
                 <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl flex items-center gap-3">

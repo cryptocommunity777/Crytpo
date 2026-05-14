@@ -24,6 +24,10 @@ const Dashboard = () => {
   const [walletRefreshKey, setWalletRefreshKey] = useState(0);
   const [loading, setLoading] = useState(false);
   
+  // 🔥 NAYI STATES: Backend se aaye hue Real aur Fake count ko store karne ke liye
+  const [totalRealUsers, setTotalRealUsers] = useState(0);
+  const [globalFakeCount, setGlobalFakeCount] = useState(0);
+  
   const [income, setIncome] = useState({
     directIncome: 0,
     levelIncome: 0,
@@ -52,8 +56,14 @@ const Dashboard = () => {
     if (!token || !user?.userId) return;
     try {
         setLoading(true);
+        // Dashboard data fetch kar rahe hain
         const userRes = await api.get(`/user/${user.userId}?t=${new Date().getTime()}`, { headers: { Authorization: `Bearer ${token}` } });
+        
         setUser(userRes.data.user); 
+        
+        // 🔥 BACKEND SE AAYA HUA REAL AUR FAKE COUNT YAHAN SET KARO
+        setTotalRealUsers(userRes.data.totalRealUsers || 0);
+        setGlobalFakeCount(userRes.data.globalFakeCount || 0);
 
         const incomeRes = await api.get(`/wallet/${user.userId}?t=${new Date().getTime()}`, { headers: { Authorization: `Bearer ${token}` } });
         
@@ -126,19 +136,19 @@ const Dashboard = () => {
 
       <div className="space-y-6 md:space-y-8 relative z-10">
         
-        {/* 🔥 NEW UPDATE: Welcome & Active/Inactive Status Section */}
-      
-
         {/* Wallet Balance Container */}
- {/* Wallet Balance Container */}
-<section>
-    <WalletBalance userId={user.userId} refreshKey={walletRefreshKey} income={income} />
-</section>
+        <section>
+          <WalletBalance userId={user.userId} refreshKey={walletRefreshKey} income={income} />
+        </section>
          
         {/* Total System Users Container */}
-      {/* Total System Users Container */}
         <section>
-           <TotalSystemUsers user={user} />
+           {/* 🔥 YAHAN PAR DONO VALUES BHEJI HAIN COMPONENT KO */}
+           <TotalSystemUsers 
+             user={user} 
+             totalRealUsersFromDB={totalRealUsers} 
+             globalFakeCount={globalFakeCount} 
+           />
         </section>
 
         {/* Referral Link Container */}

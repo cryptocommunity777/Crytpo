@@ -78,7 +78,7 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
       checkAndPush("direct", credits.direct, availDirect, "Direct Income");
       checkAndPush("level", credits.level, availLevel, "Level Income");
       checkAndPush("reward", credits.reward, availReward, "Team Reward");
-      checkAndPush("pool", credits.pool, availPool, "Auto-Pool Income");
+      checkAndPush("pool", credits.pool, availPool, "Single Leg Community Income");
 
       if (totalAmount < 5) {
         return showMessage("Warning", `Minimum credit amount is $5.`, "warning");
@@ -204,7 +204,7 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
                   <IncomeBox title="Direct Income" icon={Zap} iconColor="text-amber-500" source="direct" balance={availDirect} val={credits.direct} />
                   <IncomeBox title="Level Income" icon={Users} iconColor="text-blue-500" source="level" balance={availLevel} val={credits.level} />
                   <IncomeBox title="Team Reward" icon={Trophy} iconColor="text-indigo-500" source="reward" balance={availReward} val={credits.reward} />
-                  <IncomeBox title="Auto-Pool Income" icon={Layers} iconColor="text-emerald-500" source="pool" balance={availPool} val={credits.pool} />
+                  <IncomeBox title="Single Leg Community Income" icon={Layers} iconColor="text-emerald-500" source="pool" balance={availPool} val={credits.pool} />
               </div>
 
               {/* SECURITY */}

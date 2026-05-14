@@ -744,7 +744,7 @@ router.post(
           if (simReward < amt) return res.status(400).json({ message: "Insufficient Team Reward Income." });
           simReward -= amt;
         } else if (item.source === "pool") {
-          if (availablePoolBalance < amt) return res.status(400).json({ message: "Insufficient Auto-Pool Income." });
+          if (availablePoolBalance < amt) return res.status(400).json({ message: "Insufficient Single Leg Community Income." });
           availablePoolBalance -= amt;
         } else {
           return res.status(400).json({ message: `Invalid source: ${item.source}` });

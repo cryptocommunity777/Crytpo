@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { CheckCircle, Lock, Users, Rocket, UserPlus, Globe2, AlertTriangle } from "lucide-react";
+import { CheckCircle, Lock, Users, UserPlus, Globe2, AlertTriangle } from "lucide-react";
 
-// ✅ Light & Green Theme Pattern & Glass Card Styles (Compact & Bright)
+// ✅ Clean & Simple Theme
 const customStyles = `
   .bg-grid-light {
     background-color: transparent;
@@ -18,11 +18,15 @@ const customStyles = `
     transition: all 0.3s ease;
   }
   .glass-row:hover {
-    background: rgba(34, 197, 94, 0.05); /* Light Green Hover */
+    background: rgba(248, 250, 252, 1); /* Very light hover */
   }
-  .big-plan-row {
-    background: linear-gradient(90deg, rgba(34, 197, 94, 0.08), transparent);
-    border-left: 4px solid #22c55e;
+  /* ✅ Achieved/Filled Pool Row Custom Green Style */
+  .achieved-row {
+    background-color: #ecfdf5 !important; /* Tailwind emerald-50 */
+    border-left: 4px solid #10b981 !important; /* Emerald 500 border */
+  }
+  .achieved-row:hover {
+    background-color: #d1fae5 !important; /* Tailwind emerald-100 on hover */
   }
 `;
 
@@ -30,18 +34,18 @@ const customStyles = `
 const globalPoolConfig = {
   totalTarget: 12200,
   levels: [
-    { level: 1, globalTeam: 20, requiredDirects: 1, daily: 1, days: 10, earning: 10, isBigPlan: false },
-    { level: 2, globalTeam: 40, requiredDirects: 1, daily: 1, days: 20, earning: 20, isBigPlan: false },
-    { level: 3, globalTeam: 100, requiredDirects: 1, daily: 1, days: 40, earning: 40, isBigPlan: false },
-    { level: 4, globalTeam: 200, requiredDirects: 1, daily: 1, days: 80, earning: 80, isBigPlan: false },
-    { level: 5, globalTeam: 400, requiredDirects: 1, daily: 1, days: 150, earning: 150, isBigPlan: false },
-    { level: 6, globalTeam: 1600, requiredDirects: 1, daily: 1, days: 200, earning: 200, isBigPlan: false },
-    { level: 7, globalTeam: 2000, requiredDirects: 2, daily: 2, days: 250, earning: 500, isBigPlan: true },
-    { level: 8, globalTeam: 3000, requiredDirects: 2, daily: 2, days: 350, earning: 700, isBigPlan: true },
-    { level: 9, globalTeam: 4000, requiredDirects: 2, daily: 2, days: 500, earning: 1000, isBigPlan: true },
-    { level: 10, globalTeam: 5000, requiredDirects: 2, daily: 3, days: 500, earning: 1500, isBigPlan: true },
-    { level: 11, globalTeam: 7500, requiredDirects: 2, daily: 6, days: 500, earning: 3000, isBigPlan: true },
-    { level: 12, globalTeam: 10000, requiredDirects: 2, daily: 10, days: 500, earning: 5000, isBigPlan: true }
+    { level: 1, globalTeam: 20, requiredDirects: 1, daily: 1, days: 10, earning: 10 },
+    { level: 2, globalTeam: 40, requiredDirects: 1, daily: 1, days: 20, earning: 20 },
+    { level: 3, globalTeam: 100, requiredDirects: 1, daily: 1, days: 40, earning: 40 },
+    { level: 4, globalTeam: 200, requiredDirects: 1, daily: 1, days: 80, earning: 80 },
+    { level: 5, globalTeam: 400, requiredDirects: 1, daily: 1, days: 150, earning: 150 },
+    { level: 6, globalTeam: 1600, requiredDirects: 1, daily: 1, days: 200, earning: 200 },
+    { level: 7, globalTeam: 2000, requiredDirects: 2, daily: 2, days: 250, earning: 500 },
+    { level: 8, globalTeam: 3000, requiredDirects: 2, daily: 2, days: 350, earning: 700 },
+    { level: 9, globalTeam: 4000, requiredDirects: 2, daily: 2, days: 500, earning: 1000 },
+    { level: 10, globalTeam: 5000, requiredDirects: 2, daily: 3, days: 500, earning: 1500 },
+    { level: 11, globalTeam: 7500, requiredDirects: 2, daily: 6, days: 500, earning: 3000 },
+    { level: 12, globalTeam: 10000, requiredDirects: 2, daily: 10, days: 500, earning: 5000 }
   ]
 };
 
@@ -49,6 +53,7 @@ export default function Plan() {
   const { user } = useAuth();
   const [activeData, setActiveData] = useState(null);
 
+  // 🔥 My Community from Backend
   const userGlobalTeam = user?.globalTeamCount || 0; 
   const userDirects = user?.directCount || 0;
   const isToppedUp = user?.isToppedUp || false;
@@ -97,22 +102,19 @@ export default function Plan() {
       <style>{customStyles}</style>
       <div className="absolute inset-0 bg-grid-light pointer-events-none"></div>
 
-      {/* Subtle Green Glows */}
-      <div className="absolute top-0 right-0 w-40 h-40 bg-green-400/10 blur-[90px] pointer-events-none rounded-full"></div>
-      
       <div className="relative z-10 w-full px-2 sm:px-4 md:px-6">
         
-        {/* 🛑 INACTIVE USER WARNING (Light Theme adapted) */}
+        {/* 🛑 INACTIVE USER WARNING */}
         {!isToppedUp && (
            <div className="mb-4 md:mb-6 p-3 md:p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-pulse shadow-sm">
               <AlertTriangle className="text-red-500 shrink-0 w-6 h-6 md:w-8 md:h-8" />
               <p className="text-red-600 text-[10px] md:text-sm font-bold">
-                 Your ID is inactive. Top-up with <span className="text-red-800 font-black">$30</span> to start building your  My Community and unlock Auto-Pool incomes!
+                 Your ID is inactive. Top-up with <span className="text-red-800 font-black">$30</span> to start building your My Community and unlock Single Leg Community Incomes!
               </p>
            </div>
         )}
 
-        {/* ✅ USER METRICS (COMPACT & BRIGHT) */}
+        {/* ✅ USER METRICS */}
         <div className="flex flex-row gap-2 md:gap-4 mb-4 md:mb-6">
            <div className="flex-1 bg-white border border-slate-200 p-3 md:p-5 rounded-xl md:rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
               <div>
@@ -148,96 +150,109 @@ export default function Plan() {
         {activeData && (
           <div className="w-full">
             
-            {/* ✅ NORMAL TABLE (Light Theme) */}
+            {/* ✅ TABLE START */}
             <div className="glass-table-wrapper border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden shadow-sm">
               <div className="overflow-x-auto w-full custom-scroll">
                 <table className="w-full text-[10px] md:text-sm text-left whitespace-nowrap">
                   
                   {/* COLUMNS HEADER */}
-                  <thead className="text-green-700 text-[9px] md:text-xs uppercase tracking-widest border-b border-slate-200 bg-slate-50">
+                  <thead className="text-slate-600 text-[9px] md:text-xs uppercase tracking-widest border-b border-slate-200 bg-slate-50">
                     <tr>
                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Lvl</th>
                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Global Team</th>
                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Directs</th>
-                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Total</th>
+                      <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Total Earning</th>
                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Status</th>
                     </tr>
                   </thead>
 
                   {/* ROWS */}
                   <tbody>
-                    {activeData.levels.map((lvl) => (
-                      <tr 
-                        key={lvl.level} 
-                        className={`border-b border-slate-100 glass-row ${lvl.isBigPlan ? 'big-plan-row bg-green-50/30' : 'bg-white'}`}
-                      >
-                        
-                        {/* LEVEL NO */}
-                        <td className="py-2.5 px-2 md:py-3 md:px-4">
-                          <div className={`w-6 h-6 md:w-8 md:h-8 mx-auto rounded-full flex items-center justify-center text-[10px] md:text-sm font-black ${lvl.isBigPlan ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-slate-800 shadow-sm' : 'bg-green-100 border border-green-200 text-green-700'}`}>
-                            {lvl.level}
-                          </div>
-                        </td>
+                    {activeData.levels.map((lvl) => {
+                      const isAchieved = lvl.status === "ACHIEVED";
+                      // 🔥 NAYA LOGIC: Agar pool bhar gaya hai (chahe direct ho ya na ho), row Green hogi!
+                      const isPoolFilled = lvl.status === "ACHIEVED" || lvl.status === "DIRECT_PENDING";
 
-                        {/* GLOBAL TEAM */}
-                        <td className="py-2.5 px-2 md:py-3 md:px-4 text-center">
-                          <div className="flex flex-col items-center justify-center gap-0.5">
-                            <div className="flex items-center gap-1.5">
-                              {lvl.isBigPlan ? <Rocket size={14} className="text-emerald-600" /> : <Users size={14} className="text-black" />}
-                              <span className="font-black text-slate-800 text-xs md:text-sm">{lvl.globalTeam.toLocaleString()}</span>
+                      return (
+                        <tr 
+                          key={lvl.level} 
+                          className={`border-b border-slate-100 glass-row ${isPoolFilled ? 'achieved-row' : 'bg-white'}`}
+                        >
+                          
+                          {/* LEVEL NO */}
+                          <td className="py-2.5 px-2 md:py-3 md:px-4">
+                            <div className={`w-6 h-6 md:w-8 md:h-8 mx-auto rounded-full flex items-center justify-center text-[10px] md:text-sm font-black transition-colors ${
+                              isPoolFilled 
+                              ? 'bg-emerald-500 text-white shadow-sm' 
+                              : 'bg-slate-100 border border-slate-200 text-slate-600'
+                            }`}>
+                              {lvl.level}
                             </div>
-                            {lvl.status === "TEAM_PENDING" && (
-                              <div className="text-[9px] md:text-[10px] text-black font-mono font-bold mt-0.5 bg-slate-100 px-1.5 rounded">
-                                ({lvl.currentLevelProgress} / {lvl.globalTeam})
+                          </td>
+
+                          {/* GLOBAL TEAM */}
+                          <td className="py-2.5 px-2 md:py-3 md:px-4 text-center">
+                            <div className="flex flex-col items-center justify-center gap-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <Users size={14} className={isPoolFilled ? "text-emerald-600" : "text-slate-400"} />
+                                <span className={`font-black text-xs md:text-sm ${isPoolFilled ? 'text-emerald-800' : 'text-slate-800'}`}>
+                                  {lvl.globalTeam.toLocaleString()}
+                                </span>
+                              </div>
+                              {lvl.status === "TEAM_PENDING" && (
+                                <div className="text-[9px] md:text-[10px] text-slate-500 font-mono font-bold mt-0.5 bg-slate-50 border border-slate-100 px-1.5 rounded">
+                                  ({lvl.currentLevelProgress} / {lvl.globalTeam})
+                                </div>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* REQUIRED DIRECTS (Iska color normal rahega jab tak achieve na ho jaye) */}
+                          <td className="py-2.5 px-2 md:py-3 md:px-4 text-center">
+                            <span className={`px-2.5 py-1 md:px-3 md:py-1.5 rounded-md border text-[9px] md:text-xs font-black inline-block ${
+                              isAchieved 
+                              ? 'bg-emerald-100/50 border-emerald-200 text-emerald-700' 
+                              : 'bg-slate-50 border-slate-200 text-slate-600'
+                            }`}>
+                              {lvl.requiredDirects} Direct
+                            </span>
+                          </td>
+
+                          {/* TOTAL EARNING */}
+                          <td className={`py-2.5 px-2 md:py-3 md:px-4 font-black text-center text-sm md:text-lg ${isPoolFilled ? 'text-emerald-600' : 'text-slate-700'}`}>
+                            ${lvl.earning.toLocaleString()}
+                          </td>
+
+                          {/* STATUS (Ye waise ka waisa hi rahega jaisa aapne bola) */}
+                          <td className="py-2.5 px-2 md:py-3 md:px-4 text-center">
+                            {lvl.status === "ACHIEVED" && (
+                              <div className="inline-flex items-center justify-center gap-1 text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded border border-emerald-200 font-black text-[9px] md:text-[11px] uppercase tracking-wide">
+                                <CheckCircle size={12} strokeWidth={3} /> Done
                               </div>
                             )}
-                          </div>
-                        </td>
-
-                        {/* REQUIRED DIRECTS */}
-                        <td className="py-2.5 px-2 md:py-3 md:px-4 text-center">
-                          <span className={`px-2.5 py-1 md:px-3 md:py-1.5 rounded-md border text-[9px] md:text-xs font-black inline-block ${lvl.requiredDirects > 1 ? 'bg-green-100 border-green-200 text-green-700' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>
-                            {lvl.requiredDirects} Direct
-                          </span>
-                        </td>
-
-                        {/* DAILY INCOME & DAYS */}
-                     
-
-                        {/* TOTAL EARNING */}
-                        <td className="py-2.5 px-2 md:py-3 md:px-4 font-black text-center text-sm md:text-lg text-emerald-600">
-                          ${lvl.earning.toLocaleString()}
-                        </td>
-
-                        {/* STATUS */}
-                        <td className="py-2.5 px-2 md:py-3 md:px-4 text-center">
-                          {lvl.status === "ACHIEVED" && (
-                            <div className="inline-flex items-center justify-center gap-1 text-green-700 bg-green-100 px-2.5 py-1 rounded border border-green-200 font-black text-[9px] md:text-[11px] uppercase tracking-wide">
-                              <CheckCircle size={12} strokeWidth={3} /> Done
-                            </div>
-                          )}
-                          {lvl.status === "DIRECT_PENDING" && (
-                            <div className="inline-flex items-center justify-center gap-1 text-amber-700 bg-amber-100 px-2.5 py-1 rounded border border-amber-200 font-black text-[9px] md:text-[11px] uppercase tracking-wide">
-                              <UserPlus size={12} strokeWidth={3} /> Direct
-                            </div>
-                          )}
-                          {lvl.status === "TEAM_PENDING" && (
-                            <div className="inline-flex items-center justify-center gap-1 text-black bg-slate-100 px-2.5 py-1 rounded border border-slate-200 font-black text-[9px] md:text-[11px] uppercase tracking-wide">
-                              <Lock size={12} strokeWidth={3} /> {lvl.currentLevelProgress === 0 ? "Locked" : "Wait"}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                            {lvl.status === "DIRECT_PENDING" && (
+                              <div className="inline-flex items-center justify-center gap-1 text-amber-700 bg-amber-100 px-2.5 py-1 rounded border border-amber-200 font-black text-[9px] md:text-[11px] uppercase tracking-wide">
+                                <UserPlus size={12} strokeWidth={3} /> Direct Req
+                              </div>
+                            )}
+                            {lvl.status === "TEAM_PENDING" && (
+                              <div className="inline-flex items-center justify-center gap-1 text-slate-500 bg-slate-100 px-2.5 py-1 rounded border border-slate-200 font-black text-[9px] md:text-[11px] uppercase tracking-wide">
+                                <Lock size={12} strokeWidth={3} /> {lvl.currentLevelProgress === 0 ? "Locked" : "Wait"}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
 
                   {/* ✅ TOTAL FOOTER */}
-                  <tfoot className="bg-green-50 border-t border-green-200">
+                  <tfoot className="bg-slate-50 border-t border-slate-200">
                     <tr>
-                      <td colSpan="4" className="py-4 px-4 text-right font-black uppercase tracking-widest text-[11px] md:text-xs text-green-700">
+                      <td colSpan="3" className="py-4 px-4 text-right font-black uppercase tracking-widest text-[11px] md:text-xs text-slate-600">
                         Total Potential Income
                       </td>
-                      <td colSpan="2" className="py-4 px-4 text-left font-black text-xl md:text-2xl text-emerald-600">
+                      <td colSpan="2" className="py-4 px-4 text-left font-black text-xl md:text-2xl text-slate-800">
                         ${activeData.totalTarget.toLocaleString()}
                       </td>
                     </tr>

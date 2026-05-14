@@ -10,9 +10,7 @@ const ReferralLinkBox = ({ link }) => {
     setTimeout(() => setCopied(false), 2000); // Reset after 2s
   };
 
-  const whatsappShare = `https://wa.me/?text=Join%20the%20Global%20Auto-Pool%20using%20my%20referral%20link:%20${encodeURIComponent(link)}`;
-  const telegramShare = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=Join%20the%20Global%20Auto-Pool%20using%20my%20referral%20link`;
-
+  
   return (
     // 🔥 UPDATE: Background changed to bright white with slate border
     <div className="relative overflow-hidden bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm group w-full">

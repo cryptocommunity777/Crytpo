@@ -11,7 +11,7 @@ const withdrawalSchema = new mongoose.Schema({
       // 🔥 NAYE $30 PLAN KE INCOME SOURCES 🔥
       "direct",   // Direct Referral Income
       "level",    // Standard Team Level Income
-      "pool",     // ✅ 12-Level Global Auto-Pool Income
+      "pool",     // ✅ 12-Level Global Single Leg Community Income
       "reward",   // Team Reward Income
       "wallet",   // Agar Main Wallet se seedha total withdraw ho raha hai
       "mixed",    // Agar multiple incomes ek sath withdraw ho rahi hain
