@@ -66,7 +66,7 @@ const userSchema = new mongoose.Schema({
   boosterRewardPaid: { type: Boolean, default: false },
 
   // ==========================================
-  // 💰 ALL 4 INCOMES TRACKING (WITHDRAWABLE WALLETS)
+  // 💰 ALL 5 INCOMES TRACKING (WITHDRAWABLE WALLETS) 🔥 4 se 5 kar diya
   // ==========================================
   directIncome: { type: Number, default: 0 },
   totalDirectIncome: { type: Number, default: 0 }, 
@@ -81,6 +81,10 @@ const userSchema = new mongoose.Schema({
   rewardIncome: { type: Number, default: 0 },     
   totalRewardIncome: { type: Number, default: 0 },
   
+  // ⚡ NAYA: FAST TRACK INCOME TRACKER ADD KIYA
+  fastTrackIncome: { type: Number, default: 0 },
+  totalFastTrackIncome: { type: Number, default: 0 },
+
   // 🏆 NEW: Team Reward Claim Tracker (Target paisa dobara na mile)
   claimedRewards: { type: [Number], default: [] }, 
 

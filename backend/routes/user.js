@@ -9,7 +9,7 @@ const authMiddleware = require('../middleware/authMiddleware');
  const DummyTransaction = require('../models/DummyTransaction');
 const DummyUser = require('../models/DummyUser.js'); // 🔥 Naya model
 const { bot } = require('../utils/telegramBot');
-
+const FastTrack = require('../models/FastTrack');
  const checkFeature = require("../middleware/checkFeatureEnabled");
 // Controllers
 // Controllers ko import kiya
@@ -449,7 +449,6 @@ router.put(
         targetUser.isToppedUp = true;
         targetUser.topUpDate = new Date();
 
-        // 👇👇 YAHAN SE NAYA CODE SHURU 👇👇
         // ✨ MAGIC LOGIC: Asli User ke Top-up karte hi baaki saare Active users ki Global Team Count badha do!
         try {
             await User.updateMany(
@@ -459,7 +458,6 @@ router.put(
         } catch (globalErr) {
             console.error("Global Team Increment Error during Top-up:", globalErr);
         }
-        // 👆👆 NAYA CODE KHATAM 👆👆
 
         // 🌟 SPONSOR DIRECT COUNT & DIRECT INCOME (Level 1)
         if (targetUser.sponsorId) {
@@ -485,6 +483,37 @@ router.put(
                     description: `Direct Bonus (10%) from ${targetUser.name}'s Node Activation`,
                     status: 'success'
                 });
+
+                // 👇👇👇 YAHAN SE FAST TRACK KA NAYA CODE SHURU 👇👇👇
+                // =======================================================
+                // 🔥 NEW: FAST TRACK OFFER ENGINE 🔥
+                // =======================================================
+                // Check karo kya Sponsor abhi bhi apne 30-din ke window me hai (from Registration/createdAt date)
+                if (sponsor.createdAt) {
+                    const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+                    const timeSinceRegistration = new Date().getTime() - new Date(sponsor.createdAt).getTime();
+
+                    // Agar registration ko 30 din se kam huye hain (Yani Offer Chalu hai)
+                    if (timeSinceRegistration <= thirtyDaysInMs) {
+                        try {
+                            const FastTrack = require('../models/FastTrack'); // Jo model humne banaya
+                            
+                            // Ek nayi entry bana do is direct ke liye
+                            await FastTrack.create({
+                                sponsorId: sponsor.userId,
+                                directUserId: targetUser.userId,
+                                dailyAmount: 1, // Har direct ka $1 daily
+                                daysPaid: 0,    // Abhi ek bhi din ka paisa nahi diya hai
+                                maxDays: 10,    // 10 din tak dena hai
+                                status: 'active'
+                            });
+                            console.log(`🚀 FastTrack Offer activated for Sponsor ${sponsor.userId} due to Direct ${targetUser.userId}`);
+                        } catch (ftErr) {
+                            console.error("Fast Track Entry Error:", ftErr);
+                        }
+                    }
+                }
+                // 👆👆👆 NAYA CODE KHATAM 👆👆👆
 
                 // =======================================================
                 // 🏆 TEAM REWARD (BONANZA) SYSTEM CHECK (STRONG/OTHER)

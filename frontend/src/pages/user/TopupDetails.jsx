@@ -134,12 +134,12 @@ const TopupDetails = () => {
             <thead className="bg-slate-50 text-green-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center">Sr.</th>
+                                <th className="p-4 font-black text-right">Date & Time</th>
                 <th className="p-4 font-black">Action</th>
                 <th className="p-4 font-black">Sender ID</th>
                 <th className="p-4 font-black">Receiver ID</th>
                 <th className="p-4 font-black text-center">Amount</th>
                 <th className="p-4 font-black">Details</th>
-                <th className="p-4 font-black text-right">Date & Time</th>
               </tr>
             </thead>
 
@@ -191,6 +191,9 @@ const TopupDetails = () => {
                       <td className="p-4 font-bold text-gray-500 text-center">
                         {indexOfFirstRow + idx + 1}
                       </td>
+                        <td className="p-4 text-gray-500 font-mono text-xs text-right">
+                        {t.createdAt ? format(new Date(t.createdAt), "dd MMM yyyy, HH:mm") : "N/A"}
+                      </td>
 
                       <td className="p-4">
                         <span className={`flex items-center gap-1.5 w-fit border py-1 px-2.5 rounded-md text-[9px] font-black tracking-widest ${tagDetails.style}`}>
@@ -214,9 +217,7 @@ const TopupDetails = () => {
                         {t.description || "Top-up package"}
                       </td>
 
-                      <td className="p-4 text-gray-500 font-mono text-xs text-right">
-                        {t.createdAt ? format(new Date(t.createdAt), "dd MMM yyyy, HH:mm") : "N/A"}
-                      </td>
+                    
                     </tr>
                   );
                 })

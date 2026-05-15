@@ -81,7 +81,10 @@ const Dashboard = () => {
           totalLevelIncome: incomeRes.data.income?.totalLevelIncome || 0,
           totalRewardIncome: incomeRes.data.income?.totalRewardIncome || 0,
           totalSpinIncome: incomeRes.data.income?.totalSpinIncome || 0,
+          fastTrackIncome: incomeRes.data.fastTrackIncome || incomeRes.data.income?.fastTrackIncome || 0,
+          totalFastTrackIncome: incomeRes.data.totalFastTrackIncome || incomeRes.data.income?.totalFastTrackIncome || 0,
         });
+
 
         // NAYA FETCH: Top 5 Global Community Members
         try {

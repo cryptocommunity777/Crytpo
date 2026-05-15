@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 
-// Target nikalne ke liye config (Directs hata diya gaya hai)
 const globalPoolConfig = {
   levels: [
     { level: 1, globalTeam: 20, earning: 10 },
@@ -26,12 +25,15 @@ const WalletBalance = ({ income = {} }) => {
   // 🔥 ID Active/Inactive Check
   const isUserActive = user?.isToppedUp === true || user?.isToppedUp === "true" || (user?.topUpAmount && user?.topUpAmount > 0);
 
-  // 1. Incomes Fetching
+  // 1. Incomes Fetching (Ab isme Fast Track bhi hai)
   const directIncome = Number(income.totalDirectIncome) || Number(income.directIncome) || 0;
   const levelIncome = Number(income.totalLevelIncome) || Number(income.levelIncome) || 0;
   const rewardIncome = Number(income.totalRewardIncome) || Number(income.rewardIncome) || Number(user?.rewardIncome) || 0;
+  
+  // 🔥 NAYA: Fast Track Income Extract kiya
+  const fastTrackIncome = Number(income.totalFastTrackIncome) || Number(income.fastTrackIncome) || Number(user?.totalFastTrackIncome) || 0;
 
-  // 2. COMMUNITY EARNING (Global Growth) CALCULATION (Direct Count Removed)
+  // 2. COMMUNITY EARNING (Global Growth) CALCULATION
   useEffect(() => {
     if (!user) return;
 
@@ -41,7 +43,6 @@ const WalletBalance = ({ income = {} }) => {
 
     globalPoolConfig.levels.forEach((lvl) => {
       cumulative += lvl.globalTeam;
-      // ✅ Ab sirf Global Team check ho rahi hai, direct count nahi
       if (realGlobalTeamCount >= cumulative) {
         totalFrontendAchieved += lvl.earning;
       }
@@ -49,17 +50,15 @@ const WalletBalance = ({ income = {} }) => {
     setGlobalGrowthIncome(totalFrontendAchieved);
   }, [user]);
 
-  // 3. TOTAL EARNING CALCULATION
-  const totalEarning = directIncome + levelIncome + rewardIncome + globalGrowthIncome;
+  // 3. 🔥 UPDATED TOTAL EARNING: Ab isme fastTrackIncome bhi add ho gaya hai
+  const totalEarning = directIncome + levelIncome + rewardIncome + globalGrowthIncome + fastTrackIncome;
   
   const format = (val) => `$${Number(val || 0).toFixed(2)}`;
 
   return (
     <div className="grid grid-cols-2 gap-3 md:gap-4 w-full">
       
-      {/* ==========================================
-          BOX 1: TOTAL EARNING 
-      ========================================== */}
+      {/* BOX 1: TOTAL EARNING */}
       <div className="bg-white p-5 md:p-6 rounded-[20px] border border-emerald-50 shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px]">
         <p className=" text-black text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
           Total Earning
@@ -69,9 +68,7 @@ const WalletBalance = ({ income = {} }) => {
         </h2>
       </div>
 
-      {/* ==========================================
-          BOX 2: ACCOUNT STATUS
-      ========================================== */}
+      {/* BOX 2: ACCOUNT STATUS */}
       <div className={`bg-white p-5 md:p-6 rounded-[20px] border shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px] ${isUserActive ? 'border-emerald-50' : 'border-red-50'}`}>
         <p className=" text-black text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
           Account Status

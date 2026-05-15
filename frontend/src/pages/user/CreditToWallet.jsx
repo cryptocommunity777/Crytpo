@@ -13,7 +13,7 @@ const CreditToWalletHistory = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+ useEffect(() => {
     if (!userId) {
       setErrorMessage("User ID not found. Please log in again.");
       setLoading(false);
@@ -21,10 +21,13 @@ const CreditToWalletHistory = () => {
     }
 
     setLoading(true);
-    // 🔥 CACHE FIX: URL ke end mein ?t=${new Date().getTime()} add kiya hai
+    // 🔥 CACHE FIX
     api.get(`/wallet/history/${userId}?t=${new Date().getTime()}`)
       .then((res) => {
-        const creditTxs = (res.data || [])
+        // 🎯 THE FIX: res.data.history use karna hai (Kyunki backend dabba bhej raha hai)
+        const rawData = res.data.history ? res.data.history : (Array.isArray(res.data) ? res.data : []);
+
+        const creditTxs = rawData
           .filter(
             (tx) =>
               tx.type === "credit_to_wallet" || tx.type === "binary_income"
@@ -129,10 +132,11 @@ const CreditToWalletHistory = () => {
             <thead className="bg-slate-50 text-green-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center w-16">Sr.</th>
+                                <th className="p-4 font-black text-right">Date & Time</th>
+
                 <th className="p-4 font-black">Type</th>
                 <th className="p-4 font-black">Source</th>
                 <th className="p-4 font-black text-center">Amount</th>
-                <th className="p-4 font-black text-right">Date & Time</th>
               </tr>
             </thead>
             <tbody className="text-slate-600">
@@ -162,6 +166,12 @@ const CreditToWalletHistory = () => {
                       <td className="p-4 font-bold text-gray-500 text-center">
                         {indexOfFirst + idx + 1}
                       </td>
+                      <td className="p-4 text-gray-500 font-mono text-[10px] sm:text-xs text-right">
+                        <div className="flex flex-col items-end">
+                           <span className="text-slate-600">{date.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                           <span>{date.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                        </div>
+                      </td>
 
                       <td className="p-4">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border ${
@@ -184,12 +194,7 @@ const CreditToWalletHistory = () => {
                         </span>
                       </td>
 
-                      <td className="p-4 text-gray-500 font-mono text-[10px] sm:text-xs text-right">
-                        <div className="flex flex-col items-end">
-                           <span className="text-slate-600">{date.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                           <span>{date.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                        </div>
-                      </td>
+                      
                     </tr>
                   );
                 })

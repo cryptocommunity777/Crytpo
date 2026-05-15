@@ -13,7 +13,7 @@ const WalletHistory = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Allowed types for Main Wallet History
+  // ✅ Allowed types for Main Wallet
   const allTypes = [
     "deposit",
     "credit_to_wallet",
@@ -23,7 +23,8 @@ const WalletHistory = () => {
     "debit_topup",
     "withdrawal",
     "manual_credit",
-    "manual_debit"
+    "manual_debit",
+    "fast_track" // 🔥 Fast Track allowed
   ];
   const types = ["all", ...allTypes];
 
@@ -42,153 +43,181 @@ const WalletHistory = () => {
     setCurrentPage(1);
   }, [searchTerm, typeFilter]);
 
-  const fetchWalletHistory = async (uid) => {
-    try {
-      setLoading(true);
-      const res = await api.get(`/wallet/history/${uid}?t=${new Date().getTime()}`);
+ const fetchWalletHistory = async (uid) => {
+  try {
+    setLoading(true);
+    setError("");
+    const res = await api.get(`/wallet/history/${uid}?t=${new Date().getTime()}`);
 
-      let txns = [];
-      if (Array.isArray(res.data)) {
-        txns = res.data;
-      } else if (res.data && Array.isArray(res.data.history)) {
-        txns = res.data.history;
-      }
+ 
+    // 🛡️ Safe data extraction: success:true wale format ke liye
+    let txns = [];
+    if (res.data && Array.isArray(res.data.history)) {
+      txns = res.data.history;
+    } else if (Array.isArray(res.data)) {
+      txns = res.data;
+    }
 
-      const formattedHistory = txns
-        .filter(t => allTypes.includes(t.type)) 
-        .map(t => ({
+    const formattedHistory = txns
+      .filter(t => allTypes.includes(t.type))
+      .filter(t => {
+        if(t.type === 'fast_track') {
+     }
+        // 🔥 AUTO-POOL HIDE KARO
+        const desc = (t.description || "").toLowerCase();
+        return !(desc.includes("auto-pool") || desc.includes("pool level") || desc.includes("pool income"));
+      })
+      .map(t => {
+        // 💰 Universal Amount Extractor: Sab kuch handle karega
+        let val = 0;
+        if (t.amount && typeof t.amount === 'object' && t.amount.$numberDecimal) {
+          val = parseFloat(t.amount.$numberDecimal);
+        } else if (t.amount !== undefined && t.amount !== null) {
+          val = parseFloat(t.amount);
+        } else {
+          val = parseFloat(t.grossAmount || 0);
+        }
+
+        return {
           ...t,
           date: t.createdAt || t.date,
-          rawAmount: Number(t.amount || t.grossAmount || 0)
-        }));
+          rawAmount: isNaN(val) ? 0 : val // Ensure valid number
+        };
+      });
 
-      formattedHistory.sort((a,b) => new Date(a.date) - new Date(b.date));
-      setTransactions(formattedHistory);
+    // Date sorting: Oldest to Newest for balance calculation
+    formattedHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
+    setTransactions(formattedHistory);
 
-    } catch (err) {
-      console.error("Wallet History Error:", err); 
-      setError("Failed to load wallet history.");
-    } finally { 
-      setLoading(false); 
-    }
-  };
+  } catch (err) {
+    console.error("Fetch Error:", err);
+    setError("Failed to load history.");
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const calculateBalances = () => {
-    let balance = 0;
-    
-    return transactions.map(txn => {
-      let mathImpact = 0;
-      let colorStyle = "text-black"; 
-      let operator = "";
-      let finalDescription = txn.description || ""; 
-      let displayTypeUI = "UNKNOWN";
-      let icon = <History size={14} />;
 
-      // ✅ SAFER EXTRACTION
-      const fromId = txn.fromUserId ? String(txn.fromUserId) : "";
-      const toId = txn.toUserId ? String(txn.toUserId) : "";
-      const txnOwnerId = String(txn.userId);
-      const myId = String(userId);
-      const amt = txn.rawAmount;
 
-      switch(txn.type) {
-        
-        case "deposit":
-        case "manual_credit":
-        case "credit_to_wallet": 
-        case "credit": 
+ const calculateBalances = () => {
+  let runningBalance = 0; // Local variable to track running total
+
+  return transactions.map((txn) => {
+    let mathImpact = 0;
+    let colorStyle = "text-black";
+    let operator = "";
+    let finalDescription = txn.description || "";
+    let displayTypeUI = "UNKNOWN";
+    let icon = <History size={14} />;
+
+    // 🛡️ SAFER EXTRACTION: Ensure 'amt' is always a valid number
+    const amt = Number(txn.rawAmount || 0);
+    const myId = String(userId);
+    const fromId = txn.fromUserId ? String(txn.fromUserId) : "";
+    const toId = txn.toUserId ? String(txn.toUserId) : "";
+    const txnOwnerId = String(txn.userId);
+
+    switch (txn.type) {
+      case "deposit":
+      case "manual_credit":
+      case "credit_to_wallet":
+      case "credit":
+        mathImpact = amt;
+        colorStyle = "text-green-500";
+        operator = "+";
+        displayTypeUI = "CREDIT";
+        icon = <ArrowDownLeft size={14} className="text-green-500" />;
+        break;
+
+      case "fast_track":
+        mathImpact = amt;
+        colorStyle = "text-blue-500"; // Blue for distinct look
+        operator = "+";
+        displayTypeUI = "FAST TRACK";
+        icon = <Zap size={14} className="text-blue-500" />;
+        break;
+
+      case "manual_debit":
+        mathImpact = -amt;
+        colorStyle = "text-red-500";
+        operator = "-";
+        displayTypeUI = "DEBIT";
+        icon = <ArrowUpRight size={14} className="text-red-500" />;
+        break;
+
+      case "withdrawal":
+        // 💡 Note: If status is 'pending', impact is 0. If 'success', it's -amt.
+        mathImpact = txn.status === "success" || txn.status === "completed" ? -amt : 0;
+        colorStyle = "text-slate-500";
+        operator = mathImpact < 0 ? "-" : "";
+        displayTypeUI = "WITHDRAWAL";
+        icon = <Landmark size={14} className="text-slate-500" />;
+        break;
+
+      case "transfer":
+        if (toId === myId) {
           mathImpact = amt;
-          colorStyle = "text-green-500"; 
+          colorStyle = "text-green-500";
           operator = "+";
-          displayTypeUI = "CREDIT";
+          displayTypeUI = "RECEIVED";
           icon = <ArrowDownLeft size={14} className="text-green-500" />;
-          break;
-
-        case "withdrawal":
-          mathImpact = 0; 
-          colorStyle = "text-slate-500"; 
-          operator = "";
-          displayTypeUI = "WITHDRAWAL";
-          icon = <Landmark size={14} className="text-slate-500" />;
-          break;
-
-        case "manual_debit":
+        } else if (fromId === myId || (!fromId && txnOwnerId === myId)) {
           mathImpact = -amt;
-          colorStyle = "text-red-500"; 
+          colorStyle = "text-red-500";
           operator = "-";
-          displayTypeUI = "DEBIT";
-          icon = <ArrowUpRight size={14} className="text-red-500" />;
-          break;
+          displayTypeUI = "SENT P2P";
+          icon = <ArrowRightLeft size={14} className="text-red-500" />;
+        }
+        break;
 
-        case "transfer": 
-          if (toId === myId) { 
-            mathImpact = amt; 
-            colorStyle = "text-green-500"; 
-            operator = "+";
-            displayTypeUI = "RECEIVED";
-            icon = <ArrowDownLeft size={14} className="text-green-500" />;
-          } else if (fromId === myId || (!fromId && txnOwnerId === myId)) { 
-            mathImpact = -amt; 
-            colorStyle = "text-red-500"; 
+      case "topup":
+      case "debit_topup":
+        displayTypeUI = "TOPUP";
+        icon = <Zap size={14} className="text-yellow-500" />;
+        const isMyMoneySpent = fromId === myId || (!fromId && txnOwnerId === myId);
+
+        if (isMyMoneySpent) {
+          if (amt === 10 && finalDescription.includes("Pre-launch")) {
+            mathImpact = 0;
+            colorStyle = "text-yellow-500";
+            operator = "";
+          } else {
+            mathImpact = -amt;
+            colorStyle = "text-red-500";
             operator = "-";
-            displayTypeUI = "SENT P2P";
-            icon = <ArrowRightLeft size={14} className="text-red-500" />;
           }
-          break;
+        } else {
+          mathImpact = 0;
+          colorStyle = "text-slate-500";
+          operator = "";
+        }
+        break;
 
-        // 🔥 THE REAL FIX FOR TOPUP DEDUCTION 🔥
-        case "topup":
-        case "debit_topup":
-          displayTypeUI = "TOPUP";
-          icon = <Zap size={14} className="text-yellow-500" />;
-          
-          // Condition: "Kya ye paisa MERE wallet se kata hai?"
-          // Agar 'fromUserId' main hoon, matlab maine top-up kiya hai (khud ka ya kisi aur ka)
-          const isMyMoneySpent = (fromId === myId) || (!fromId && txnOwnerId === myId);
+      default:
+        break;
+    }
 
-          if (isMyMoneySpent) { 
-            if (amt === 10 && finalDescription.includes("Pre-launch")) {
-              mathImpact = 0; 
-              colorStyle = "text-yellow-500"; 
-              operator = ""; 
-            } else {
-              mathImpact = -amt; // ✅ Paisa kat gaya
-              colorStyle = "text-red-500"; 
-              operator = "-";
-            }
-          } else { 
-            // Agar aapke downline ne apna khud ka top-up kiya, toh wo list me aayega par aapka balance impact 0 rahega
-            mathImpact = 0; 
-            colorStyle = "text-slate-500"; 
-            operator = ""; 
-          }
-          break;
+    runningBalance += mathImpact;
 
-        default: 
-          break;
-      }
-
-      balance += mathImpact; 
-
-      return {
-        ...txn, 
-        description: finalDescription, 
-        balance: balance.toFixed(2),
-        colorStyle,
-        formattedAmount: `${operator} $${amt.toFixed(2)}`,
-        displayTypeUI,
-        icon,
-        fromIdSafe: fromId,
-        toIdSafe: toId,
-        txnOwnerIdSafe: txnOwnerId
-      };
-    });
-  };
+    return {
+      ...txn,
+      description: finalDescription,
+      // 🛡️ Safety Check for toFixed
+      balance: (runningBalance || 0).toFixed(2),
+      colorStyle,
+      formattedAmount: `${operator} $${(amt || 0).toFixed(2)}`,
+      displayTypeUI,
+      icon,
+      fromIdSafe: fromId,
+      toIdSafe: toId,
+      txnOwnerIdSafe: txnOwnerId,
+    };
+  });
+};
 
   const processedData = calculateBalances();
   const currentWalletBalance = processedData.length > 0 ? processedData[processedData.length - 1].balance : "0.00";
 
-  // Filter Logic: Ab isme 'txnOwnerIdSafe' bhi include kar diya taaki search accurate rahe
   const filtered = processedData.filter(txn => {
     const s = searchTerm.toLowerCase();
     const matchesType = typeFilter === "all" || txn.type === typeFilter;
@@ -280,12 +309,12 @@ const WalletHistory = () => {
             <thead className="bg-slate-50 text-green-600 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center w-16">Sr.</th>
+                                <th className="p-4 font-black text-right">Date & Time</th>
                 <th className="p-4 font-black">Type</th>
                 <th className="p-4 font-black">Amount</th>
                 <th className="p-4 font-black">Running Bal.</th>
                 <th className="p-4 font-black">From / To</th>
                 <th className="p-4 font-black">Details</th>
-                <th className="p-4 font-black text-right">Date & Time</th>
               </tr>
             </thead>
 
@@ -312,21 +341,21 @@ const WalletHistory = () => {
                 currentItems.map((txn, idx) => {
                   const serialNumber = indexOfFirstItem + idx + 1;
                   
-                  // Party info format
                   let partyInfo = "-";
-                  // Agar us bande ne khud ka kiya hai
-                  if (txn.fromIdSafe === String(userId) && txn.toIdSafe === String(userId)) {
+                  
+                  // 🔥 Fast Track me pata chale kiski wajah se paisa aaya
+                  if (txn.type === "fast_track") {
+                      partyInfo = txn.fromIdSafe ? `From: ${txn.fromIdSafe}` : "-";
+                  }
+                  else if (txn.fromIdSafe === String(userId) && txn.toIdSafe === String(userId)) {
                       partyInfo = "Self";
                   } 
-                  // Agar aapne kisi ko bheja/topup kiya hai
                   else if (txn.fromIdSafe === String(userId)) {
                       partyInfo = `To: ${txn.toIdSafe}`;
                   } 
-                  // Agar kisi ne aapko bheja/topup kiya hai
                   else if (txn.toIdSafe === String(userId)) {
                       partyInfo = `From: ${txn.fromIdSafe}`;
                   } 
-                  // Legacy fallback
                   else if (txn.type === "topup" && !txn.fromIdSafe && txn.txnOwnerIdSafe === String(userId)) {
                       partyInfo = "Self";
                   }
@@ -334,6 +363,12 @@ const WalletHistory = () => {
                   return (
                     <tr key={`${txn._id}-${txn.date}-${idx}`} className="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-white">
                       <td className="p-4 font-bold text-gray-500 text-center">{serialNumber}</td>
+                        <td className="p-4 text-gray-500 font-mono text-[10px] sm:text-xs text-right">
+                        <div className="flex flex-col items-end">
+                           <span className="text-slate-600">{new Date(txn.date).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                           <span>{new Date(txn.date).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                        </div>
+                      </td>
                       <td className="p-4">
                         <span className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2 py-1 rounded-md text-[10px] font-black tracking-widest text-slate-600 shadow-sm">
                           {txn.icon} {txn.displayTypeUI}
@@ -351,12 +386,7 @@ const WalletHistory = () => {
                       <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={txn.description || "-"}>
                         {txn.description || "-"}
                       </td>
-                      <td className="p-4 text-gray-500 font-mono text-[10px] sm:text-xs text-right">
-                        <div className="flex flex-col items-end">
-                           <span className="text-slate-600">{new Date(txn.date).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                           <span>{new Date(txn.date).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                        </div>
-                      </td>
+                    
                     </tr>
                   );
                 })

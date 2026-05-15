@@ -166,13 +166,13 @@ function UserWithdrawalHistory() {
             <thead className="bg-slate-50 text-green-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center">Sr.</th>
+                                <th className="p-4 font-black">Date</th>
                 <th className="p-4 font-black">Gross</th>
                 <th className="p-4 font-black">Fee</th>
                 <th className="p-4 font-black">Net Amount</th>
                 <th className="p-4 font-black">Source</th>
                 <th className="p-4 font-black">Wallet Address</th>
                 <th className="p-4 font-black text-center">Status</th>
-                <th className="p-4 font-black">Date</th>
                 <th className="p-4 font-black text-center">Details</th>
               </tr>
             </thead>
@@ -205,6 +205,9 @@ function UserWithdrawalHistory() {
                         <td className="p-4 font-bold text-gray-500 text-center">
                           {startIdx + idx + 1}
                         </td>
+                        <td className="p-4 text-gray-500 font-mono text-xs">
+                          {new Date(item.createdAt).toLocaleDateString("en-GB")}
+                        </td>
                         <td className="p-4 font-bold text-black">
                           ${Number(item.grossAmount || 0).toFixed(2)}
                         </td>
@@ -227,9 +230,7 @@ function UserWithdrawalHistory() {
                             {statusInfo.label}
                           </span>
                         </td>
-                        <td className="p-4 text-gray-500 font-mono text-xs">
-                          {new Date(item.createdAt).toLocaleDateString("en-GB")}
-                        </td>
+                        
                         <td className="p-4 text-center">
                           {item.schedule?.length > 0 ? (
                             <div className="flex justify-center text-green-500">

@@ -142,12 +142,12 @@ const DownlineBusiness = () => {
             <thead className="bg-slate-50 text-slate-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center w-16">Sr.</th>
+                                <th className="p-4 font-black text-right">Date & Time</th>
                 <th className="p-4 font-black">User ID</th>
                 <th className="p-4 font-black">Name</th>
                 <th className="p-4 font-black text-center">Level</th>
                 <th className="p-4 font-black text-center">Status</th>
                 <th className="p-4 font-black text-right">Topup Amount</th>
-                <th className="p-4 font-black text-right">Date & Time</th>
               </tr>
             </thead>
 
@@ -171,6 +171,12 @@ const DownlineBusiness = () => {
                     <td className="p-4 font-bold text-slate-400 text-center">
                       {indexOfFirst + idx + 1}
                     </td>
+                      <td className="p-4 text-slate-500 font-mono text-[10px] sm:text-xs text-right">
+                      <div className="flex flex-col items-end">
+                         <span className="text-slate-700 font-bold">{new Date(t.date).toLocaleDateString("en-GB")}</span>
+                         <span>{new Date(t.date).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                      </div>
+                    </td>
                     <td className="p-4 font-black text-slate-900">
                       #{t.userId}
                     </td>
@@ -190,12 +196,7 @@ const DownlineBusiness = () => {
                     <td className="p-4 font-black text-slate-900 text-right text-base">
                       ${Number(t.amount ?? 0).toFixed(2)}
                     </td>
-                    <td className="p-4 text-slate-500 font-mono text-[10px] sm:text-xs text-right">
-                      <div className="flex flex-col items-end">
-                         <span className="text-slate-700 font-bold">{new Date(t.date).toLocaleDateString("en-GB")}</span>
-                         <span>{new Date(t.date).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                      </div>
-                    </td>
+                  
                   </tr>
                 ))
               )}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { 
-  TrendingUp, Users, Trophy, Layers
+  TrendingUp, Users, Trophy, Layers, Zap // 🔥 1. Zap icon add kiya
 } from "lucide-react";
 
 // ✅ Updated Config: Required Directs hata diya hai
@@ -27,6 +27,9 @@ const IncomeSummary = ({ income = {}, user = {} }) => {
   const directIncome = Number(income.totalDirectIncome) || Number(income.directIncome) || 0;
   const levelIncome = Number(income.totalLevelIncome) || Number(income.levelIncome) || 0;
   const rewardIncome = Number(income.totalRewardIncome) || Number(income.rewardIncome) || Number(user.rewardIncome) || 0;
+  
+  // 🔥 2. Fast Track Income Extract Kiya
+  const fastTrackIncome = Number(income.totalFastTrackIncome) || Number(income.fastTrackIncome) || 0;
 
   // 🔥 UPDATED CALCULATION: No Direct Check
   useEffect(() => {
@@ -52,7 +55,9 @@ const IncomeSummary = ({ income = {}, user = {} }) => {
     { label: "Community Earning", value: `$${globalGrowthIncome.toFixed(2)}`, icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100", glow: "bg-emerald-400/20" },
     { label: "Direct Earning", value: `$${directIncome.toFixed(2)}`, icon: Users, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100", glow: "bg-amber-400/20" },
     { label: "Level Earning", value: `$${levelIncome.toFixed(2)}`, icon: Layers, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-100", glow: "bg-blue-400/20" },
-    { label: "Team Reward", value: `$${rewardIncome.toFixed(2)}`, icon: Trophy, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-100", glow: "bg-indigo-400/20" }
+    { label: "Team Reward", value: `$${rewardIncome.toFixed(2)}`, icon: Trophy, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-100", glow: "bg-indigo-400/20" },
+    // 🔥 3. 5th Box for Fast Track
+    { label: "Fast Track Bonus", value: `$${fastTrackIncome.toFixed(2)}`, icon: Zap, color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-100", glow: "bg-violet-400/20" } 
   ];
 
   return (

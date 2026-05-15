@@ -145,10 +145,11 @@ const MyTransfers = () => {
             <thead className="bg-slate-50 text-green-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center w-16">Sr.</th>
+                                <th className="p-4 font-black text-right">Date & Time</th>
+
                 <th className="p-4 font-black">Type</th>
                 <th className="p-4 font-black">{view === "sent" ? "To User" : "From User"}</th>
                 <th className="p-4 font-black text-center">Amount</th>
-                <th className="p-4 font-black text-right">Date & Time</th>
               </tr>
             </thead>
             <tbody className="text-slate-600">
@@ -189,6 +190,12 @@ const MyTransfers = () => {
                           {isSent ? "Sent" : "Received"}
                         </span>
                       </td>
+                        <td className="p-4 text-gray-500 font-mono text-[10px] sm:text-xs text-right">
+                        <div className="flex flex-col items-end">
+                           <span className="text-slate-600">{date.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                           <span>{date.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                        </div>
+                      </td>
 
                       <td className="p-4 font-black text-slate-900">
                          <span className="bg-white/5 px-3 py-1.5 border border-slate-200 rounded-lg">
@@ -202,12 +209,7 @@ const MyTransfers = () => {
                         </span>
                       </td>
 
-                      <td className="p-4 text-gray-500 font-mono text-[10px] sm:text-xs text-right">
-                        <div className="flex flex-col items-end">
-                           <span className="text-slate-600">{date.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                           <span>{date.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                        </div>
-                      </td>
+                    
                     </tr>
                   );
                 })

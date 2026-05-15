@@ -138,11 +138,11 @@ const DirectIncome = () => {
             <thead className="bg-slate-50 text-green-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center">Sr.</th>
+                                <th className="p-4 font-black text-right">Date & Time</th>
                 <th className="p-4 font-black">From User</th>
                 <th className="p-4 font-black text-center">Package</th>
                 <th className="p-4 font-black text-center">Income</th>
                 <th className="p-4 font-black">Description</th>
-                <th className="p-4 font-black text-right">Date & Time</th>
               </tr>
             </thead>
             <tbody className="text-slate-600">
@@ -169,6 +169,13 @@ const DirectIncome = () => {
                       <td className="p-4 font-bold text-gray-500 text-center">
                         {indexOfFirst + idx + 1}
                       </td>
+                         {/* Date & Time */}
+                      <td className="p-4 text-gray-500 font-mono text-xs text-right">
+                        <div className="flex flex-col items-end">
+                           <span className="text-slate-600">{date.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                           <span className="text-[10px]">{date.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                        </div>
+                      </td>
 
                       {/* From User */}
                       <td className="p-4 font-black text-slate-900 flex items-center gap-2">
@@ -194,13 +201,7 @@ const DirectIncome = () => {
                         {txn.description || "Direct income"}
                       </td>
 
-                      {/* Date & Time */}
-                      <td className="p-4 text-gray-500 font-mono text-xs text-right">
-                        <div className="flex flex-col items-end">
-                           <span className="text-slate-600">{date.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                           <span className="text-[10px]">{date.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                        </div>
-                      </td>
+                   
                     </tr>
                   );
                 })

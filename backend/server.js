@@ -122,8 +122,12 @@ mongoose.connect(process.env.MONGO_URI)
       console.log('✅ Global Auto-Growth Cron Started (1 ID every 14 mins)');
 
       runDailyLeaderClosing();
-     console.log('Daily Leaders Closing is also runnign');
+      console.log('✅ Daily Leaders Closing is also running');
 
+      // 👇👇👇 NAYA FAST TRACK CRON YAHAN ADD KIYA HAI 👇👇👇
+      require('./cron/fastTrackCron'); 
+      console.log('✅ Fast Track Offer Daily Cron Started (Runs at 12:05 AM)');
+      // 👆👆👆 ========================================= 👆👆👆
 
     } catch (error) {
       console.error('⚠️ Error starting Cron Jobs:', error);

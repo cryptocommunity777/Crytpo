@@ -119,13 +119,13 @@ const DirectTeamPage = () => {
             <thead className="bg-slate-50 text-slate-600 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center">Sr.</th>
+                                <th className="p-4 font-black text-right">Joined Date</th>
                 <th className="p-4 font-black">User ID</th>
                 <th className="p-4 font-black">Name</th>
                 <th className="p-4 font-black text-center">Directs</th>
                 <th className="p-4 font-black text-center">Team Size</th>
                 <th className="p-4 font-black text-center">Top-Up</th>
                 <th className="p-4 font-black">Mobile</th>
-                <th className="p-4 font-black text-right">Joined Date</th>
               </tr>
             </thead>
 
@@ -151,6 +151,11 @@ const DirectTeamPage = () => {
                   >
                     <td className="p-4 font-bold text-black text-center">
                       {indexOfFirst + index + 1}
+                    </td>
+                    <td className="p-4 text-black font-mono text-xs text-right">
+                      {member.createdAt
+                        ? new Date(member.createdAt).toLocaleDateString("en-GB")
+                        : "-"}
                     </td>
                     <td className="p-4 font-black text-slate-800">
                       {member.userId}
@@ -199,11 +204,7 @@ const DirectTeamPage = () => {
                       </div>
                     </td>
 
-                    <td className="p-4 text-black font-mono text-xs text-right">
-                      {member.createdAt
-                        ? new Date(member.createdAt).toLocaleDateString("en-GB")
-                        : "-"}
-                    </td>
+                    
                   </tr>
                 ))
               )}

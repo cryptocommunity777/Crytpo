@@ -7,10 +7,11 @@ require('dotenv').config();
 const seedUsers = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/cryptocommunity");
-        console.log("🔗 Connected to DB. Generating 100 Users...");
+        console.log("🔗 Connected to DB. Generating 100 Fresh Users...");
 
-        // Purane fake users hata do taaki list fresh ban jaye
+        // 1. Purane fake users hata do taaki list fresh ban jaye (Isi se purane naam jayenge)
         await FakeUser.deleteMany({});
+        console.log("🗑️ Old fake users deleted.");
         
         let fakeUsersList = [];
         let now = new Date();
@@ -29,17 +30,18 @@ const seedUsers = async () => {
             usedIds.add(randomId); // Nayi ID ko list me daal do
 
             fakeUsersList.push({
-                userId: randomId, // ✅ Ekdum Real jaisi 7-digit ID
-                name: names[Math.floor(Math.random() * names.length)],
-                country: countries[Math.floor(Math.random() * countries.length)],
+                userId: randomId, 
+                name: names[Math.floor(Math.random() * names.length)], // Naye full names
+                country: countries[Math.floor(Math.random() * countries.length)], // 50/30/20 wala ratio
                 isToppedUp: true,
                 topUpAmount: 30, // Sabka package $30
                 date: pastDate
             });
         }
 
+        // 2. Naye 100 users database me daal do
         await FakeUser.insertMany(fakeUsersList);
-        console.log("✅ 100 Active Fake Users with 7-Digit IDs added successfully!");
+        console.log("✅ 100 Active Fake Users with 7-Digit IDs & Full Names added successfully!");
         process.exit();
 
     } catch (err) {

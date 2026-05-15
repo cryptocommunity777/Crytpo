@@ -252,7 +252,29 @@ router.post('/transfer', async (req, res) => {
       return res.status(400).json({ message: 'Insufficient balance' });
     }
 
-    // 🔥 DOWNLINE CHECK REMOVED: Ab kisi ko bhi (anywhere) transfer ho sakta hai!
+    // 3. ✨ STRICT DOWNLINE CHECK (Sirf Downline me transfer allow hoga)
+    let isDownline = false;
+    let currentSponsorId = receiver.sponsorId;
+    let depth = 0;
+    const maxDepth = 1000; // Infinite loop se bachne ke liye limit
+
+    while (currentSponsorId && depth < maxDepth) {
+      if (Number(currentSponsorId) === Number(sender.userId)) {
+        isDownline = true; // Mil gaya! Sender iska upline hai (Yani Receiver downline me hai)
+        break;
+      }
+      
+      // Upar ki taraf search badhao
+      const uplineUser = await User.findOne({ userId: Number(currentSponsorId) }).lean();
+      if (!uplineUser) break; // Agar koi upline na mile to break
+      
+      currentSponsorId = uplineUser.sponsorId;
+      depth++;
+    }
+
+    if (!isDownline) {
+      return res.status(403).json({ message: 'Transfer restricted. You can only transfer funds to your downline members.' });
+    }
 
     // ============================================
     // 💸 TRANSFER EXECUTION
@@ -666,24 +688,22 @@ router.get('/history/:userId', async (req, res) => {
       return res.status(400).json({ message: 'Invalid user ID' });
     }
 
-    // 1. Saare types jo frontend ko ledger calculate karne ke liye chahiye
+    // 1. 🔥 CHOR YAHI THA: "fast_track" add kar diya list mein!
     const allowedTypes = [
       "deposit",
       "credit_to_wallet",
-      "credit",         // Withdrawal return 50%
+      "credit",        
       "transfer",
-      "topup",          // Aapka top-up deduction
+      "topup",         
       "debit_topup",
       "withdrawal",
       "manual_credit",
-      "manual_debit"
+      "manual_debit",
+      "fast_track" // ✅ YE LINE MISSING THI
     ];
 
-    // 2. ✨ MEGA QUERY: 
-    // - Check 1: Kya user khud owner hai (userId)?
-    // - Check 2: Kya user ne kisi aur ka topup/transfer kiya (fromUserId)?
-    // - Check 3: Kya kisi ne user ko transfer kiya (toUserId)?
-    const txs = await Transaction.find({
+    // 2. ✨ MEGA QUERY
+    let txs = await Transaction.find({
       $and: [
         {
           $or: [
@@ -700,10 +720,18 @@ router.get('/history/:userId', async (req, res) => {
           description: { $not: /PROMOTION/i } 
         }
       ]
-    }).sort({ date: -1 });
+    }).sort({ date: -1 }).lean();
 
-    // Response ko 'history' key me bhejna hai jaisa frontend expect kar raha hai
-    res.json({ success: true, history: txs });
+    // 3. 🛡️ SAFETY FILTER: Fast track sirf Sponsor (paisa jisko mila) ko dikhe, downline ko nahi
+    const cleanHistory = txs.filter(t => {
+      if (t.type === 'fast_track') {
+          return String(t.userId) === String(userId);
+      }
+      return true;
+    });
+
+    // Response ko 'history' key me bhejna hai
+    res.json({ success: true, history: cleanHistory });
 
   } catch (err) {
     console.error("Wallet history error:", err);
@@ -878,27 +906,99 @@ router.get('/withdrawals/:userId', async (req, res) => {
 });
 
 // 🔹 Get Transaction History
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\wallet.js
+
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\wallet.js
+
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\wallet.js
+
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\wallet.js
+
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\wallet.js
+
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\wallet.js
+
 router.get('/history/:userId', async (req, res) => {
   try {
-    const userId = Number(req.params.userId);
+    const rawUserId = req.params.userId;
+    const userIdNum = Number(rawUserId);
 
-    const txns = await Transaction.find({
+    // Agar ID galat hai, toh safe format mein khali array bhejo
+    if (isNaN(userIdNum)) {
+      return res.status(400).json({ success: false, history: [] });
+    }
+
+    console.log(`\n🔎 LEDGER REQUEST: User ${userIdNum}`);
+
+    // 1. Database Query (.lean() ke sath fast data fetch karne ke liye)
+    const allTxs = await Transaction.find({
       $or: [
-        { userId },          // normal transactions
-        { toUserId: userId }, // incoming transfers
-      ],
-    }).sort({ createdAt: -1 });
+        { userId: userIdNum },
+        { toUserId: userIdNum },
+        { fromUserId: userIdNum }
+      ]
+    }).sort({ date: -1, createdAt: -1 }).lean(); 
 
-    res.json(txns);
+    // ✅ Allowed list (Isme fast_track shamil hai)
+    const allowedTypes = [
+      "deposit", "credit_to_wallet", "credit", "transfer", 
+      "topup", "debit_topup", "withdrawal", "manual_credit", 
+      "manual_debit", "fast_track"
+    ];
+
+    // 2. Filter & Clean Data (Sab kuch yahin saaf ho jayega)
+    const cleanHistory = allTxs
+      .filter(t => {
+        if (!t || !t.type) return false;
+        
+        // Unwanted types hatao
+        if (!allowedTypes.includes(t.type)) return false;
+
+        // Auto-pool / Promotion ka kachra saaf karo
+        const desc = (t.description || "").toLowerCase();
+        if (desc.includes("auto-pool") || desc.includes("promotion")) return false;
+
+        // 🔥 Fast Track sirf asli owner (Sponsor) ko dikhe
+        if (t.type === 'fast_track') {
+           return String(t.userId) === String(rawUserId);
+        }
+
+        return true;
+      })
+      .map(t => {
+        // 💰 DECIMAL 128 FIX: Backend se hi amount ko Number bana kar bhejo
+        // Isse frontend par kabhi Object wala ya .toFixed() error nahi aayega!
+        let safeAmount = 0;
+        let safeGross = 0;
+
+        // Extract Amount
+        if (t.amount && t.amount.$numberDecimal) safeAmount = parseFloat(t.amount.$numberDecimal);
+        else safeAmount = parseFloat(t.amount) || 0;
+
+        // Extract Gross Amount
+        if (t.grossAmount && t.grossAmount.$numberDecimal) safeGross = parseFloat(t.grossAmount.$numberDecimal);
+        else safeGross = parseFloat(t.grossAmount) || 0;
+
+        return {
+          ...t,
+          amount: safeAmount,
+          grossAmount: safeGross
+        };
+      });
+
+    console.log(`✨ SENDING: ${cleanHistory.length} clean items to frontend\n`);
+    
+    // Hamesha { success: true, history: [...] } format me bhejein
+    res.json({ success: true, history: cleanHistory });
+
   } catch (err) {
-    console.error("Transaction history error:", err);
-    res.status(500).json({ message: 'Transaction history error' });
+    console.error("Route Error:", err);
+    // Crash hone par bhi array bhejo taaki frontend white screen na de
+    res.status(500).json({ success: false, history: [] });
   }
 });
 
-
-// 🔹 Get Withdrawal History
- 
+  
 
 
 
@@ -941,13 +1041,13 @@ router.get("/:userId", async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // 🔥 FIX FOR OLD DATA: Agar database me totalRewardIncome nahi hai, toh add kar do
+    // 🔥 FIX FOR OLD DATA: Reward Income update
     if (!user.totalRewardIncome && user.rewardIncome > 0) {
         user.totalRewardIncome = user.rewardIncome;
-        await user.save(); // Data hamesha ke liye save ho jayega
+        await user.save(); 
     }
 
-    // 2. Lifetime incomes nikalna (Helper function se jisme ab reward history bhi hai)
+    // 2. Lifetime incomes nikalna
     const life = await getLifetimeIncomes(userId);
 
     // 3. Current Plan Income calculation
@@ -958,28 +1058,41 @@ router.get("/:userId", async (req, res) => {
       currentTotalPlanIncome += calculatePackageEarnings(user.packages, key);
     });
 
-    // 4. Final Response (Frontend ko yahi format chahiye)
+    // 4. Final Response (Ab isme Fast Track Shamil Hai)
     res.json({
       success: true,
-      user: user, // Frontend ko Global Growth calculate karne ke liye user chahiye
+      user: user, 
       walletBalance: user.walletBalance || 0,
       
-      // ✅ DASHBOARD LIFETIME TOTALS (Kabhi minus nahi honge)
+      // ✅ DASHBOARD LIFETIME TOTALS (Inka data box me dikhta hai)
       income: {
          totalDirectIncome: life.direct || user.totalDirectIncome || user.directIncome || 0,
-         totalLevelIncome:  life.level  || user.levelIncome || 0,
-         totalSpinIncome:   life.spin   || user.spinIncome || 0,
+         totalLevelIncome:  life.level  || user.totalLevelIncome || user.levelIncome || 0,
          totalRewardIncome: life.reward || user.totalRewardIncome || user.rewardIncome || 0,
-         planIncome:        currentTotalPlanIncome || 0
+         totalSpinIncome:   life.spin   || user.totalSpinIncome || user.spinIncome || 0,
+         
+         // 🔥 NAYA: Fast Track Total Bonus for Dashboard Box
+         totalFastTrackIncome: user.totalFastTrackIncome || user.fastTrackIncome || 0,
+         
+         planIncome: currentTotalPlanIncome || 0
       },
 
-      // ✅ WITHDRAWAL KE LIYE CURRENT BALANCE (Jo minus hota hai)
+      // ✅ CURRENT WITHDRAWABLE BALANCES
       directIncome: user.directIncome || 0,
       levelIncome:  user.levelIncome || 0,
       spinIncome:   user.spinIncome || 0,
       rewardIncome: user.rewardIncome || 0, 
+      fastTrackIncome: user.fastTrackIncome || 0, // 🔥 Naya Field
 
-      totalLifetimeIncome: (life.direct + life.level + currentTotalPlanIncome + life.spin + life.reward)
+      // Sabka total (Ab isme Fast Track bhi judega)
+      totalLifetimeIncome: (
+        (life.direct || 0) + 
+        (life.level || 0) + 
+        (currentTotalPlanIncome || 0) + 
+        (life.spin || 0) + 
+        (life.reward || 0) + 
+        (user.totalFastTrackIncome || 0) // 🔥 Fast Track added here
+      )
     });
 
   } catch (err) {
