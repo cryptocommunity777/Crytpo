@@ -31,21 +31,22 @@ const customStyles = `
 `;
 
 // ✅ Complete $12,200 Global Pool Plan
+// ✅ Frontend ke DailyROI.jsx / Plan.jsx ke top par isse replace karo
 const globalPoolConfig = {
   totalTarget: 12200,
   levels: [
-    { level: 1, globalTeam: 20, requiredDirects: 1, daily: 1, days: 10, earning: 10 },
-    { level: 2, globalTeam: 40, requiredDirects: 1, daily: 1, days: 20, earning: 20 },
-    { level: 3, globalTeam: 100, requiredDirects: 1, daily: 1, days: 40, earning: 40 },
-    { level: 4, globalTeam: 200, requiredDirects: 1, daily: 1, days: 80, earning: 80 },
-    { level: 5, globalTeam: 400, requiredDirects: 1, daily: 1, days: 150, earning: 150 },
-    { level: 6, globalTeam: 1600, requiredDirects: 1, daily: 1, days: 200, earning: 200 },
-    { level: 7, globalTeam: 2000, requiredDirects: 2, daily: 2, days: 250, earning: 500 },
-    { level: 8, globalTeam: 3000, requiredDirects: 2, daily: 2, days: 350, earning: 700 },
-    { level: 9, globalTeam: 4000, requiredDirects: 2, daily: 2, days: 500, earning: 1000 },
-    { level: 10, globalTeam: 5000, requiredDirects: 2, daily: 3, days: 500, earning: 1500 },
-    { level: 11, globalTeam: 7500, requiredDirects: 2, daily: 6, days: 500, earning: 3000 },
-    { level: 12, globalTeam: 10000, requiredDirects: 2, daily: 10, days: 500, earning: 5000 }
+    { level: 1,  globalTeam: 20,    requiredDirects: 1,  displayDirects: 1, daily: 1,  days: 10,  earning: 10   }, // Shart: 1 | UI: 1
+    { level: 2,  globalTeam: 40,    requiredDirects: 2,  displayDirects: 1, daily: 1,  days: 20,  earning: 20   }, // Shart: 2 | UI: 1
+    { level: 3,  globalTeam: 100,   requiredDirects: 3,  displayDirects: 1, daily: 1,  days: 40,  earning: 40   }, // Shart: 3 | UI: 1
+    { level: 4,  globalTeam: 200,   requiredDirects: 4,  displayDirects: 1, daily: 1,  days: 80,  earning: 80   }, // Shart: 4 | UI: 1
+    { level: 5,  globalTeam: 400,   requiredDirects: 5,  displayDirects: 1, daily: 1,  days: 150, earning: 150  }, // Shart: 5 | UI: 1
+    { level: 6,  globalTeam: 1600,  requiredDirects: 6,  displayDirects: 1, daily: 1,  days: 200, earning: 200  }, // Shart: 6 | UI: 1
+    { level: 7,  globalTeam: 2000,  requiredDirects: 8,  displayDirects: 2, daily: 2,  days: 250, earning: 500  }, // Shart: 8 | UI: 2
+    { level: 8,  globalTeam: 3000,  requiredDirects: 10, displayDirects: 2, daily: 2,  days: 350, earning: 700  }, // Shart: 10| UI: 2
+    { level: 9,  globalTeam: 4000,  requiredDirects: 12, displayDirects: 2, daily: 2,  days: 500, earning: 1000 }, // Shart: 12| UI: 2
+    { level: 10, globalTeam: 5000,  requiredDirects: 14, displayDirects: 2, daily: 3,  days: 500, earning: 1500 }, // Shart: 14| UI: 2
+    { level: 11, globalTeam: 7500,  requiredDirects: 16, displayDirects: 2, daily: 6,  days: 500, earning: 3000 }, // Shart: 16| UI: 2
+    { level: 12, globalTeam: 10000, requiredDirects: 18, displayDirects: 2, daily: 10, days: 500, earning: 5000 }  // Shart: 18| UI: 2
   ]
 };
 
@@ -208,15 +209,18 @@ export default function Plan() {
                           </td>
 
                           {/* REQUIRED DIRECTS (Iska color normal rahega jab tak achieve na ho jaye) */}
-                          <td className="py-2.5 px-2 md:py-3 md:px-4 text-center">
-                            <span className={`px-2.5 py-1 md:px-3 md:py-1.5 rounded-md border text-[9px] md:text-xs font-black inline-block ${
-                              isAchieved 
-                              ? 'bg-emerald-100/50 border-emerald-200 text-emerald-700' 
-                              : 'bg-slate-50 border-slate-200 text-slate-600'
-                            }`}>
-                              {lvl.requiredDirects} Direct
-                            </span>
-                          </td>
+                        {/* REQUIRED DIRECTS COLUMN */}
+{/* REQUIRED DIRECTS COLUMN */}
+<td className="py-2.5 px-2 md:py-3 md:px-4 text-center">
+  <span className={`px-2.5 py-1 md:px-3 md:py-1.5 rounded-md border text-[9px] md:text-xs font-black inline-block ${
+    isAchieved 
+    ? 'bg-emerald-100/50 border-emerald-200 text-emerald-700' 
+    : 'bg-slate-50 border-slate-200 text-slate-600'
+  }`}>
+    {/* ✅ Bulletproof Fallback: Agar displayDirects nahi bhi mila, toh level ke hisaab se khud hi 1 ya 2 dikha dega */}
+    {lvl.displayDirects || (lvl.level <= 6 ? 1 : 2)} {(lvl.displayDirects || (lvl.level <= 6 ? 1 : 2)) > 1 ? 'Directs' : 'Direct'}
+  </span>
+</td>
 
                           {/* TOTAL EARNING */}
                           <td className={`py-2.5 px-2 md:py-3 md:px-4 font-black text-center text-sm md:text-lg ${isPoolFilled ? 'text-emerald-600' : 'text-slate-700'}`}>
