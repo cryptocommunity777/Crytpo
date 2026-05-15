@@ -1,51 +1,58 @@
 // C:\Users\HP\Desktop\Cryptocommunity\backend\seed100.js
 const mongoose = require('mongoose');
 const FakeUser = require('./models/FakeUser');
-const { names, countries } = require('./utils/fakeData');
+const { countryNames, countriesProbability } = require('./utils/fakeData');
 require('dotenv').config();
 
 const seedUsers = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/cryptocommunity");
-        console.log("🔗 Connected to DB. Generating 100 Fresh Users...");
+        console.log("🔗 Connected! Generating 100 Proper Matched Users...");
 
-        // 1. Purane fake users hata do taaki list fresh ban jaye (Isi se purane naam jayenge)
+        // 1. Purane users saaf karo
         await FakeUser.deleteMany({});
-        console.log("🗑️ Old fake users deleted.");
         
         let fakeUsersList = [];
         let now = new Date();
-        let usedIds = new Set(); // ✅ Aapas me ID clash na ho iske liye
+        let usedIds = new Set();
 
         for (let i = 0; i < 100; i++) {
-            // Har user ke beech 15-20 minute ka gap daal rahe hain taaki real lage
-            let pastDate = new Date(now.getTime() - (i * 18 * 60000)); 
+            // ✅ SAFETY FIX: Pick Country Code
+            const randomCountry = countriesProbability[Math.floor(Math.random() * countriesProbability.length)] || "IN";
+            
+            // ✅ SAFETY FIX: Get Name Pool (If country missing, fallback to IN)
+            const namePool = countryNames[randomCountry] || countryNames["IN"];
+            
+            // ✅ CRASH PREVENTION: Pick random name from the pool
+            const randomName = namePool[Math.floor(Math.random() * namePool.length)];
 
-            // ✅ 7-Digit Unique ID Generator (Cron wala same logic)
+            // Unique 7-Digit ID
             let randomId;
             do {
                 randomId = Math.floor(1000000 + Math.random() * 9000000); 
-            } while (usedIds.has(randomId)); // Agar same ID dobara aayi to loop fir ghumega
-            
-            usedIds.add(randomId); // Nayi ID ko list me daal do
+            } while (usedIds.has(randomId));
+            usedIds.add(randomId);
+
+            // Time Gap (approx 18 mins)
+            let pastDate = new Date(now.getTime() - (i * 18 * 60000)); 
 
             fakeUsersList.push({
                 userId: randomId, 
-                name: names[Math.floor(Math.random() * names.length)], // Naye full names
-                country: countries[Math.floor(Math.random() * countries.length)], // 50/30/20 wala ratio
+                name: randomName, 
+                country: randomCountry,
                 isToppedUp: true,
-                topUpAmount: 30, // Sabka package $30
+                topUpAmount: 30,
                 date: pastDate
             });
         }
 
-        // 2. Naye 100 users database me daal do
+        // 2. Database mein save karo
         await FakeUser.insertMany(fakeUsersList);
-        console.log("✅ 100 Active Fake Users with 7-Digit IDs & Full Names added successfully!");
+        console.log("✅ SUCCESS: 100 Country-Matched Users added successfully!");
         process.exit();
 
     } catch (err) {
-        console.error("Error:", err);
+        console.error("❌ Seed Error:", err);
         process.exit(1);
     }
 };
