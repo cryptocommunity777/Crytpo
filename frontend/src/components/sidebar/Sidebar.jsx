@@ -3,7 +3,7 @@ import api from "../../api/axios";
 import { useNavigate, useLocation, Link } from "react-router-dom"; 
 import {
   Home, Wallet, Banknote, History, Users, UserCircle2, 
-  HelpCircle, BadgeDollarSign, BarChart
+  HelpCircle, BadgeDollarSign, BarChart, Globe
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -85,7 +85,9 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
     { label: "Credit To Wallet", icon: BadgeDollarSign, path: "/credit-to-wallet" },
     { label: "P2P Transfers", icon: History, path: "/my-transfers" },
     { label: "Transactions", icon: Wallet, path: "/transaction-details" },
-    { label: "Help & Support", icon: HelpCircle, path: "/support" }
+    { label: "Help & Support", icon: HelpCircle, path: "/support" },
+    // ✅ YAHAN GLOBAL COMMUNITY ADD KIYA HAI
+    { label: "Global Community", icon: Globe, path: "/global-community" } 
   ];
 
   return (

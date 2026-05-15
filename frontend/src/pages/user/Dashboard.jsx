@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from "react";
 import api from "../../api/axios"; 
 import { useNavigate } from "react-router-dom"; 
 import { useAuth } from "../../context/AuthContext";
+// ✅ CalendarDays icon add kiya hai date dikhane ke liye
+import { Globe, ChevronRight, CalendarDays } from "lucide-react"; 
 
 // Components Imports
 import TotalSystemUsers from "../../components/dashboard/TotalSystemUsers"; 
@@ -24,9 +26,12 @@ const Dashboard = () => {
   const [walletRefreshKey, setWalletRefreshKey] = useState(0);
   const [loading, setLoading] = useState(false);
   
-  // 🔥 NAYI STATES: Backend se aaye hue Real aur Fake count ko store karne ke liye
+  // Real aur Fake count ko store karne ke liye
   const [totalRealUsers, setTotalRealUsers] = useState(0);
   const [globalFakeCount, setGlobalFakeCount] = useState(0);
+  
+  // NAYI STATE: Latest 5 Global Users ke liye
+  const [latestGlobalUsers, setLatestGlobalUsers] = useState([]);
   
   const [income, setIncome] = useState({
     directIncome: 0,
@@ -61,7 +66,6 @@ const Dashboard = () => {
         
         setUser(userRes.data.user); 
         
-        // 🔥 BACKEND SE AAYA HUA REAL AUR FAKE COUNT YAHAN SET KARO
         setTotalRealUsers(userRes.data.totalRealUsers || 0);
         setGlobalFakeCount(userRes.data.globalFakeCount || 0);
 
@@ -78,6 +82,17 @@ const Dashboard = () => {
           totalRewardIncome: incomeRes.data.income?.totalRewardIncome || 0,
           totalSpinIncome: incomeRes.data.income?.totalSpinIncome || 0,
         });
+
+        // NAYA FETCH: Top 5 Global Community Members
+        try {
+            const globalRes = await api.get('/community/global-list');
+            if(globalRes.data.success) {
+                // Sirf pehle 5 users uthayenge
+                setLatestGlobalUsers(globalRes.data.data.slice(0, 5));
+            }
+        } catch(globalErr) {
+            console.error("Failed to fetch top 5 global users", globalErr);
+        }
 
     } catch (err) {
         console.error("Failed to fetch user data:", err);
@@ -143,7 +158,6 @@ const Dashboard = () => {
          
         {/* Total System Users Container */}
         <section>
-           {/* 🔥 YAHAN PAR DONO VALUES BHEJI HAIN COMPONENT KO */}
            <TotalSystemUsers 
              user={user} 
              totalRealUsersFromDB={totalRealUsers} 
@@ -167,6 +181,74 @@ const Dashboard = () => {
         <section className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
             <DailyROIPlan dailyROI={user.dailyROI || []} onClaim={claimDailyROI} />
         </section>
+
+        {/* ✅ LIVE GLOBAL COMMUNITY PREVIEW BOX (UPDATED UI) */}
+        {latestGlobalUsers.length > 0 && (
+          <section 
+             onClick={() => navigate('/global-community')}
+             className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group p-4 md:p-5"
+          >
+             {/* Header */}
+             <div className="flex justify-between items-center mb-4">
+                 <h3 className="font-black text-slate-800 flex items-center gap-2 text-sm md:text-base uppercase tracking-tight">
+                    <Globe className="text-blue-500 animate-pulse" size={20}/> Live Global Community
+                 </h3>
+                 <span className="text-[10px] md:text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md flex items-center gap-1 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    View All <ChevronRight size={14}/>
+                 </span>
+             </div>
+
+             {/* 5 Users List with Flag Images, Date and Amount */}
+             <div className="space-y-2">
+                 {latestGlobalUsers.map((u, idx) => (
+                     <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50 hover:bg-slate-100 transition-colors p-3 rounded-xl border border-slate-100 gap-2 sm:gap-0">
+                         
+                         {/* Left Side: Flag, Name, ID & Mobile Amount */}
+                         <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
+                             <div className="flex items-center gap-3">
+                                 {/* ✅ FLAG IMAGE */}
+                                 <img 
+                                    src={`https://flagcdn.com/w40/${(u.country || 'in').toLowerCase()}.png`} 
+                                    alt={u.country}
+                                    className="w-6 sm:w-7 h-auto rounded-[2px] shadow-[0_0_2px_rgba(0,0,0,0.2)]"
+                                    onError={(e) => { e.target.src = 'https://flagcdn.com/w40/in.png'; }}
+                                 />
+                                 <div>
+                                     <span className="block font-black text-slate-700 text-sm capitalize leading-tight">{u.name || "User"}</span>
+                                     <span className="text-[10px] font-bold text-slate-400">#{u.userId}</span>
+                                 </div>
+                             </div>
+                             
+                             {/* Only visible on Mobile (Amount on top row) */}
+                             <div className="sm:hidden flex items-center gap-1 bg-green-50 border border-green-100 text-green-600 px-2 py-1 rounded-md">
+                                 <span className="font-black text-[10px]">${u.amount || 30}</span>
+                                 <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse"></span>
+                             </div>
+                         </div>
+
+                         {/* Right Side: Date & Desktop Amount */}
+                         <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t sm:border-t-0 border-slate-200 sm:border-transparent pt-2 sm:pt-0">
+                             {/* ✅ DATE */}
+                             <div className="flex items-center gap-1.5 text-slate-500">
+                                <CalendarDays size={12} className="opacity-70" />
+                                <span className="font-bold text-[10px] sm:text-xs">
+                                   {new Date(u.date || new Date()).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}
+                                </span>
+                             </div>
+                             
+                             {/* Only visible on PC/Desktop */}
+                             <div className="hidden sm:flex items-center gap-1.5 bg-green-50 border border-green-100 text-green-600 px-2.5 py-1 rounded-lg">
+                                 <span className="font-black text-xs">${u.amount || 30}</span>
+                                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                                 <span className="text-[9px] font-black uppercase">Active</span>
+                             </div>
+                         </div>
+                         
+                     </div>
+                 ))}
+             </div>
+          </section>
+        )}
         
       </div>
 

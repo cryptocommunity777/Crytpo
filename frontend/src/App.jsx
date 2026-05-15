@@ -40,7 +40,7 @@ import DownlineBusiness from './pages/user/DownlineBusiness.jsx';
 import CreditToWallet from './pages/user/CreditToWallet.jsx';
 import Notifications from "./pages/user/Notifications.jsx";
 import UserLayout from "./components/layout/UserLayout.jsx";
- 
+ import GlobalTeam from './pages/user/GlobalTeam';
 // 🔹 Admin Pages
 import AdminLogin from './pages/admin/AdminLogin.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
@@ -175,7 +175,16 @@ function AppContent() {
             <Route path="/wallet-history" element={<RequireUserAuth><UserLayout><WalletHistory /></UserLayout></RequireUserAuth>} />
             <Route path="/direct-team" element={<RequireUserAuth><UserLayout><DirectTeamPage /></UserLayout></RequireUserAuth>} />
             <Route path="/all-team" element={<RequireUserAuth><UserLayout><AllTeamPage /></UserLayout></RequireUserAuth>} />
-            
+            <Route 
+    path="/global-community" 
+    element={
+        <RequireUserAuth>
+            <UserLayout>
+                <GlobalTeam />
+            </UserLayout>
+        </RequireUserAuth>
+    } 
+/>
   
              <Route path="/direct-income" element={<RequireUserAuth><UserLayout><DirectIncome /></UserLayout></RequireUserAuth>} />
             <Route path="/level-income" element={<RequireUserAuth><UserLayout><LevelIncome /></UserLayout></RequireUserAuth>} />

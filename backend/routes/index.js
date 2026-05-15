@@ -35,6 +35,7 @@ router.use('/deposit', require('./depositRoutes'));
 router.use('/packages', require('./packages'));
  router.use('/support', require('./support'));
 router.use('/dashboard', require('./dashboard'));
+router.use('/community', require('./community'));
 
 router.use('/transactions', require('./systemtransactions')); // 👈 YE LINE ADD KAREIN (Notice the 's')
 // 🌐 Root test

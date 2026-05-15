@@ -225,10 +225,11 @@ router.post('/transfer', async (req, res) => {
 
     const amt = Number(amount);
     
-    // 🔥 LIMIT CHANGED: Ab minimum $5 ka transfer ho sakta hai
-    if (amt < 5) return res.status(400).json({ message: "Minimum transfer amount is $5" });
+    // ✨ LIMIT CHANGED: Ab minimum $10 ka transfer ho sakta hai
+    if (amt < 10) return res.status(400).json({ message: "Minimum transfer amount is $10" });
 
-    if (amt % 1 !== 0) return res.status(400).json({ message: "Decimals not allowed. Please enter round figure." });
+    // ✨ INTEGER CHECK: Koi decimal nahi chalega (Sirf round figures: 10, 11, 12, 13... allow hoga)
+    if (amt % 1 !== 0) return res.status(400).json({ message: "Decimals not allowed. Please enter a whole number (e.g., 10, 11, 12)." });
 
     // 🔥 PROMO USER LOGIC START
     if (sender.role === "promo") {
@@ -423,14 +424,23 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
         return res.status(400).json({ message: "No withdrawal items provided." });
     }
 
-    // 💰 CALCULATE TOTAL AMOUNT
+    // 💰 CALCULATE TOTAL AMOUNT 
     let totalAmt = 0;
     for (let item of items) {
-      totalAmt += Math.floor(parseFloat(item.amount));
+      const amt = Math.floor(parseFloat(item.amount));
+      if (amt <= 0) return res.status(400).json({ message: "Invalid amount detected." });
+      
+      totalAmt += amt; // Sirf total calculate kar rahe hain yahan
     }
     
-    if (totalAmt < 5) {
-        return res.status(400).json({ message: "Minimum total withdrawal amount is $5." });
+    // ✨ NAYA CHECK (Loop ke bahar, yani Total Amount par)
+    if (totalAmt % 10 !== 0) {
+        return res.status(400).json({ message: `Total withdrawal amount must be in multiples of $10. Your total is $${totalAmt}.` });
+    }
+    
+    // ✨ UPDATE: Minimum total withdrawal amount is now $10
+    if (totalAmt < 10) {
+        return res.status(400).json({ message: "Minimum total withdrawal amount is $10." });
     }
 
     // =========================================================
@@ -440,11 +450,10 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
     let simDirectWallet = user.directIncome || 0;
     let simLevelWallet = user.levelIncome || 0;
     let simRewardWallet = user.rewardIncome || 0;
-    let simPoolWallet = user.poolIncome || 0; // ✨ NAYA: Daily pool wallet
+    let simPoolWallet = user.poolIncome || 0; 
 
     for (let item of items) {
       const amt = Math.floor(parseFloat(item.amount));
-      if (amt <= 0) return res.status(400).json({ message: "Invalid amount detected." });
 
       if (item.source === "direct") {
         if (simDirectWallet < amt) return res.status(400).json({ message: "Insufficient Direct Income balance." });
@@ -458,10 +467,9 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
         if (simRewardWallet < amt) return res.status(400).json({ message: "Insufficient Reward Income balance." });
         simRewardWallet -= amt;
       }
-      // 🔥 MAGIC UPDATE: Ab agar source 'pool', 'pool_1', 'pool_12' kuch bhi ho, wo poolIncome se hi katega
       else if (item.source.startsWith("pool")) {
         if (simPoolWallet < amt) return res.status(400).json({ message: "Insufficient Auto-Pool balance." });
-        simPoolWallet -= amt; // ✨ Minus from simulated pool wallet
+        simPoolWallet -= amt; 
       } 
       else {
         return res.status(400).json({ message: `Unknown source: ${item.source}` });
@@ -478,7 +486,7 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
       if (item.source === "direct") user.directIncome -= amt;
       else if (item.source === "level") user.levelIncome -= amt;
       else if (item.source === "reward") user.rewardIncome -= amt;
-      else if (item.source.startsWith("pool")) user.poolIncome -= amt; // ✨ NAYA MAGIC YAHAN BHI
+      else if (item.source.startsWith("pool")) user.poolIncome -= amt; 
 
       // 💎 SILENT 50/50 SPLIT
       const withdrawShare = amt * 0.50; // Aadha crypto withdrawal ke liye
@@ -498,7 +506,7 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
       // Create Record for Crypto Withdrawal
       await Withdrawal.create({
         userId: user.userId,
-        source: item.source.startsWith("pool") ? "pool" : item.source, // Backend reports me clean rakhne ke liye 'pool_1' ko 'pool' save karega
+        source: item.source.startsWith("pool") ? "pool" : item.source, 
         grossAmount: withdrawShare,
         fee: withdrawFee, 
         netAmount: netWithdrawAmount,
@@ -516,7 +524,7 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
         type: "withdrawal",
         source: item.source.startsWith("pool") ? "pool" : item.source,
         amount: withdrawShare,
-        description: `Withdrawal from ${cleanSourceName}`, // Normal text
+        description: `Withdrawal from ${cleanSourceName}`, 
         status: "pending"
       });
 
@@ -526,7 +534,7 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
         type: "credit",
         source: "system",
         amount: netWalletAmount,
-        description: `Wallet Credit from ${cleanSourceName}`, // Normal text
+        description: `Wallet Credit from ${cleanSourceName}`, 
         status: "success"
       });
     }
@@ -646,26 +654,57 @@ router.post("/promo-withdraw", authMiddleware, async (req, res) => {
 });
 
 
-router.get('/wallet-history/:userId', async (req, res) => {
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\wallet.js
+
+// ✅ Frontend calls: /api/wallet/history/${uid}
+// Isliye route ka naam strictly '/history/:userId' hona chahiye
+router.get('/history/:userId', async (req, res) => {
   try {
     const userId = Number(req.params.userId);
+    
     if (isNaN(userId)) {
       return res.status(400).json({ message: 'Invalid user ID' });
     }
 
-    // Fetch transactions but ignore topup with "PROMOTION"
+    // 1. Saare types jo frontend ko ledger calculate karne ke liye chahiye
+    const allowedTypes = [
+      "deposit",
+      "credit_to_wallet",
+      "credit",         // Withdrawal return 50%
+      "transfer",
+      "topup",          // Aapka top-up deduction
+      "debit_topup",
+      "withdrawal",
+      "manual_credit",
+      "manual_debit"
+    ];
+
+    // 2. ✨ MEGA QUERY: 
+    // - Check 1: Kya user khud owner hai (userId)?
+    // - Check 2: Kya user ne kisi aur ka topup/transfer kiya (fromUserId)?
+    // - Check 3: Kya kisi ne user ko transfer kiya (toUserId)?
     const txs = await Transaction.find({
-      userId,
-      $or: [
-        { type: { $in: ['deposit', 'transfer'] } },
+      $and: [
+        {
+          $or: [
+            { userId: userId },       
+            { fromUserId: userId },   
+            { toUserId: userId }      
+          ]
+        },
         { 
-          type: 'topup',
-          description: { $exists: true, $ne: null, $not: /PROMOTION/i } // ignore promo topups
+          type: { $in: allowedTypes } 
+        },
+        { 
+          // PROMOTION wale fake transactions ko hide rakhega
+          description: { $not: /PROMOTION/i } 
         }
       ]
     }).sort({ date: -1 });
 
+    // Response ko 'history' key me bhejna hai jaisa frontend expect kar raha hai
     res.json({ success: true, history: txs });
+
   } catch (err) {
     console.error("Wallet history error:", err);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -699,16 +738,23 @@ router.post(
         return res.status(400).json({ message: "Please enter an amount to credit." });
       }
 
-      // 💰 CALCULATE TOTAL AMOUNT
+      // 💰 CALCULATE TOTAL AMOUNT 
       let totalAmt = 0;
       for (let item of items) {
         const amt = Math.floor(parseFloat(item.amount));
         if (amt <= 0) return res.status(400).json({ message: "Invalid amount detected." });
-        totalAmt += amt;
+        
+        totalAmt += amt; // Sirf total calculate karo
       }
 
-      if (totalAmt < 5) {
-        return res.status(400).json({ message: `Minimum total credit amount is $5. You entered $${totalAmt}.` });
+      // ✨ NAYA CHECK (Loop ke bahar, yani Total Amount par)
+      if (totalAmt % 10 !== 0) {
+          return res.status(400).json({ message: `Total credit amount must be in multiples of $10. Your total is $${totalAmt}.` });
+      }
+
+      // ✨ UPDATE: Minimum total credit amount is now $10
+      if (totalAmt < 10) {
+        return res.status(400).json({ message: `Minimum total credit amount is $10. You entered $${totalAmt}.` });
       }
 
       // =========================================================

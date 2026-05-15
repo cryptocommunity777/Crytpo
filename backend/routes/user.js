@@ -449,10 +449,22 @@ router.put(
         targetUser.isToppedUp = true;
         targetUser.topUpDate = new Date();
 
+        // 👇👇 YAHAN SE NAYA CODE SHURU 👇👇
+        // ✨ MAGIC LOGIC: Asli User ke Top-up karte hi baaki saare Active users ki Global Team Count badha do!
+        try {
+            await User.updateMany(
+                { isToppedUp: true, userId: { $ne: targetUser.userId } }, 
+                { $inc: { globalTeamCount: 1 } }
+            );
+        } catch (globalErr) {
+            console.error("Global Team Increment Error during Top-up:", globalErr);
+        }
+        // 👆👆 NAYA CODE KHATAM 👆👆
+
         // 🌟 SPONSOR DIRECT COUNT & DIRECT INCOME (Level 1)
         if (targetUser.sponsorId) {
             const sponsor = await User.findOne({ userId: targetUser.sponsorId });
-            if (sponsor) {
+             if (sponsor) {
                 // 1. Direct Count badhao
                 sponsor.directCount = (sponsor.directCount || 0) + 1;
                 
@@ -563,6 +575,7 @@ router.put(
         withdrawn: 0
       });
       targetUser.topUpAmount = Math.max(targetUser.topUpAmount || 0, amount);
+      targetUser.updatedAt = new Date(); // 👈 Ye line make sure karegi ki ye list me top pe aaye
       await targetUser.save();
 
       let txDescription = isFirstTopup ? `Node Activated with $${amount}` : `Node Upgrade with $${amount}`;

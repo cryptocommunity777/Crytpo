@@ -345,8 +345,7 @@ function Register() {
       {/* --- LIGHT THEME SUCCESS MODAL --- */}
       {showPopup && registeredData && (
         <div style={modalOverlay}>
-          {showConfetti && <Confetti width={window.innerWidth} height={window.innerHeight} numberOfPieces={300} gravity={0.15} colors={['#10b981', '#34d399', '#fcd34d', '#ffffff']} recycle={false} style={{ zIndex: 2001 }} />}
-          
+           
           <div className="animate-in zoom-in duration-300 relative overflow-hidden" style={modalBox}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-100 blur-[50px]"></div>
             

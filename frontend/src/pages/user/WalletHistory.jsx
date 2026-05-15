@@ -10,7 +10,6 @@ const WalletHistory = () => {
   const [typeFilter, setTypeFilter] = useState("all");
   const [userId, setUserId] = useState(null);
 
-  // --- PAGINATION STATE ---
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -18,6 +17,7 @@ const WalletHistory = () => {
   const allTypes = [
     "deposit",
     "credit_to_wallet",
+    "credit", 
     "transfer",
     "topup",
     "debit_topup",
@@ -45,7 +45,6 @@ const WalletHistory = () => {
   const fetchWalletHistory = async (uid) => {
     try {
       setLoading(true);
-      // 🔥 CACHE FIX
       const res = await api.get(`/wallet/history/${uid}?t=${new Date().getTime()}`);
 
       let txns = [];
@@ -56,14 +55,13 @@ const WalletHistory = () => {
       }
 
       const formattedHistory = txns
-        .filter(t => allTypes.includes(t.type)) // Only allowed types
+        .filter(t => allTypes.includes(t.type)) 
         .map(t => ({
           ...t,
           date: t.createdAt || t.date,
           rawAmount: Number(t.amount || t.grossAmount || 0)
         }));
 
-      // Sort Oldest to Newest for sequential balance calculation
       formattedHistory.sort((a,b) => new Date(a.date) - new Date(b.date));
       setTransactions(formattedHistory);
 
@@ -86,84 +84,82 @@ const WalletHistory = () => {
       let displayTypeUI = "UNKNOWN";
       let icon = <History size={14} />;
 
-      const fromId = String(txn.fromUserId);
-      const toId = String(txn.toUserId);
+      // ✅ SAFER EXTRACTION
+      const fromId = txn.fromUserId ? String(txn.fromUserId) : "";
+      const toId = txn.toUserId ? String(txn.toUserId) : "";
+      const txnOwnerId = String(txn.userId);
       const myId = String(userId);
       const amt = txn.rawAmount;
 
       switch(txn.type) {
         
-        // ✅ DEPOSIT & CREDIT TO WALLET (Balance Badhega +)
         case "deposit":
         case "manual_credit":
         case "credit_to_wallet": 
+        case "credit": 
           mathImpact = amt;
-          colorStyle = "text-green-400"; 
+          colorStyle = "text-green-500"; 
           operator = "+";
           displayTypeUI = "CREDIT";
-          icon = <ArrowDownLeft size={14} className="text-green-400" />;
+          icon = <ArrowDownLeft size={14} className="text-green-500" />;
           break;
 
-        // ✅ WITHDRAWAL (Main Wallet me 50% aata hai, toh Balance Badhega +)
         case "withdrawal":
-          mathImpact = amt; 
-          colorStyle = "text-green-400"; 
-          operator = "+";
+          mathImpact = 0; 
+          colorStyle = "text-slate-500"; 
+          operator = "";
           displayTypeUI = "WITHDRAWAL";
-          icon = <Landmark size={14} className="text-green-400" />;
+          icon = <Landmark size={14} className="text-slate-500" />;
           break;
 
-        // ❌ MANUAL DEBIT (Balance Katega -)
         case "manual_debit":
           mathImpact = -amt;
-          colorStyle = "text-red-400"; 
+          colorStyle = "text-red-500"; 
           operator = "-";
           displayTypeUI = "DEBIT";
-          icon = <ArrowUpRight size={14} className="text-red-400" />;
+          icon = <ArrowUpRight size={14} className="text-red-500" />;
           break;
 
-        // 🔄 P2P TRANSFER (Bheja toh -, Aaya toh +)
         case "transfer": 
           if (toId === myId) { 
-            mathImpact = amt; // Paisa Aaya
-            colorStyle = "text-green-400"; 
+            mathImpact = amt; 
+            colorStyle = "text-green-500"; 
             operator = "+";
             displayTypeUI = "RECEIVED";
-            icon = <ArrowDownLeft size={14} className="text-green-400" />;
-          } else if (fromId === myId) { 
-            mathImpact = -amt; // Paisa Bheja
-            colorStyle = "text-green-400"; 
+            icon = <ArrowDownLeft size={14} className="text-green-500" />;
+          } else if (fromId === myId || (!fromId && txnOwnerId === myId)) { 
+            mathImpact = -amt; 
+            colorStyle = "text-red-500"; 
             operator = "-";
             displayTypeUI = "SENT P2P";
-            icon = <ArrowRightLeft size={14} className="text-green-400" />;
+            icon = <ArrowRightLeft size={14} className="text-red-500" />;
           }
           break;
 
-        // ⚡ TOP-UP (Khud kiya ya kisi ka kiya toh Balance Katega -)
+        // 🔥 THE REAL FIX FOR TOPUP DEDUCTION 🔥
         case "topup":
         case "debit_topup":
           displayTypeUI = "TOPUP";
-          icon = <Zap size={14} className="text-yellow-400" />;
+          icon = <Zap size={14} className="text-yellow-500" />;
           
-          if (fromId === myId) { 
-            // Aapne kisi ki ID topup ki ya khud ki (Paisa Katega)
-            if (amt === 10) {
-              // (Puraani condition: $10 pre-launch free ID exception)
+          // Condition: "Kya ye paisa MERE wallet se kata hai?"
+          // Agar 'fromUserId' main hoon, matlab maine top-up kiya hai (khud ka ya kisi aur ka)
+          const isMyMoneySpent = (fromId === myId) || (!fromId && txnOwnerId === myId);
+
+          if (isMyMoneySpent) { 
+            if (amt === 10 && finalDescription.includes("Pre-launch")) {
               mathImpact = 0; 
-              colorStyle = "text-yellow-400"; 
+              colorStyle = "text-yellow-500"; 
               operator = ""; 
-              if (!finalDescription.includes("(Pre-launch Offer)")) {
-                finalDescription = finalDescription ? finalDescription + " (Pre-launch Offer)" : "Pre-launch Offer (No Deduction)";
-              }
             } else {
-              mathImpact = -amt; // Balance Deduction
-              colorStyle = "text-red-400"; 
+              mathImpact = -amt; // ✅ Paisa kat gaya
+              colorStyle = "text-red-500"; 
               operator = "-";
             }
           } else { 
-            // Kisi aur ne aapki ID topup ki (Aapke wallet par koi farq nahi, Impact = 0)
+            // Agar aapke downline ne apna khud ka top-up kiya, toh wo list me aayega par aapka balance impact 0 rahega
             mathImpact = 0; 
-            colorStyle = "text-black"; 
+            colorStyle = "text-slate-500"; 
             operator = ""; 
           }
           break;
@@ -181,7 +177,10 @@ const WalletHistory = () => {
         colorStyle,
         formattedAmount: `${operator} $${amt.toFixed(2)}`,
         displayTypeUI,
-        icon
+        icon,
+        fromIdSafe: fromId,
+        toIdSafe: toId,
+        txnOwnerIdSafe: txnOwnerId
       };
     });
   };
@@ -189,19 +188,20 @@ const WalletHistory = () => {
   const processedData = calculateBalances();
   const currentWalletBalance = processedData.length > 0 ? processedData[processedData.length - 1].balance : "0.00";
 
+  // Filter Logic: Ab isme 'txnOwnerIdSafe' bhi include kar diya taaki search accurate rahe
   const filtered = processedData.filter(txn => {
     const s = searchTerm.toLowerCase();
     const matchesType = typeFilter === "all" || txn.type === typeFilter;
     const matchesSearch = 
       txn.displayTypeUI.toLowerCase().includes(s) || 
       txn.description?.toLowerCase().includes(s) || 
-      txn.fromUserId?.toString().includes(s) || 
-      txn.toUserId?.toString().includes(s);
+      txn.fromIdSafe.includes(s) || 
+      txn.toIdSafe.includes(s) ||
+      txn.txnOwnerIdSafe.includes(s);
     
     return matchesType && matchesSearch;
   });
 
-  // --- PAGINATION LOGIC (Reverse to show newest first) ---
   const reversedData = [...filtered].reverse();
   const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -211,7 +211,6 @@ const WalletHistory = () => {
   return (
     <div className="w-full max-w-7xl mx-auto pb-10 relative z-10 animate-in fade-in duration-500">
       
-      {/* Scrollbar CSS */}
       <style>{`
         .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
         .custom-scroll::-webkit-scrollbar-track { background: #050505; }
@@ -245,7 +244,6 @@ const WalletHistory = () => {
 
       {/* Filters (Search & Type) */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between items-center bg-white shadow-sm p-4 rounded-2xl border border-slate-200">
-        
         <div className="relative w-full sm:w-80 group">
            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
              <Search size={16} className="text-gray-500 group-focus-within:text-green-500 transition-colors" />
@@ -258,7 +256,6 @@ const WalletHistory = () => {
              className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-bold tracking-wide rounded-xl px-4 py-3 pl-10 focus:border-green-500 focus:outline-none transition-all placeholder-slate-400"
            />
         </div>
-
         <div className="flex items-center gap-3 w-full sm:w-auto">
            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Filter:</span>
            <select
@@ -278,10 +275,9 @@ const WalletHistory = () => {
       {/* Table Box */}
       <div className="bg-white shadow-sm backdrop-blur-xl rounded-2xl border border-slate-200 overflow-hidden shadow-2xl relative">
         <div className="absolute top-0 right-0 w-64 h-64 bg-green-600/5 blur-[100px] pointer-events-none rounded-full"></div>
-        
         <div className="overflow-x-auto custom-scroll w-full relative z-10">
           <table className="w-full text-xs sm:text-sm text-left whitespace-nowrap">
-            <thead className="bg-slate-50 text-green-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
+            <thead className="bg-slate-50 text-green-600 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center w-16">Sr.</th>
                 <th className="p-4 font-black">Type</th>
@@ -297,14 +293,13 @@ const WalletHistory = () => {
               {loading ? (
                 <tr>
                   <td colSpan="7" className="text-center py-10">
-                    <svg className="animate-spin h-8 w-8 text-green-500 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Loading Ledger...</span>
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
                   <td colSpan="7" className="text-center py-10">
-                    <span className="text-red-400 font-bold text-sm uppercase tracking-widest bg-red-500/10 px-4 py-2 rounded-lg border border-red-500/20">{error}</span>
+                    <span className="text-red-500 font-bold text-sm uppercase tracking-widest bg-red-50 px-4 py-2 rounded-lg border border-red-200">{error}</span>
                   </td>
                 </tr>
               ) : currentItems.length === 0 ? (
@@ -319,45 +314,43 @@ const WalletHistory = () => {
                   
                   // Party info format
                   let partyInfo = "-";
-                  if (txn.fromUserId && txn.toUserId) {
-                     if (String(txn.fromUserId) === userId && String(txn.toUserId) === userId) {
-                       partyInfo = "Self";
-                     } else if (String(txn.fromUserId) === userId) {
-                       partyInfo = `To: ${txn.toUserId}`;
-                     } else if (String(txn.toUserId) === userId) {
-                       partyInfo = `From: ${txn.fromUserId}`;
-                     }
+                  // Agar us bande ne khud ka kiya hai
+                  if (txn.fromIdSafe === String(userId) && txn.toIdSafe === String(userId)) {
+                      partyInfo = "Self";
+                  } 
+                  // Agar aapne kisi ko bheja/topup kiya hai
+                  else if (txn.fromIdSafe === String(userId)) {
+                      partyInfo = `To: ${txn.toIdSafe}`;
+                  } 
+                  // Agar kisi ne aapko bheja/topup kiya hai
+                  else if (txn.toIdSafe === String(userId)) {
+                      partyInfo = `From: ${txn.fromIdSafe}`;
+                  } 
+                  // Legacy fallback
+                  else if (txn.type === "topup" && !txn.fromIdSafe && txn.txnOwnerIdSafe === String(userId)) {
+                      partyInfo = "Self";
                   }
 
                   return (
-                    <tr key={`${txn._id}-${txn.date}-${idx}`} className="border-b border-slate-100 hover:bg-white/5 transition-colors bg-white">
-                      
-                      <td className="p-4 font-bold text-gray-500 text-center">
-                        {serialNumber}
-                      </td>
-
+                    <tr key={`${txn._id}-${txn.date}-${idx}`} className="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-white">
+                      <td className="p-4 font-bold text-gray-500 text-center">{serialNumber}</td>
                       <td className="p-4">
-                        <span className="inline-flex items-center gap-1.5 bg-white/5 border border-slate-200 px-2 py-1 rounded-md text-[10px] font-black tracking-widest text-slate-600">
+                        <span className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2 py-1 rounded-md text-[10px] font-black tracking-widest text-slate-600 shadow-sm">
                           {txn.icon} {txn.displayTypeUI}
                         </span>
                       </td>
-
                       <td className={`p-4 font-black ${txn.colorStyle}`}>
                          {txn.formattedAmount}
                       </td>
-
                       <td className="p-4 font-black text-slate-900">
                          ${txn.balance}
                       </td>
-
                       <td className="p-4 font-mono text-black text-xs">
-                        {partyInfo !== "-" ? <span className="bg-white/5 px-2 py-1 border border-slate-200 rounded">{partyInfo}</span> : "-"}
+                        {partyInfo !== "-" ? <span className="bg-slate-50 px-2 py-1 border border-slate-200 rounded">{partyInfo}</span> : "-"}
                       </td>
-
                       <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={txn.description || "-"}>
                         {txn.description || "-"}
                       </td>
-
                       <td className="p-4 text-gray-500 font-mono text-[10px] sm:text-xs text-right">
                         <div className="flex flex-col items-end">
                            <span className="text-slate-600">{new Date(txn.date).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}</span>
@@ -374,49 +367,23 @@ const WalletHistory = () => {
 
         {/* Pagination Footer */}
         {!loading && !error && filtered.length > 0 && (
-           <div className="p-4 border-t border-slate-100 bg-slate-50/40 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-10">
-              
+           <div className="p-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-10">
               <div className="flex items-center gap-3">
                  <span className="text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Rows:</span>
-                 <select
-                   value={itemsPerPage}
-                   onChange={(e) => {
-                     setItemsPerPage(Number(e.target.value));
-                     setCurrentPage(1);
-                   }}
-                   className="bg-white border border-slate-200 text-slate-900 text-xs font-bold rounded-lg px-2 py-1 focus:border-green-500 outline-none"
-                 >
+                 <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="bg-white border border-slate-200 text-slate-900 text-xs font-bold rounded-lg px-2 py-1 focus:border-green-500 outline-none">
                    <option value={10}>10</option>
                    <option value={20}>20</option>
                    <option value={50}>50</option>
                    <option value={100}>100</option>
                  </select>
               </div>
-
               <span className="text-gray-500 text-[10px] md:text-xs font-black uppercase tracking-widest">
                 Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filtered.length)} of {filtered.length}
               </span>
-              
               <div className="flex items-center gap-2">
-                 <button
-                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                   disabled={currentPage === 1}
-                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === 1 ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-white/10 text-slate-900 hover:bg-green-500/20 hover:text-green-500 border border-transparent hover:border-green-500/30'}`}
-                 >
-                   <ChevronLeft size={18} />
-                 </button>
-                 
-                 <span className="bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-2 rounded-lg">
-                    {currentPage} / {totalPages}
-                 </span>
-                 
-                 <button
-                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                   disabled={currentPage === totalPages}
-                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === totalPages ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-white/10 text-slate-900 hover:bg-green-500/20 hover:text-green-500 border border-transparent hover:border-green-500/30'}`}
-                 >
-                   <ChevronRight size={18} />
-                 </button>
+                 <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === 1 ? 'bg-slate-100 text-gray-400 cursor-not-allowed border-slate-200' : 'bg-white text-slate-900 hover:bg-green-50 hover:text-green-600 border border-slate-200 shadow-sm'}`}><ChevronLeft size={18} /></button>
+                 <span className="bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-2 rounded-lg shadow-sm">{currentPage} / {totalPages}</span>
+                 <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === totalPages ? 'bg-slate-100 text-gray-400 cursor-not-allowed border-slate-200' : 'bg-white text-slate-900 hover:bg-green-50 hover:text-green-600 border border-slate-200 shadow-sm'}`}><ChevronRight size={18} /></button>
               </div>
            </div>
         )}

@@ -11,6 +11,7 @@ const checkFeature = require('../middleware/checkFeatureEnabled');
 const DummyUser = require('../models/DummyUser.js');
 const LoginHistory = require('../models/LoginHistory'); 
 const IpRule = require('../models/IpRule'); 
+const FakeUser = require('../models/FakeUser'); 
 
 // 🚀 NEW: BlockedDevice Model Import
 const BlockedDevice = require('../models/BlockedDevice'); 
@@ -82,15 +83,7 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
             return res.status(403).json({ message: "Access Denied: Your IP has been blocked by the Administrator." });
         }
 
-        // ✅ IP Limit Wapas Laga Di (Default 5)
-        const allowedLimit = (rule && rule.limit) ? rule.limit : 5;
-        const totalRegisteredFromIP = await User.countDocuments({ ipAddress: userIP });
-
-        if (totalRegisteredFromIP >= allowedLimit) {
-            return res.status(403).json({ 
-                message: `Access Denied: You have reached the maximum limit of ${allowedLimit} accounts per network.` 
-            });
-        }
+        
     }
 
     // 🚀 DEVICE FINGERPRINT CHECK (5 Accounts Per Device + Admin Block)
@@ -105,7 +98,24 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         
     }
 
-    const userId = await generateUserId();
+    // ✨ NAYA LOGIC: 100% Unique ID Check (Real aur Fake dono collection me)
+    let userId;
+    let isUniqueId = false;
+
+    while (!isUniqueId) {
+        userId = await generateUserId(); // Temporary ID generate karega
+        
+        // Check karega ki ye ID kisibhi table me mojood toh nahi hai
+        const existsInFake = await FakeUser.exists({ userId: userId });
+        const existsInReal = await User.exists({ userId: userId });
+
+        // Agar dono jagah nahi hai, tab isko final manega aur loop todega
+        if (!existsInFake && !existsInReal) {
+            isUniqueId = true;
+        }
+    }
+
+    // Ab naya user exactly 100% unique ID ke sath banega
     const user = new User({
       userId, name, mobile, email, country,
       password, transactionPassword: password,
@@ -118,7 +128,6 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     await user.save();
 
     // 👉 EMAIL TEMPLATE
-  // 👉 EMAIL TEMPLATE
     try {
         await sendEmail({
     email: user.email,

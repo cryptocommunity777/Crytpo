@@ -14,7 +14,7 @@ exports.getUserById = async (req, res) => {
     }
 
     // 🔥 Total Real Users ka count nikalna
-    const totalRealUsers = await User.countDocuments();
+const totalRealUsers = await User.countDocuments({ isToppedUp: true });
 
     // 🔥 Total Fake Users (Cron wala) ka count nikalna
     const stat = await SystemStat.findOne();

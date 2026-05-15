@@ -205,7 +205,8 @@ const WithdrawalModal = ({ userId, onClose }) => {
       }
 
       if (totalRequested === 0) return showMessage("Warning", "Enter amount to withdraw.");
-      if (!isPromo && totalRequested < 5) return showMessage("Warning", "Minimum total withdrawal amount is $5.");
+      // ✅ UPDATE: Minimum 10 karna hai jaisa backend me kiya tha (Frontend warning bhi change kardi)
+      if (!isPromo && totalRequested < 10) return showMessage("Warning", "Minimum total withdrawal amount is $10.");
       if (!transactionPassword.trim()) return showMessage("Warning", "Enter transaction password.");
 
       setLoading(true);
@@ -226,9 +227,24 @@ const WithdrawalModal = ({ userId, onClose }) => {
       await fetchData();
 
     } catch (err) {
-      console.log(err);
-      const msg = err.message || (err.response?.status === 403 ? "Invalid Transaction Password" : err.response?.data?.message || "Withdrawal failed.");
-      showMessage("Error", msg);
+      console.error(err);
+      
+      // ✅ YAHAN MAINE ERROR MESSAGE EXTRACTION THEEK KAR DIYA HAI
+      // Agar backend se proper message aaya hai, toh use dikhao, warna default message dikhao
+      let errorMsg = "Withdrawal failed due to a server error.";
+      
+      if (err.response && err.response.data && err.response.data.message) {
+         errorMsg = err.response.data.message;
+      } else if (err.message) {
+         errorMsg = err.message;
+      }
+
+      // Check for strict 403 status 
+      if (err.response?.status === 403) {
+          errorMsg = "Invalid Transaction Password";
+      }
+
+      showMessage("Withdrawal Error", errorMsg);
     } finally {
       setLoading(false); 
     }

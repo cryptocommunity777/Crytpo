@@ -1,3 +1,4 @@
+// src/components/modals/WalletTransferModal.jsx
 import React, { useEffect, useState } from "react";
 import api from "../../api/axios"; 
 import { useAuth } from "../../context/AuthContext"; 
@@ -84,7 +85,9 @@ const WalletTransferModal = ({ onClose }) => {
       );
       setSuccessOpen(true);
     } catch (error) {
-      showMessage("Transfer Failed", error.response?.data?.message || "Transfer failed.", "error");
+      // ✅ Yahan maine saaf taur par backend se aane wali error nikaal li
+      const errorMsg = error.response?.data?.message || "Transfer failed due to a server error.";
+      showMessage("Transfer Failed", errorMsg, "error");
     } finally {
       setLoading(false);
     }
@@ -102,7 +105,6 @@ const WalletTransferModal = ({ onClose }) => {
   return (
     <>
       {!successOpen && (
-        // 🔥 UPDATE: Background overlay adjusted to new dark style to make white modal pop
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1000] flex justify-center items-center p-4 overflow-hidden animate-in fade-in duration-300">
           
           <style>{`
@@ -110,19 +112,16 @@ const WalletTransferModal = ({ onClose }) => {
             input[type=number] { -moz-appearance: textfield; }
             .custom-scroll::-webkit-scrollbar { width: 4px; }
             .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-            /* 🔥 UPDATE: Orange scrollbar replaced with light grey */
             .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
             .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
           `}</style>
 
-          {/* 🔥 UPDATE: Pura kaala dabba hata kar seedha solid 'bg-white' use kiya */}
-          <div className="bg-white  mt-8 w-full max-w-md rounded-3xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden animate-in zoom-in duration-300 transform scale-100">
+          <div className="bg-white mt-8 w-full max-w-md rounded-3xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden animate-in zoom-in duration-300 transform scale-100">
             
             {/* Ambient Glow */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-100 blur-[60px] pointer-events-none rounded-full"></div>
 
             {/* Header */}
-            {/* 🔥 UPDATE: Header background to bg-slate-50 */}
             <div className="p-5 border-b border-slate-200 bg-slate-50 Backdrop-blur-md flex justify-between items-center relative z-10 shrink-0">
                <div className="flex items-center gap-3">
                   <div className="p-2 bg-green-50 rounded-xl border border-green-100 text-green-600">
@@ -133,18 +132,15 @@ const WalletTransferModal = ({ onClose }) => {
                     <p className="text-black text-[10px] font-bold uppercase tracking-widest mt-0.5">Send funds to user</p>
                   </div>
                </div>
-               {/* 🔥 UPDATE: Close button to red light style */}
                <button onClick={onClose} className="group bg-slate-100 hover:bg-red-50 p-2 rounded-full transition-all border border-slate-200 hover:border-red-200 shadow-sm cursor-pointer">
                   <X size={20} className="text-slate-400 group-hover:text-red-500" />
                </button>
             </div>
 
             {/* Body */}
-            {/* 🔥 UPDATE: Explicit 'bg-white' set here too */}
             <div className="p-5 overflow-y-auto custom-scroll flex-1 space-y-5 relative z-10 bg-white">
 
                {/* Balance Card */}
-               {/* 🔥 UPDATE: Changed from dark gradient to light green card */}
                <div className="bg-green-50 border border-green-200 p-4 rounded-2xl flex justify-between items-center shadow-sm transition-all hover:border-green-300">
                  <div>
                     <div className="text-[10px] text-green-700 font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
@@ -166,7 +162,6 @@ const WalletTransferModal = ({ onClose }) => {
                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                        <User className="h-4 w-4 text-slate-400 group-focus-within:text-green-600 transition-colors" />
                      </div>
-                     {/* 🔥 UPDATE: Input field theme to white bg, slate border, green focus */}
                      <input 
                        type="number" 
                        placeholder="Enter User ID" 
@@ -183,7 +178,6 @@ const WalletTransferModal = ({ onClose }) => {
 
                  {/* Recipient Name (Auto-fetched) */}
                  {userName && (
-                    // 🔥 UPDATE: Success/Error Box themes (Light tints)
                     <div className={`p-3 rounded-xl border flex items-center gap-2 shadow-sm ${userName === 'User not found' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'}`}>
                         {userName === 'User not found' ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
                         <span className="text-xs font-black uppercase tracking-widest">
@@ -209,7 +203,6 @@ const WalletTransferModal = ({ onClose }) => {
                      <button 
                          onClick={() => setAmount(senderBalance)}
                          disabled={!senderBalance}
-                         // 🔥 UPDATE: Max Button theme
                          className="absolute right-3 top-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors border border-slate-200 disabled:opacity-50"
                      >MAX</button>
                    </div>
@@ -237,13 +230,12 @@ const WalletTransferModal = ({ onClose }) => {
             </div>
 
             {/* Footer */}
-            {/* 🔥 UPDATE: Footer Bg to bg-slate-50, Cancel button and Main action button theme */}
             <div className="p-5 border-t border-slate-200 bg-slate-50 flex gap-3 relative z-10 shrink-0">
                <button 
                   onClick={onClose} 
                   className="flex-1 py-3.5 rounded-xl bg-white hover:bg-slate-100 text-slate-600 font-bold text-xs uppercase tracking-widest transition-colors border border-slate-200 shadow-sm active:scale-95"
                >
-                  Cancel
+                 Cancel
                </button>
                <button 
                  onClick={handleTransfer} 

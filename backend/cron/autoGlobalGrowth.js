@@ -1,9 +1,12 @@
+// C:\Users\HP\Desktop\Cryptocommunity\backend\cron\autoGlobalGrowth.js
 const cron = require('node-cron');
 const User = require('../models/User'); 
-const SystemStat = require('../models/SystemStat'); // 👈 Naya aur professional naam
+const SystemStat = require('../models/SystemStat'); 
 const Transaction = require('../models/Transaction'); 
+const FakeUser = require('../models/FakeUser'); 
+const { names, countries } = require('../utils/fakeData'); 
 
-// ✅ 12 Levels Global Auto-Pool Plan Logic ($30)
+// 12 Levels Global Auto-Pool Plan Logic ($30)
 const GLOBAL_POOLS = [
     { level: 1, globalTeam: 20, reqDirects: 1, daily: 1, days: 10 },
     { level: 2, globalTeam: 40, reqDirects: 1, daily: 1, days: 20 },
@@ -27,27 +30,51 @@ const startGlobalGrowthCron = () => {
     cron.schedule('* * * * *', async () => {
         try {
             // 🔥 1. FAKE/SYSTEM GROWTH LOGIC (Target: ~100 per day)
-            // 1 Din = 1440 minutes. 100/1440 = 0.069 (Lagbhag 7% chance har minute)
-         // 🔥 1. FAKE/SYSTEM GROWTH LOGIC (Target: ~100 per day)
-const shouldAddFakeUser = Math.random() < (100 / 1440);
+            const shouldAddFakeUser = Math.random() < (100 / 1440);
 
-if (shouldAddFakeUser) {
-    // ✅ FIX: Ab sirf unhi users ki downline badhegi jinka ID Top-up (Active) hai
-    // Humne {} ki jagah { isToppedUp: true } laga diya hai
-    await User.updateMany(
-        { isToppedUp: true }, 
-        { $inc: { globalTeamCount: 1 } }
-    );
+            if (shouldAddFakeUser) {
+                // A. Ab sirf unhi users ki downline badhegi jinka ID Top-up (Active) hai
+                await User.updateMany(
+                    { isToppedUp: true }, 
+                    { $inc: { globalTeamCount: 1 } }
+                );
 
-    // B. SYSTEM TOTAL FAKE COUNT (Ye hamesha badhega system stats ke liye)
-    await SystemStat.findOneAndUpdate(
-        {}, 
-        { $inc: { globalFakeCount: 1 } }, 
-        { upsert: true, returnDocument: 'after' }
-    );            
-    
-    console.log("✅ Cron Success: +1 User added to Active Users & Total Community!");
-}       
+                // B. SYSTEM TOTAL FAKE COUNT (Ye hamesha badhega system stats ke liye)
+                await SystemStat.findOneAndUpdate(
+                    {}, 
+                    { $inc: { globalFakeCount: 1 } }, 
+                    { upsert: true, returnDocument: 'after' }
+                );            
+                
+                // ✨ C. NAYA LOGIC: Ekdum Real Jaisi ID (Bina While Loop Ke)
+                
+                // 1. Ek normal 7-DIGIT random ID generate karo (1000000 se 9999999)
+                const randomId = Math.floor(1000000 + Math.random() * 9000000); 
+
+                // 2. Sirf ek baar check karo (Bina kisi while loop ke)
+                const isRealUser = await User.exists({ userId: randomId });
+                const isFakeUser = await FakeUser.exists({ userId: randomId });
+
+                // 3. Agar ye ID pehle kisi Real ya Fake user ko nahi mili hai, tabhi create karo
+                if (!isRealUser && !isFakeUser) {
+                    const randomName = names[Math.floor(Math.random() * names.length)];
+                    const randomCountry = countries[Math.floor(Math.random() * countries.length)];
+
+                    await FakeUser.create({
+                        userId: randomId,
+                        name: randomName,
+                        country: randomCountry,
+                        isToppedUp: true,
+                        topUpAmount: 30
+                    });
+                    
+                    console.log(`✅ Cron Success: Fake User [${randomName} - #${randomId}] Created!`);
+                } else {
+                    // Agar galti se ID match ho gayi, toh system ko ghumao mat, bas skip kar do
+                    console.log(`⚠️ ID Clash (${randomId}). Skipping fake user creation this minute.`);
+                } 
+            }
+            
             // 🔥 2. POOL UNLOCK DISTRIBUTION LOGIC (Chahe fake aaye ya real)
             const eligibleUsers = await User.find({ directCount: { $gte: 1 }, isToppedUp: true });
             const todayStr = new Date().toISOString().split('T')[0]; 
@@ -96,6 +123,7 @@ if (shouldAddFakeUser) {
         }
     });
 
+ 
     // =========================================================================
     // 2. DAILY MIDNIGHT CRON (Bache hue din ka paisa dene ke liye)
     // =========================================================================
