@@ -88,28 +88,7 @@ const DirectIncome = () => {
         </div>
       </div>
 
-      {/* Top Stats Cards */}
-      <div className="grid grid-cols-2 gap-4 md:gap-6 mb-8">
-        <div className="bg-white shadow-sm backdrop-blur-md rounded-2xl border border-slate-200 p-5 md:p-6 shadow-[0_0_30px_rgba(249,115,22,0.1)] relative overflow-hidden flex flex-col justify-center">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 blur-[30px]"></div>
-          <h3 className="text-gray-500 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 mb-2">
-             <ListChecks size={14} className="text-blue-500" /> Total Records
-          </h3>
-          <p className="text-3xl md:text-4xl font-black text-slate-900 drop-shadow-md">
-            {filtered.length}
-          </p>
-        </div>
-
-        <div className="bg-white shadow-sm backdrop-blur-md rounded-2xl border border-slate-200 p-5 md:p-6 shadow-[0_0_30px_rgba(249,115,22,0.1)] relative overflow-hidden flex flex-col justify-center">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 blur-[30px]"></div>
-          <h3 className="text-gray-500 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 mb-2">
-             <DollarSign size={14} className="text-green-500" /> Total Income
-          </h3>
-          <p className="text-3xl md:text-4xl font-black text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.3)]">
-            ${totalIncome.toFixed(2)}
-          </p>
-        </div>
-      </div>
+       
 
       {/* Filters (Search & Entries) */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between items-center bg-white shadow-sm p-4 rounded-2xl border border-slate-200">
