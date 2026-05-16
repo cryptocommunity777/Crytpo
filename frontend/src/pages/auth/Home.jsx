@@ -5,7 +5,7 @@ import {
   Network, Rocket, ShieldCheck, 
   Globe2, ChevronRight, Activity,
   Hexagon, Users, DollarSign,
-  Gift, Target, Trophy, Medal, Crown, Calendar
+  Gift, Target, Trophy, Medal, Crown, Calendar, Info, Timer
 } from 'lucide-react';
 
 // --- PREMIUM ANIMATED COUNTER ---
@@ -189,7 +189,7 @@ const Home = () => {
               { label: "Activation", prefix: "$", end: 30, suffix: " Only" },
               { label: "Community Bonus", prefix: "Max $", end: 12200, suffix: "" },
               { label: "Referral Levels", end: 20, suffix: " Levels" },
-              { label: "Fast Track Bonus", prefix: "$", end: 10, suffix: "/Direct" } // REPLACED CYCLE BONUS HERE
+              { label: "Fast Track Bonus", prefix: "$", end: 10, suffix: "/Direct" }
             ].map((stat, i) => (
               <div key={i} className="flex-1 min-w-[140px]">
                 <div className="text-theme-green text-3xl md:text-4xl font-black mb-1 drop-shadow-sm">
@@ -317,80 +317,130 @@ const Home = () => {
           </div>
         </section>
 
-        {/* --- 3. MONTHLY REWARDS --- */}
-      {/* ==========================================
-            4. FAST TRACK BONUS SECTION (NEW SEPARATE)
-        ========================================== */}
-        <section className="py-20 px-6 bg-gradient-to-br from-green-500 to-emerald-700 text-white relative overflow-hidden">
-          {/* Background Effects */}
-          <div className="absolute top-[-20%] left-[-10%] w-64 h-64 bg-white/20 rounded-full blur-3xl mix-blend-overlay"></div>
-          <div className="absolute bottom-[-20%] right-[-10%] w-64 h-64 bg-slate-900/20 rounded-full blur-3xl mix-blend-overlay"></div>
+        {/* --- 3. FAST TRACK BONUS (ENHANCED) --- */}
+        <section className="py-20 px-6 bg-gradient-to-br from-green-600 to-emerald-900 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-white/5 blur-[100px] rounded-full pointer-events-none"></div>
           
-          <div className="max-w-4xl mx-auto relative z-10 text-center">
-            <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/30 shadow-lg transform hover:scale-110 transition-transform">
-              <Gift size={40} className="text-white" />
-            </div>
-            <h2 className="text-3xl md:text-5xl font-black mb-4">Fast Track <span className="text-green-200">Bonus</span></h2>
-            <p className="text-lg md:text-xl font-medium mb-10 text-green-50 max-w-2xl mx-auto">
-              Bring a direct $30 top-up within your first 30 days and earn an extra $1 daily for 10 days!
-            </p>
-            
-            <div className="inline-block bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl transform hover:-translate-y-1 transition-all">
-              <span className="block text-green-100 text-sm font-bold uppercase tracking-widest mb-2">Total Fast Track Reward</span>
-              <span className="text-5xl md:text-6xl font-black text-white drop-shadow-md">
-                $10 <span className="text-2xl md:text-3xl font-bold text-green-200">/ Direct</span>
-              </span>
+          <div className="max-w-6xl mx-auto relative z-10">
+            <div className="flex flex-col lg:flex-row items-center gap-12">
+              <div className="flex-1 text-center lg:text-left">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-green-300 text-xs font-black tracking-widest mb-6">
+                  <Timer size={16} /> LIMITED TIME OFFER
+                </div>
+                <h2 className="text-4xl md:text-6xl font-black mb-6 leading-tight">
+                  Fast Track <br /> <span className="text-green-400">Direct Bonus</span>
+                </h2>
+                <p className="text-green-100 text-lg mb-8 leading-relaxed max-w-xl">
+                  Boost your earnings in the first month! Bring any direct $30 top-up within 30 days of your registration and unlock a special daily reward.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-6 items-center lg:items-start">
+                  <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-3xl text-center min-w-[200px]">
+                    <span className="block text-green-300 text-xs font-bold uppercase mb-2">Daily Extra</span>
+                    <span className="text-4xl font-black">$1.00</span>
+                  </div>
+                  <ArrowRight className="hidden sm:block text-white/30" size={32} />
+                  <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-3xl text-center min-w-[200px]">
+                    <span className="block text-green-300 text-xs font-bold uppercase mb-2">For Total</span>
+                    <span className="text-4xl font-black">10 Days</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 w-full max-w-md">
+                <div className="bg-white p-8 rounded-[40px] shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full -mr-8 -mt-8"></div>
+                  <h3 className="text-slate-900 text-2xl font-black mb-6 flex items-center gap-3">
+                    <Rocket className="text-green-600" /> How it Works?
+                  </h3>
+                  <div className="space-y-6">
+                    <div className="flex gap-4">
+                      <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-black shrink-0">1</div>
+                      <p className="text-slate-600 text-sm font-medium">Register and activate your node for $30.</p>
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-black shrink-0">2</div>
+                      <p className="text-slate-600 text-sm font-medium">Refer a direct member with $30 within your first 30 days.</p>
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-black shrink-0">3</div>
+                      <p className="text-slate-600 text-sm font-medium">System starts paying you <span className="text-green-600 font-bold">$1 extra daily</span> for 10 days straight!</p>
+                    </div>
+                  </div>
+                  <div className="mt-8 pt-6 border-t border-slate-100 text-center">
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Total Benefit per Direct</p>
+                    <p className="text-3xl font-black text-slate-900">$10.00 <span className="text-green-600">+ Commissions</span></p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ==========================================
-            5. MONTHLY REWARDS SECTION
-        ========================================== */}
+        {/* --- 4. MONTHLY REWARDS SECTION (CLEAN) --- */}
         <section className="py-24 px-6 bg-slate-900 text-white relative overflow-hidden">
-          {/* Dark theme background effect */}
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-green-500/10 blur-[100px] rounded-full"></div>
+          <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-green-500/5 blur-[120px] rounded-full pointer-events-none"></div>
           
-          <div className="max-w-6xl mx-auto relative z-10">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-5xl font-black mb-4">MONTHLY <span className="text-green-400">REWARDS</span></h2>
-              <p className="inline-flex items-center gap-2 bg-slate-800 text-green-400 px-6 py-2.5 rounded-full border border-green-500/30 text-base md:text-lg font-bold shadow-sm">
-                <Users size={20} /> 1 Member team = 1 point
-              </p>
+          <div className="max-w-7xl mx-auto relative z-10">
+            <div className="text-center mb-16">
+              <div className="inline-block bg-green-500/10 text-green-400 px-4 py-1 rounded-lg text-xs font-black tracking-[0.3em] mb-4 uppercase">
+                Achievement Program
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black mb-4">Monthly <span className="text-green-400">Leadership Rewards</span></h2>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-6">
+                <p className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-5 py-2.5 rounded-2xl text-green-400 font-bold shadow-xl">
+                  <Users size={18} /> 1 Team Member = 1 Point
+                </p>
+                <div className="hidden sm:block w-8 h-px bg-slate-700"></div>
+                <p className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-5 py-2.5 rounded-2xl text-blue-400 font-bold shadow-xl">
+                  <Calendar size={18} /> Rewards Closed Every Month
+                </p>
+              </div>
             </div>
 
-            {/* Grid without Fast Track Card */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 justify-center">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {rewardsPlan.map((reward, i) => (
-                <div key={i} className="bg-slate-800/50 border border-slate-700 p-6 rounded-3xl text-center hover:bg-slate-800 hover:border-green-500/50 transition-all group shadow-lg">
-                  <div className="flex justify-center mb-5 transform group-hover:scale-110 transition-transform drop-shadow-md">
-                    {React.cloneElement(reward.icon, { size: 56 })}
+                <div key={i} className="bg-slate-800/40 backdrop-blur-sm border border-slate-700 p-6 rounded-[32px] text-center hover:bg-slate-800 hover:border-green-500/50 transition-all group relative overflow-hidden shadow-2xl">
+                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Medal size={40} />
                   </div>
-                  <h3 className="text-xl font-black tracking-widest mb-1 text-white">{reward.rank}</h3>
-                  <p className="text-slate-400 text-sm font-bold mb-5">{reward.pts} POINTS</p>
-                  <div className="bg-slate-900 rounded-xl py-3 border border-slate-700 shadow-inner">
-                    <span className="text-green-400 font-black text-2xl">${reward.reward}</span>
+                  <div className="flex justify-center mb-6 transform group-hover:scale-110 transition-transform">
+                    <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center border border-slate-700 shadow-inner">
+                       {React.cloneElement(reward.icon, { size: 36 })}
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-black tracking-widest mb-1 text-white uppercase">{reward.rank}</h3>
+                  <p className="text-slate-400 text-[10px] font-black tracking-widest uppercase mb-6">{reward.pts} POINTS REQUIRED</p>
+                  <div className="bg-gradient-to-t from-slate-900 to-slate-800 rounded-2xl py-4 border border-slate-700 shadow-lg group-hover:border-green-500/30 transition-colors">
+                    <span className="block text-slate-500 text-[9px] font-bold uppercase tracking-widest mb-1">Monthly Reward</span>
+                    <span className="text-green-400 font-black text-3xl">${reward.reward}</span>
                   </div>
                 </div>
               ))}
-            </div>
-
-            {/* RULES SECTION FROM FLYER */}
-            <div className="max-w-3xl mx-auto mt-16 space-y-3">
-              <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-5 flex items-start gap-4 text-left shadow-sm">
-                <Network className="text-green-400 shrink-0 mt-0.5" size={22} />
-                <p className="text-slate-300 text-sm leading-relaxed">Reward points will be calculated based on <span className="text-white font-bold">one strong leg</span>, and matching will be done with <span className="text-white font-bold">all other legs</span>.</p>
-              </div>
-              <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-5 flex items-start gap-4 text-left shadow-sm">
-                <Calendar className="text-green-400 shrink-0 mt-0.5" size={22} />
-                <p className="text-slate-300 text-sm leading-relaxed">Rewards will be <span className="text-white font-bold">closed every month</span>, and higher rewards will be distributed every month.</p>
-              </div>
-              <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-5 flex items-start gap-4 text-left shadow-sm">
-                <DollarSign className="text-green-400 shrink-0 mt-0.5" size={22} />
-                <p className="text-slate-300 text-sm leading-relaxed">Reward withdrawals will be release on <span className="text-white font-bold">1st day of every month</span>.</p>
+              
+              <div className="bg-green-600 p-6 rounded-[32px] flex flex-col justify-center items-center text-center shadow-2xl transform hover:scale-105 transition-transform group overflow-hidden relative">
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+                <Rocket size={48} className="mb-4 text-white animate-bounce" />
+                <h3 className="text-xl font-black mb-2 relative z-10">Reach LEGEND</h3>
+                <p className="text-green-100 text-xs font-bold leading-relaxed relative z-10">
+                  Build your team today and unlock monthly cash rewards up to $1500 every single month!
+                </p>
               </div>
             </div>
 
+            <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { icon: <Network />, text: "Points = 1 Strong Leg matching with All Other Legs Combined." },
+                  { icon: <Calendar />, text: "Higher rewards are distributed at the end of every calendar month." },
+                  { icon: <DollarSign />, text: "Reward balance release and withdrawals open on the 1st of every month." }
+                ].map((rule, idx) => (
+                  <div key={idx} className="bg-slate-800/50 border border-slate-700 p-4 rounded-2xl flex items-start gap-4">
+                    <div className="bg-green-500/20 p-2 rounded-lg text-green-400 shrink-0">
+                      {React.cloneElement(rule.icon, { size: 18 })}
+                    </div>
+                    <p className="text-slate-300 text-[13px] leading-relaxed font-medium">{rule.text}</p>
+                  </div>
+                ))}
+            </div>
           </div>
         </section>
 

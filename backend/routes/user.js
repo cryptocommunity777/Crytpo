@@ -1356,22 +1356,42 @@ router.get('/:userId', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid ID format' });
     }
 
-    // 3. Search User
+    // 3. Search Real User
     let user = await User.findOne(query).select('-password -transactionPassword -resetToken -__v');
+    let isFake = false;
     
-    if (!user && typeof DummyUser !== 'undefined') {
-        user = await DummyUser.findOne(query).select('-password -transactionPassword -resetToken -__v');
+    // 🔥 4. Search Fake User if Real not found
+    if (!user) {
+        const FakeUser = require('../models/FakeUser'); // File path check kar lena
+        user = await FakeUser.findOne(query).select('-__v');
+        
+        // Backup ke liye DummyUser ka check (agar purani IDs hon)
+        if (!user && typeof DummyUser !== 'undefined') {
+            user = await DummyUser.findOne(query).select('-__v');
+        }
+
+        // Agar Fake/Dummy user mil gaya
+        if (user) {
+            isFake = true;
+            // Mongoose document ko plain Javascript object me convert karo taaki hum modify kar sakein
+            user = user.toObject ? user.toObject() : user;
+            
+            // 🚨 FRONTEND CRASH FIX: Frontend 'packages' array me check karta hai ki ID topup hai ya nahi
+            if (user.isToppedUp && (!user.packages || user.packages.length === 0)) {
+                user.packages = [{ amount: user.topUpAmount || 30 }];
+            }
+        }
     }
 
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    // 🏆 4. Sync Logic
-    if (user.totalRewardIncome === 0 && user.rewardIncome > 0) {
+    // 🏆 5. Sync Logic (Sirf Real User par chalega kyunki FakeUser plain object me convert ho chuka hai)
+    if (!isFake && user.totalRewardIncome === 0 && user.rewardIncome > 0) {
         user.totalRewardIncome = user.rewardIncome;
         await user.save();
     }
 
-    // 💰 5. Response
+    // 💰 6. Response
     res.json({ 
         success: true,
         user: user, 
