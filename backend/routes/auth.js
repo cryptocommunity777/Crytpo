@@ -56,18 +56,41 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
 
     if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
 
-    let sponsorExists = await User.findOne({ userId: parseInt(sponsorId) });
+    // 🔥 1. SPONSOR CHECK LOGIC (Real and Fake)
+    let actualSponsorId = parseInt(sponsorId);
+    let sponsorExists = await User.findOne({ userId: actualSponsorId });
+    let isFakeSponsor = false;
+
     if (!sponsorExists) {
-        sponsorExists = await DummyUser.findOne({ userId: parseInt(sponsorId) });
+         sponsorExists = await FakeUser.findOne({ userId: actualSponsorId });
+        if (sponsorExists) {
+            isFakeSponsor = true; // Mark as fake sponsor
+        }
     }
+
     if (!sponsorExists) return res.status(400).json({ message: 'Invalid Sponsor ID.' });
 
-    if (sponsorExists.isSponsorDeactivated) {
+    if (!isFakeSponsor && sponsorExists.isSponsorDeactivated) {
         return res.status(403).json({
           message: 'Policy violation: The provided sponsor link is invalid or deactivated.'
         });    
     }
 
+    // ✨ NAYA LOGIC: Agar Sponsor Fake User hai, toh real user ko System (Admin) ke direct me daal do!
+   // ✨ NAYA LOGIC: Agar Sponsor Fake User hai, toh real user ko seedha 100000 wali ID ke direct me daal do!
+    if (isFakeSponsor) {
+        const SYSTEM_TOP_ID = 100000; // 🔥 Aapki fix ki hui Main Earning ID
+        
+        const topUser = await User.findOne({ userId: SYSTEM_TOP_ID }); 
+        if (topUser) {
+            actualSponsorId = topUser.userId; 
+            console.log(`[SYSTEM ATTACH] Fake Sponsor (${sponsorId}) used. Redirecting to Top Earning ID: ${topUser.userId}`);
+        } else {
+            console.log(`⚠️ WARNING: Top ID ${SYSTEM_TOP_ID} not found in database!`);
+        }
+    }
+
+    // 2. Existing User Check
     const existingUser = await User.findOne({ $or: [{ email: email }, { mobile: mobile }] });
     if (existingUser) {
         return res.status(400).json({ message: existingUser.mobile === mobile ? 'Mobile already registered.' : 'Email already registered.' });
@@ -82,32 +105,26 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         if (rule && rule.isBlocked) {
             return res.status(403).json({ message: "Access Denied: Your IP has been blocked by the Administrator." });
         }
-
-        
     }
 
-    // 🚀 DEVICE FINGERPRINT CHECK (5 Accounts Per Device + Admin Block)
+    // 🚀 DEVICE FINGERPRINT CHECK
     if (deviceId) {
-        // 1. Check if Device is Blocked
         const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
         if (isDeviceBlocked) {
             return res.status(403).json({ message: "Access Denied: Your device has been blocked due to a policy violation." });
         }
-        
-        // ✅ Device Limit Wapas Laga Di (Set to 5)
-        
     }
 
     // ✨ NAYA LOGIC: 100% Unique ID Check (Real aur Fake dono collection me)
-    let userId;
+    let newUserId;
     let isUniqueId = false;
 
     while (!isUniqueId) {
-        userId = await generateUserId(); // Temporary ID generate karega
+        newUserId = await generateUserId(); // Temporary ID generate karega
         
         // Check karega ki ye ID kisibhi table me mojood toh nahi hai
-        const existsInFake = await FakeUser.exists({ userId: userId });
-        const existsInReal = await User.exists({ userId: userId });
+        const existsInFake = await FakeUser.exists({ userId: newUserId });
+        const existsInReal = await User.exists({ userId: newUserId });
 
         // Agar dono jagah nahi hai, tab isko final manega aur loop todega
         if (!existsInFake && !existsInReal) {
@@ -117,9 +134,10 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
 
     // Ab naya user exactly 100% unique ID ke sath banega
     const user = new User({
-      userId, name, mobile, email, country,
+      userId: newUserId, 
+      name, mobile, email, country,
       password, transactionPassword: password,
-      sponsorId: parseInt(sponsorId),
+      sponsorId: actualSponsorId, // ✅ Yahan updated sponsor ID aayegi (Real ho ya Admin ki)
       role: 'user',
       ipAddress: userIP,
       deviceId: deviceId || null 

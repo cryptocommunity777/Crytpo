@@ -11,6 +11,7 @@ const DummyUser = require('../models/DummyUser.js'); // 🔥 Naya model
 const { bot } = require('../utils/telegramBot');
 const FastTrack = require('../models/FastTrack');
  const checkFeature = require("../middleware/checkFeatureEnabled");
+ const FakeUser = require('../models/FakeUser'); // Sahi path ke hisaab se check kar lena
 // Controllers
 // Controllers ko import kiya
 const {
@@ -406,7 +407,7 @@ router.put(
   authMiddleware, 
   async (req, res) => {
     try {
-      const targetUserId = req.params.userId;
+      const targetUserId = Number(req.params.userId);
       const { amount, transactionPassword, isPromoFree } = req.body;
 
       // 🔹 1. User & Password Check
@@ -420,12 +421,60 @@ router.put(
 
       if (!amount) return res.status(400).json({ message: 'Missing amount.' });
 
-      const targetUser = await User.findOne({ userId: targetUserId });
-      if (!targetUser) return res.status(404).json({ message: 'Target user not found' });
+      // 🔥 REAL vs FAKE USER CHECK
+      let targetUser = await User.findOne({ userId: targetUserId });
+      let isFakeUser = false;
+
+      if (!targetUser) {
+          const FakeUser = require('../models/FakeUser');
+          targetUser = await FakeUser.findOne({ userId: targetUserId });
+          if (targetUser) {
+              isFakeUser = true; 
+          } else {
+              return res.status(404).json({ message: 'Target user not found' });
+          }
+      }
+
+      // =======================================================
+      // 🚫 🔥 NEW: DOUBLE TOP-UP RESTRICTION (SAME AMOUNT) 🔥 🚫
+      // =======================================================
+      if (!isFakeUser) {
+          // Real user ke packages array me check karo ki same amount ka plan pehle se hai ya nahi
+          const isAlreadyBought = targetUser.packages?.some(p => p.amount === amount);
+          if (isAlreadyBought) {
+              return res.status(400).json({ message: `❌ This ID is already active with a $${amount} package. Double top-up is not allowed.` });
+          }
+      } else {
+          // Fake user ke liye topUpAmount check karo
+          if (targetUser.topUpAmount === amount) {
+              return res.status(400).json({ message: `❌ This ID is already active with a $${amount} package. Double top-up is not allowed.` });
+          }
+      }
+
+      // 🔥 DOWNLINE & SELF CHECK ONLY (Crossline & Upline Not Allowed)
+      if (!isFakeUser && currentUser.userId !== targetUserId && currentUser.role !== 'admin') {
+          let isDownline = false;
+          let currentTraceId = targetUser.sponsorId;
+          let depthLimit = 1000; 
+
+          while (currentTraceId && depthLimit > 0) {
+              if (currentTraceId === currentUser.userId) {
+                  isDownline = true; 
+                  break;
+              }
+              const upline = await User.findOne({ userId: currentTraceId }).select('sponsorId');
+              currentTraceId = upline ? upline.sponsorId : null;
+              depthLimit--;
+          }
+
+          if (!isDownline) {
+              return res.status(403).json({ message: 'Access Denied: You can only activate your own node or your downline team members. Crossline/Upline top-up is not allowed.' });
+          }
+      }
 
       const isPromo = currentUser.role === 'promo';
 
-      // 🔹 2. Wallet Check (Current User ke wallet se paisa katega)
+      // 🔹 2. Wallet Check
       if (!(isPromoFree && amount === 10) && !isPromo) {
         if (currentUser.walletBalance < amount) {
           return res.status(400).json({ message: 'Insufficient balance in wallet' });
@@ -439,6 +488,24 @@ router.put(
          return Transaction.create({ ...data, date: new Date() });
       };
 
+      // 🔥 FAKE USER TOP-UP (Show Success, Bypass MLM)
+      if (isFakeUser) {
+          await createTransaction({
+            userId: targetUser.userId,
+            type: "topup",
+            amount,
+            fromUserId: currentUser.userId,
+            toUserId: targetUser.userId,
+            description: `Node Activated with $${amount}`,
+            status: 'success'
+          });
+
+          return res.json({
+            success: true,
+            message: `Top-up successful! $${amount} Node Activated.`,
+          });
+      }
+
       // =======================================================
       // 🔹 3. 🔥 MAGIC LOGIC: DIRECT, LEVEL & REWARD ENGINE 🔥
       // =======================================================
@@ -449,7 +516,6 @@ router.put(
         targetUser.isToppedUp = true;
         targetUser.topUpDate = new Date();
 
-        // ✨ MAGIC LOGIC: Asli User ke Top-up karte hi baaki saare Active users ki Global Team Count badha do!
         try {
             await User.updateMany(
                 { isToppedUp: true, userId: { $ne: targetUser.userId } }, 
@@ -463,17 +529,14 @@ router.put(
         if (targetUser.sponsorId) {
             const sponsor = await User.findOne({ userId: targetUser.sponsorId });
              if (sponsor) {
-                // 1. Direct Count badhao
                 sponsor.directCount = (sponsor.directCount || 0) + 1;
                 
-                // 2. DIRECT INCOME BHEJO (10% of amount)
                 const DIRECT_PERCENT = 10; 
                 const directBonusAmount = (amount * DIRECT_PERCENT) / 100; 
 
                 sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
                 sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
  
-                // 3. Sponsor ke liye Transaction Log
                 await createTransaction({
                     userId: sponsor.userId,
                     type: "direct_income", 
@@ -484,27 +547,20 @@ router.put(
                     status: 'success'
                 });
 
-                // 👇👇👇 YAHAN SE FAST TRACK KA NAYA CODE SHURU 👇👇👇
-                // =======================================================
-                // 🔥 NEW: FAST TRACK OFFER ENGINE 🔥
-                // =======================================================
-                // Check karo kya Sponsor abhi bhi apne 30-din ke window me hai (from Registration/createdAt date)
+                // 🔥 FAST TRACK OFFER ENGINE 🔥
                 if (sponsor.createdAt) {
                     const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
                     const timeSinceRegistration = new Date().getTime() - new Date(sponsor.createdAt).getTime();
 
-                    // Agar registration ko 30 din se kam huye hain (Yani Offer Chalu hai)
                     if (timeSinceRegistration <= thirtyDaysInMs) {
                         try {
-                            const FastTrack = require('../models/FastTrack'); // Jo model humne banaya
-                            
-                            // Ek nayi entry bana do is direct ke liye
+                            const FastTrack = require('../models/FastTrack');
                             await FastTrack.create({
                                 sponsorId: sponsor.userId,
                                 directUserId: targetUser.userId,
-                                dailyAmount: 1, // Har direct ka $1 daily
-                                daysPaid: 0,    // Abhi ek bhi din ka paisa nahi diya hai
-                                maxDays: 10,    // 10 din tak dena hai
+                                dailyAmount: 1, 
+                                daysPaid: 0,    
+                                maxDays: 10,    
                                 status: 'active'
                             });
                             console.log(`🚀 FastTrack Offer activated for Sponsor ${sponsor.userId} due to Direct ${targetUser.userId}`);
@@ -513,11 +569,8 @@ router.put(
                         }
                     }
                 }
-                // 👆👆👆 NAYA CODE KHATAM 👆👆👆
 
-                // =======================================================
-                // 🏆 TEAM REWARD (BONANZA) SYSTEM CHECK (STRONG/OTHER)
-                // =======================================================
+                // 🏆 TEAM REWARD (BONANZA) SYSTEM CHECK
                 const legStats = await getLegStats(sponsor.userId);
                 if (!sponsor.claimedRewards) sponsor.claimedRewards = [];
 
@@ -542,17 +595,15 @@ router.put(
                 await sponsor.save();
             }
 
-            // =======================================================
-            // 🌟 NEW: 20 LEVEL INCOME ENGINE 🔥
-            // =======================================================
+            // 🌟 20 LEVEL INCOME ENGINE 🔥
             const LEVEL_PERCENTAGES = [
-                0,      // Level 1 (Already handled as Direct)
-                5,      // Level 2
-                3,      // Level 3
-                1,      // Level 4
-                1,      // Level 5
-                0.5, 0.5, 0.5, 0.5, 0.5, // Level 6-10 (0.50% each)
-                0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25 // Level 11-20 (0.25% each)
+                0,      
+                5,      
+                3,      
+                1,      
+                1,      
+                0.5, 0.5, 0.5, 0.5, 0.5, 
+                0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25 
             ];
 
             let currentUplineId = targetUser.sponsorId; 
@@ -562,12 +613,10 @@ router.put(
                 const upline = await User.findOne({ userId: currentUplineId });
                 if (!upline) break;
 
-                // Level 2 se Level 20 tak distribution
                 if (currentLevel > 1) {
                     const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
                     const levelAmount = (amount * percentage) / 100;
 
-                    // Condition: Upline active hona chahiye tabhi paisa milega
                     if (levelAmount > 0 && upline.isToppedUp) {
                         upline.levelIncome = (upline.levelIncome || 0) + levelAmount;
                         upline.totalLevelIncome = (upline.totalLevelIncome || 0) + levelAmount;
@@ -586,16 +635,13 @@ router.put(
                     }
                 }
 
-                // Move to next upline
                 currentUplineId = upline.sponsorId;
                 currentLevel++;
             }
         }
       }
 
-      // =======================================================
       // 🔹 4. Target User Profile Update ($30 Plan)
-      // =======================================================
       if (!targetUser.packages) targetUser.packages = [];
       targetUser.packages.push({
         plan: "Global Auto-Pool",
@@ -604,7 +650,7 @@ router.put(
         withdrawn: 0
       });
       targetUser.topUpAmount = Math.max(targetUser.topUpAmount || 0, amount);
-      targetUser.updatedAt = new Date(); // 👈 Ye line make sure karegi ki ye list me top pe aaye
+      targetUser.updatedAt = new Date(); 
       await targetUser.save();
 
       let txDescription = isFirstTopup ? `Node Activated with $${amount}` : `Node Upgrade with $${amount}`;
@@ -1169,10 +1215,13 @@ router.get('/sponsor-name/:id', async (req, res) => {
     // Sirf 'name' select kar rahe hain taaki query fast ho
     let sponsor = await User.findOne({ userId: id }).select('name');
 
-    // 2. 🔥 Agar Real mein nahi mila, toh 'DummyUser' table mein check karo
+    // 2. 🔥 Agar Real mein nahi mila, toh 'FakeUser' table mein check karo
     if (!sponsor) {
-      // Ensure karna ki DummyUser model upar require kiya hua hai
-      if (typeof DummyUser !== 'undefined') {
+      // Ensure karna ki FakeUser model upar require/import kiya hua hai
+      if (typeof FakeUser !== 'undefined') {
+        sponsor = await FakeUser.findOne({ userId: id }).select('name');
+      } else if (typeof DummyUser !== 'undefined') {
+        // Fallback agar galti se purana model use ho raha ho
         sponsor = await DummyUser.findOne({ userId: id }).select('name');
       }
     }
@@ -1190,7 +1239,6 @@ router.get('/sponsor-name/:id', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 
 // ==========================================
@@ -1296,34 +1344,57 @@ router.get('/:userId', async (req, res) => {
 
     let query = {};
     
-    // 💡 2. Smart Detection: Check if it's a MongoDB _id or a Numerical userId
+    // 💡 2. Detection Logic
     if (mongoose.Types.ObjectId.isValid(rawUserId) && rawUserId.length === 24) {
-      // Agar 24 character ki string hai, toh _id se dhoondo
       query = { _id: rawUserId };
     } else if (!isNaN(Number(rawUserId))) {
-      // Agar number hai, toh userId field se dhoondo
       query = { userId: Number(rawUserId) };
     } else {
-      // Agar dono nahi hai, toh bad request
       return res.status(400).json({ success: false, message: 'Invalid ID format' });
     }
 
-    // 3. Search User
+    // 3. Search Real User
     let user = await User.findOne(query).select('-password -transactionPassword -resetToken -__v');
+    let isFake = false;
     
-    if (!user && typeof DummyUser !== 'undefined') {
-        user = await DummyUser.findOne(query).select('-password -transactionPassword -resetToken -__v');
+    // 🔥 4. Search Fake User if Real not found
+    if (!user) {
+        // Model ko try-catch ke andar require kar rahe hain taaki crash na ho
+        let FakeUser;
+        try {
+            FakeUser = mongoose.model('FakeUser') || require('../models/FakeUser');
+        } catch (e) {
+            FakeUser = require('../models/FakeUser');
+        }
+
+        user = await FakeUser.findOne(query).select('-__v');
+
+        if (user) {
+            isFake = true;
+            user = user.toObject(); // Convert to plain object
+            
+            // ✅ FRONTEND FIX: Topup modal expects 'packages'
+            if (user.isToppedUp) {
+                user.packages = [{ amount: user.topUpAmount || 30, plan: "Global Auto-Pool" }];
+            } else {
+                user.packages = [];
+            }
+        }
     }
 
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    // 🚨 AGAR AB BHI NAHI MILA TOH 404
+    if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found in Real or Fake records' });
+    }
 
-    // 🏆 4. Sync Logic
-    if (user.totalRewardIncome === 0 && user.rewardIncome > 0) {
+    // 🏆 5. Sync Logic (Real User Only)
+    if (!isFake && user.totalRewardIncome === 0 && user.rewardIncome > 0) {
         user.totalRewardIncome = user.rewardIncome;
-        await user.save();
+        // Check if it's a mongoose document before saving
+        if (typeof user.save === 'function') await user.save();
     }
 
-    // 💰 5. Response
+    // 💰 6. Final Response
     res.json({ 
         success: true,
         user: user, 
@@ -1331,13 +1402,13 @@ router.get('/:userId', async (req, res) => {
             totalDirectIncome: user.totalDirectIncome || user.directIncome || 0,
             totalLevelIncome: user.levelIncome || 0,
             totalRewardIncome: user.totalRewardIncome || user.rewardIncome || 0,
-            totalIncome: (user.totalDirectIncome || 0) + (user.levelIncome || 0) + (user.totalRewardIncome || 0)
+            totalIncome: (Number(user.totalDirectIncome || 0) + Number(user.levelIncome || 0) + Number(user.totalRewardIncome || 0))
         }
     });
 
   } catch (err) {
-    console.error("Error fetching user profile:", err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("Error fetching user profile:", err);
+    res.status(500).json({ success: false, message: 'Server error: ' + err.message });
   }
 });
 // ---------------------------
