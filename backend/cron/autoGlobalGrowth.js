@@ -4,7 +4,8 @@ const User = require('../models/User');
 const SystemStat = require('../models/SystemStat'); 
 const Transaction = require('../models/Transaction'); 
 const FakeUser = require('../models/FakeUser'); 
-const { names, countries } = require('../utils/fakeData'); 
+// ✅ YAHAN FIX KIYA HAI: Naye variables import kiye hain
+const { countryNames, countriesProbability } = require('../utils/fakeData'); 
 
 // 12 Levels Global Auto-Pool Plan Logic ($30)
 const GLOBAL_POOLS = [
@@ -29,10 +30,10 @@ const startGlobalGrowthCron = () => {
     // =========================================================================
     cron.schedule('* * * * *', async () => {
         try {
-            // 🔥 1. FAKE/SYSTEM GROWTH LOGIC (Target: ~100 per day)
-            const shouldAddFakeUser = Math.random() < (100 / 1440);
-
-            if (shouldAddFakeUser) {
+            // 🔥 1. FAKE/SYSTEM GROWTH LOGIC 
+            // 🚨 TESTING MODE: Har 2 minute mein exactly 1 ID giregi
+            const shouldAddFakeUser = Math.random() < (100 / 1440);            
+             if (shouldAddFakeUser) {
                 // A. Ab sirf unhi users ki downline badhegi jinka ID Top-up (Active) hai
                 await User.updateMany(
                     { isToppedUp: true }, 
@@ -46,36 +47,44 @@ const startGlobalGrowthCron = () => {
                     { upsert: true, returnDocument: 'after' }
                 );            
                 
-                // ✨ C. NAYA LOGIC: Ekdum Real Jaisi ID (Bina While Loop Ke)
-                
-                // 1. Ek normal 7-DIGIT random ID generate karo (1000000 se 9999999)
+                // ✨ C. NAYA LOGIC: Ekdum Real Jaisi ID (Crash-Proof)
                 const randomId = Math.floor(1000000 + Math.random() * 9000000); 
 
-                // 2. Sirf ek baar check karo (Bina kisi while loop ke)
                 const isRealUser = await User.exists({ userId: randomId });
                 const isFakeUser = await FakeUser.exists({ userId: randomId });
 
-                // 3. Agar ye ID pehle kisi Real ya Fake user ko nahi mili hai, tabhi create karo
                 if (!isRealUser && !isFakeUser) {
-                    const randomName = names[Math.floor(Math.random() * names.length)];
-                    const randomCountry = countries[Math.floor(Math.random() * countries.length)];
+                    // 🛡️ CRASH-PROOF COUNTRY CHECK (Naye variable ke sath)
+                    let randomCountry = "IN";
+                    if (typeof countriesProbability !== 'undefined' && countriesProbability?.length > 0) {
+                        randomCountry = countriesProbability[Math.floor(Math.random() * countriesProbability.length)];
+                    }
+
+                    // 🛡️ CRASH-PROOF NAME CHECK (Naye variable ke sath)
+                    let randomName = "Crypto User";
+                    if (typeof countryNames !== 'undefined') {
+                        const namePool = countryNames[randomCountry] || countryNames["IN"];
+                        if (namePool && namePool.length > 0) {
+                            randomName = namePool[Math.floor(Math.random() * namePool.length)];
+                        }
+                    }
 
                     await FakeUser.create({
                         userId: randomId,
                         name: randomName,
                         country: randomCountry,
                         isToppedUp: true,
-                        topUpAmount: 30
+                        topUpAmount: 30,
+                        date: new Date()
                     });
                     
-                    console.log(`✅ Cron Success: Fake User [${randomName} - #${randomId}] Created!`);
+                    console.log(`✅ Cron Success: Fake User [${randomName} - ${randomCountry} - #${randomId}] Created!`);
                 } else {
-                    // Agar galti se ID match ho gayi, toh system ko ghumao mat, bas skip kar do
                     console.log(`⚠️ ID Clash (${randomId}). Skipping fake user creation this minute.`);
                 } 
             }
             
-            // 🔥 2. POOL UNLOCK DISTRIBUTION LOGIC (Chahe fake aaye ya real)
+            // 🔥 2. POOL UNLOCK DISTRIBUTION LOGIC 
             const eligibleUsers = await User.find({ directCount: { $gte: 1 }, isToppedUp: true });
             const todayStr = new Date().toISOString().split('T')[0]; 
 
@@ -86,6 +95,7 @@ const startGlobalGrowthCron = () => {
                 for (let lvl of GLOBAL_POOLS) {
                     cumulativeGlobalTeam += lvl.globalTeam;
 
+                    // ✅ Directs ki shart aapke naye +1/+2 array se match karegi
                     if (user.globalTeamCount >= cumulativeGlobalTeam && user.directCount >= lvl.reqDirects) {
                         const existingPool = user.activePools?.find(p => p.level === lvl.level);
                         

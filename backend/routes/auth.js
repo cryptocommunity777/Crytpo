@@ -254,7 +254,7 @@ router.post('/login', async (req, res) => {
     
     await user.save();
 
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '15m' });
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '20m' });
 
     // ✅ Save History with Real IP
     try {

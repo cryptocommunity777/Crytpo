@@ -168,7 +168,7 @@ const countryNames = {
         "Poonam Swaminathan", "Ramesh Mukherjee", "Himani Rathore", "Aman Roy", "Rajesh Paul", "Mahesh Reddy",
         "Sonia Dey", "Jyoti Banerjee", "Indira Siddiqui", "Vikas Bhat", "Bhupendra Banerjee", "Manish Naidu",
         "Ajay Khan", "Sukhvinder Ali", "Bhavesh Shah", "Manpreet Chopra", "Rohan Roy", "Ritu Banerjee",
-        "Priya Joshi", "Piyush Kamath", "Tanvi Prasad", "Prateek Raju",
+        "Priya Joshi", "Piyush Kamath", "Tanvi Prasad", "Prateek Raju"
     ],
     "ZA": [
         "Siyanda Buthelezi", "Veronique Msweli", "Veronique Motaung", "Karabo de Villiers", "Mthobisi Nkosi", "Nkosinathi Mthethwa",
@@ -254,7 +254,7 @@ const countryNames = {
         "Jan Shabalala", "Njabulo Zulu", "Deon Naudé", "Mpho Louw", "Odette Nkosi", "Sipho Radebe",
         "Nokuthula Zulu", "Jabari Sithole", "Tendai Radebe", "Talitha Swanepoel", "Pieter Nxumalo", "Mbuso Sithole",
         "Njabulo Nkosi", "Andre Sithole", "Wessel du Plessis", "Farai Venter", "Lungile Botha", "Nombuso Potgieter",
-        "Riaan Modise", "Nandi Cele",
+        "Riaan Modise", "Nandi Cele"
     ],
     "NG": [
         "Olumide Obi", "Chinwe Adesipe", "Blessing Ogunrinde", "Folake Nwosu", "Emeka Danjuma", "Akande Obi",
@@ -290,7 +290,7 @@ const countryNames = {
         "Kelechi Adeyemo", "Emeka Ogundiran", "Adebayo Obiora", "Chiamaka Ogunrinde", "Iyabo Usman", "Gbemisola Adegoke",
         "Funmilayo Adegoke", "Ifeoma Ogundiran", "Aduragbemi Adeyemi", "Chukwudi Ezekwe", "Olumide Okoye", "Chukwudi Ogunnowo",
         "Onyemelukwe Nwofor", "Ogechukwu Aliyu", "Gbemisola Ogunrinde", "Kehinde Chukwu", "Aduragbemiga Chukwu", "Onyekachi Ogunnowo",
-        "Chidinma Ogunnowo", "Uche Balogun",
+        "Chidinma Ogunnowo", "Uche Balogun"
     ],
     "GH": [
         "Afua Afriyie", "Adjoa Amponsah", "Ahenkorah Amankwah", "Gyasi Owusu", "Afia Ampadu", "Akosua Osei",
@@ -317,7 +317,7 @@ const countryNames = {
         "Ekow Amankwah", "Kojo Baffoe", "Panyin Bonsu", "Aba Hayford", "Ekow Asiedu", "Afia Agyemang",
         "Panyin Mensah", "Adoma Antwi", "Badu Dua", "Akosua Frimpong", "Adwoa Ampadu", "Badu Attah",
         "Kakra Ansah", "Ahorlu Amoah", "Kofi Asumadu", "Adjoa Ansah", "Adwoa Boateng", "Kwaku Hackman",
-        "Amina Boateng", "Abena Bonsu", "Akua Attah", "Ekow Dua", "Akosua Appiah", "Kwaku Amponsah",
+        "Amina Boateng", "Abena Bonsu", "Akua Attah", "Ekow Dua", "Akosua Appiah", "Kwaku Amponsah"
     ],
     "PK": [
         "Waseem Bajwa", "Sumera Khan", "Bilal Khan", "Danish Ali", "Noor Abbasi", "Amna Mirza",
@@ -353,7 +353,7 @@ const countryNames = {
         "Iqbal Virk", "Babar Siddiqui", "Zahid Farooqi", "Hana Mirza", "Zahid Abbasi", "Ali Gilani",
         "Imran Sandhu", "Layla Rana", "Shoaib Ahmed", "Raza Baig", "Junaid Sheikh", "Noor Qureshi",
         "Luqman Farooqi", "Noor Zaidi", "Faisal Sheikh", "Naeem Abbasi", "Asma Abbasi", "Naeem Kazmi",
-        "Bilal Dhillon", "Parveen Naqvi",
+        "Bilal Dhillon", "Parveen Naqvi"
     ],
     "BD": [
         "Idrish Miah", "Jalal Dey", "Habibul Hossain", "Nargis Akhand", "Tahmina Khan", "Jahangir Sikder",
@@ -380,7 +380,7 @@ const countryNames = {
         "Samira Talukdar", "Jalal Biswas", "Quamrul Halder", "Obaidul Roy", "Idrish Chowdhury", "Begum Bhuiyan",
         "Uzzala Ghosh", "Momena Mondal", "Bilkis Khan", "Omar Ghosh", "Tahmina Gazi", "Parvez Saha",
         "Sufia Nath", "Farida Bhuiyan", "Lutfur Sikder", "Mustafa Paul", "Mizanur Sarkar", "Jalal Talukdar",
-        "Jalal Sheikh", "Sufia Akhand", "Sufia Bhuiyan", "Nahar Dewan", "Helal Joarder", "Habibul Faruqi",
+        "Jalal Sheikh", "Sufia Akhand", "Sufia Bhuiyan", "Nahar Dewan", "Helal Joarder", "Habibul Faruqi"
     ],
     "LK": [
         "Iresha Jayasuriya", "Madumali Karunaratne", "Nayana Wickramasinghe", "Rasika Silva", "Lakmali Pieris", "Niroshan Bandara",
@@ -407,7 +407,7 @@ const countryNames = {
         "Suranga Wijesekara", "Nilufar Karunaratne", "Danushka Silva", "Mohamed Weerasinghe", "Sajeewa Vithanage", "Upul Ratnayake",
         "Wasana Weerasinghe", "Poornima Wickramasinghe", "Sajeewa Ranasinghe", "Sandamali Perera", "Rasika Wijesinghe", "Asanka Sirisena",
         "Pathum Wijeratne", "Lahiru Mendis", "Ramesh Fernando", "Asanka Ratnayake", "Angelo Samarasinghe", "Dilshan Samarasinghe",
-        "Niroshan Gunasekara", "Nayana Karunaratne", "Kasun Wijesinghe", "Upul Jayawardena", "Tharushi Sirisena", "Dilshan Silva",
+        "Niroshan Gunasekara", "Nayana Karunaratne", "Kasun Wijesinghe", "Upul Jayawardena", "Tharushi Sirisena", "Dilshan Silva"
     ],
     "MY": [
         "Noriah bin Mohamad", "Azura bin Mustafa", "Muhamad Ng", "Suhaila Yap", "Wani binti Hassan", "Norma bin Ismail",
@@ -434,7 +434,7 @@ const countryNames = {
         "Izzat binti Abdullah", "Hanisah Chong", "Faris Koh", "Norhaiza binti Ibrahim", "Zaiton Chong", "Norzaidi Goh",
         "Norhaiza Tan", "Hidayah bin Hassan", "Ahmad binti Ali", "Azman Yap", "Norhidayah binti Abdullah", "Suraya Lee",
         "Haslinda bin Rahman", "Noor bin Rahman", "Irfan Yap", "Farid bin Ibrahim", "Farid bin Othman", "Hanisah Koh",
-        "Khairul Chong", "Zulkifli Cheah", "Ikmal binti Ali", "Syafiq bin Mustafa", "Nabilah binti Ali", "Faizal bin Mohd",
+        "Khairul Chong", "Zulkifli Cheah", "Ikmal binti Ali", "Syafiq bin Mustafa", "Nabilah binti Ali", "Faizal bin Mohd"
     ],
     "VN": [
         "Tran Thanh Tuyen", "Tran Tuan Binh", "Vo Khanh Lan", "Duong Bao Phuc", "Hoang Bao Lan", "To Hoang Huong",
@@ -461,7 +461,7 @@ const countryNames = {
         "Nguyen Huu Loan", "Duong Ngoc Khoa", "Pham Thanh Tien", "Do Thu Tien", "Ly Thu Cuong", "Vu Ngoc Hai",
         "Hoang Khanh Hai", "Do Tuan Anh", "Ha Thanh Long", "Ngo Xuan Tinh", "Pham Quang Trung", "Ha Duy Hoa",
         "Hoang Huu An", "Le Thanh Hai", "Cao Duc Lan", "Do Anh Khoa", "Le Thi Thao", "Ha Bao Manh",
-        "Tran Hoang Binh", "Dinh Van Nga", "To Tuan Nga", "Tran Bao Duc", "Ngo Hoang Hung", "Ly Anh An",
+        "Tran Hoang Binh", "Dinh Van Nga", "To Tuan Nga", "Tran Bao Duc", "Ngo Hoang Hung", "Ly Anh An"
     ],
     "KE": [
         "Kosgei Ngugi", "Ogola Otiende", "Muthoni Otiende", "Nyaguthii Bett", "Rono Rotich", "Mwangi Kimani",
@@ -488,22 +488,22 @@ const countryNames = {
         "Ndungu Gitau", "Kipchoge Mwangi", "Kariuki Owino", "Wangari Kosgei", "Jepleting Rono", "Okoth Cheruiyot",
         "Cherono Gitau", "Kiptoo Bett", "Jepkurui Langat", "Jepchirchir Rotich", "Namachanja Owino", "Jelimo Rono",
         "Sang Ngugi", "Cherono Mwenda", "Wacera Ogola", "Onyango Macharia", "Simiyu Kamau", "Kamau Rotich",
-        "Nderitu Owino", "Achieng Kosgei", "Mwangi Kipchoge", "Jelimo Mwenda", "Mwangi Odhiambo", "Wafula Sang",
-    ],
+        "Nderitu Owino", "Achieng Kosgei", "Mwangi Kipchoge", "Jelimo Mwenda", "Mwangi Odhiambo", "Wafula Sang"
+    ]
 };
 
 // Probability logic for 100 users distribution
 const countriesProbability = [
-    ...Array(50).fill("IN"),
+    ...Array(30).fill("IN"),
     ...Array(30).fill("ZA"),
-    ...Array(3).fill("NG"),
-    ...Array(3).fill("PK"),
-    ...Array(3).fill("BD"),
-    ...Array(3).fill("LK"),
-    ...Array(2).fill("MY"),
-    ...Array(2).fill("VN"),
-    ...Array(2).fill("GH"),
-    ...Array(2).fill("KE")
+    ...Array(5).fill("NG"),
+    ...Array(5).fill("PK"),
+    ...Array(5).fill("BD"),
+    ...Array(5).fill("LK"),
+    ...Array(5).fill("MY"),
+    ...Array(5).fill("VN"),
+    ...Array(5).fill("GH"),
+    ...Array(5).fill("KE")
 ];
 
 module.exports = { countryNames, countriesProbability };

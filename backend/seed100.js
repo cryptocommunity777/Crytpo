@@ -7,9 +7,9 @@ require('dotenv').config();
 const seedUsers = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/cryptocommunity");
-        console.log("🔗 Connected! Generating 100 Proper Matched Users...");
+        console.log("🔗 Connected! Clearing old records and generating 100 Fresh Users...");
 
-        // 1. Purane users saaf karo
+        // 1. Purane saare fake users ekdum saaf karo
         await FakeUser.deleteMany({});
         
         let fakeUsersList = [];
@@ -17,23 +17,23 @@ const seedUsers = async () => {
         let usedIds = new Set();
 
         for (let i = 0; i < 100; i++) {
-            // ✅ SAFETY FIX: Pick Country Code
+            // ✅ SAFETY FIX: Sahi probability ke hisaab se country code uthao
             const randomCountry = countriesProbability[Math.floor(Math.random() * countriesProbability.length)] || "IN";
             
-            // ✅ SAFETY FIX: Get Name Pool (If country missing, fallback to IN)
+            // ✅ SAFETY FIX: Usi country ka sahi name pool uthao (Nahi mila toh 'IN' use hoga)
             const namePool = countryNames[randomCountry] || countryNames["IN"];
             
-            // ✅ CRASH PREVENTION: Pick random name from the pool
+            // ✅ CRASH PREVENTION: Pool me se ek random name nikalo
             const randomName = namePool[Math.floor(Math.random() * namePool.length)];
 
-            // Unique 7-Digit ID
+            // Unique 7-Digit ID generator
             let randomId;
             do {
                 randomId = Math.floor(1000000 + Math.random() * 9000000); 
             } while (usedIds.has(randomId));
             usedIds.add(randomId);
 
-            // Time Gap (approx 18 mins)
+            // Time Gap (Har user ke beech 18 mins ka gap taaki UI me descending order mast dikhe)
             let pastDate = new Date(now.getTime() - (i * 18 * 60000)); 
 
             fakeUsersList.push({
@@ -46,10 +46,11 @@ const seedUsers = async () => {
             });
         }
 
-        // 2. Database mein save karo
+        // 2. Database mein fresh 100 users bulk insert karo
         await FakeUser.insertMany(fakeUsersList);
-        console.log("✅ SUCCESS: 100 Country-Matched Users added successfully!");
-        process.exit();
+        console.log(`✅ SUCCESS: 100 Country-Matched Users added successfully!`);
+        console.log(`🎉 Sample Latest User: ${fakeUsersList[0].name} from ${fakeUsersList[0].country}`);
+        process.exit(0);
 
     } catch (err) {
         console.error("❌ Seed Error:", err);
