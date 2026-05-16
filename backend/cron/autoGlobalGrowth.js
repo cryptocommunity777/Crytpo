@@ -118,7 +118,7 @@ const startGlobalGrowthCron = () => {
                                 type: 'credit',
                                 source: 'pool',
                                 amount: lvl.daily,
-                                description: `Auto-Pool Level ${lvl.level} Unlocked - Day 1 Income`,
+                                description: `Singel leg Level ${lvl.level} Unlocked - Day 1 Income`,
                                 status: 'success'
                             });
 
