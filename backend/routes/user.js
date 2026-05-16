@@ -1344,57 +1344,34 @@ router.get('/:userId', async (req, res) => {
 
     let query = {};
     
-    // 💡 2. Detection Logic
+    // 💡 2. Smart Detection: Check if it's a MongoDB _id or a Numerical userId
     if (mongoose.Types.ObjectId.isValid(rawUserId) && rawUserId.length === 24) {
+      // Agar 24 character ki string hai, toh _id se dhoondo
       query = { _id: rawUserId };
     } else if (!isNaN(Number(rawUserId))) {
+      // Agar number hai, toh userId field se dhoondo
       query = { userId: Number(rawUserId) };
     } else {
+      // Agar dono nahi hai, toh bad request
       return res.status(400).json({ success: false, message: 'Invalid ID format' });
     }
 
-    // 3. Search Real User
+    // 3. Search User
     let user = await User.findOne(query).select('-password -transactionPassword -resetToken -__v');
-    let isFake = false;
     
-    // 🔥 4. Search Fake User if Real not found
-    if (!user) {
-        // Model ko try-catch ke andar require kar rahe hain taaki crash na ho
-        let FakeUser;
-        try {
-            FakeUser = mongoose.model('FakeUser') || require('../models/FakeUser');
-        } catch (e) {
-            FakeUser = require('../models/FakeUser');
-        }
-
-        user = await FakeUser.findOne(query).select('-__v');
-
-        if (user) {
-            isFake = true;
-            user = user.toObject(); // Convert to plain object
-            
-            // ✅ FRONTEND FIX: Topup modal expects 'packages'
-            if (user.isToppedUp) {
-                user.packages = [{ amount: user.topUpAmount || 30, plan: "Global Auto-Pool" }];
-            } else {
-                user.packages = [];
-            }
-        }
+    if (!user && typeof DummyUser !== 'undefined') {
+        user = await DummyUser.findOne(query).select('-password -transactionPassword -resetToken -__v');
     }
 
-    // 🚨 AGAR AB BHI NAHI MILA TOH 404
-    if (!user) {
-        return res.status(404).json({ success: false, message: 'User not found in Real or Fake records' });
-    }
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    // 🏆 5. Sync Logic (Real User Only)
-    if (!isFake && user.totalRewardIncome === 0 && user.rewardIncome > 0) {
+    // 🏆 4. Sync Logic
+    if (user.totalRewardIncome === 0 && user.rewardIncome > 0) {
         user.totalRewardIncome = user.rewardIncome;
-        // Check if it's a mongoose document before saving
-        if (typeof user.save === 'function') await user.save();
+        await user.save();
     }
 
-    // 💰 6. Final Response
+    // 💰 5. Response
     res.json({ 
         success: true,
         user: user, 
@@ -1402,13 +1379,13 @@ router.get('/:userId', async (req, res) => {
             totalDirectIncome: user.totalDirectIncome || user.directIncome || 0,
             totalLevelIncome: user.levelIncome || 0,
             totalRewardIncome: user.totalRewardIncome || user.rewardIncome || 0,
-            totalIncome: (Number(user.totalDirectIncome || 0) + Number(user.levelIncome || 0) + Number(user.totalRewardIncome || 0))
+            totalIncome: (user.totalDirectIncome || 0) + (user.levelIncome || 0) + (user.totalRewardIncome || 0)
         }
     });
 
   } catch (err) {
-    console.error("Error fetching user profile:", err);
-    res.status(500).json({ success: false, message: 'Server error: ' + err.message });
+    console.error("Error fetching user profile:", err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 // ---------------------------
