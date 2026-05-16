@@ -410,7 +410,7 @@ router.put(
       const targetUserId = Number(req.params.userId);
       const { amount, transactionPassword, isPromoFree } = req.body;
 
-      // 🔹 1. User & Password Check (Parallel for performance)
+      // 🔹 1. User & Password Check 
       const currentUser = await User.findOne({ userId: req.user.userId }).lean();
       if (!currentUser) return res.status(404).json({ message: "Current user not found" });
 
@@ -437,9 +437,7 @@ router.put(
           }
       }
 
-      // =======================================================
-      // 🚫 🔥 NEW: DOUBLE TOP-UP RESTRICTION (SAME AMOUNT) 🔥 🚫
-      // =======================================================
+      // 🚫 DOUBLE TOP-UP RESTRICTION 
       if (!isFakeUser) {
           const isAlreadyBought = targetUser.packages?.some(p => p.amount === amount);
           if (isAlreadyBought) {
@@ -451,13 +449,12 @@ router.put(
           }
       }
 
-      // 🔥 DOWNLINE & SELF CHECK ONLY
+      // 🔥 DOWNLINE & SELF CHECK ONLY (Optimized depth to 50 for speed)
       if (!isFakeUser && currentUser.userId !== targetUserId && currentUser.role !== 'admin') {
           let isDownline = false;
           let currentTraceId = targetUser.sponsorId;
-          let depthLimit = 100; // Reduced from 1000 for faster rejection on long chains
+          let depthLimit = 50; // Kam limit lagayi taaki reject fast ho
 
-          // Fast DB call fetching only sponsorId
           while (currentTraceId && depthLimit > 0) {
               if (currentTraceId === currentUser.userId) {
                   isDownline = true; 
@@ -469,13 +466,13 @@ router.put(
           }
 
           if (!isDownline) {
-              return res.status(403).json({ message: 'Access Denied: You can only activate your own node or your downline team members. Crossline/Upline top-up is not allowed.' });
+              return res.status(403).json({ message: 'Access Denied: You can only activate your own node or your downline team members.' });
           }
       }
 
       const isPromo = currentUser.role === 'promo';
 
-      // 🔹 2. Wallet Check (Using direct update query to save time)
+      // 🔹 2. Wallet Check & Deduction
       if (!(isPromoFree && amount === 10) && !isPromo) {
         if (currentUser.walletBalance < amount) {
           return res.status(400).json({ message: 'Insufficient balance in wallet' });
@@ -500,173 +497,31 @@ router.put(
             status: 'success'
           });
 
-          // Update fake user status
           await FakeUser.updateOne(
              { userId: targetUser.userId }, 
              { $set: { isToppedUp: true, topUpAmount: Math.max(targetUser.topUpAmount || 0, amount), updatedAt: new Date() } }
           );
 
-          return res.json({
-            success: true,
-            message: `Top-up successful! $${amount} Node Activated.`,
-          });
+          return res.json({ success: true, message: `Top-up successful! $${amount} Node Activated.` });
       }
 
       // =======================================================
-      // 🔹 3. 🔥 MAGIC LOGIC: DIRECT, LEVEL & REWARD ENGINE 🔥
+      // 🔹 3. CORE UPDATE & INSTANT RESPONSE (MAGIC SPEED)
       // =======================================================
-      let isFirstTopup = false;
-      const dbOperations = []; // Array to hold background tasks
+      let isFirstTopup = !targetUser.isToppedUp;
       
-      if (!targetUser.isToppedUp) {
-        isFirstTopup = true;
-        targetUser.isToppedUp = true;
-        targetUser.topUpDate = new Date();
-
-        // Push global increment to background tasks
-        dbOperations.push(
-            User.updateMany(
-                { isToppedUp: true, userId: { $ne: targetUser.userId } }, 
-                { $inc: { globalTeamCount: 1 } }
-            ).catch(err => console.error("Global Team Increment Error:", err))
-        );
-
-        // 🌟 SPONSOR DIRECT COUNT & DIRECT INCOME (Level 1)
-        if (targetUser.sponsorId) {
-            const sponsor = await User.findOne({ userId: targetUser.sponsorId });
-             if (sponsor) {
-                sponsor.directCount = (sponsor.directCount || 0) + 1;
-                
-                const DIRECT_PERCENT = 10; 
-                const directBonusAmount = (amount * DIRECT_PERCENT) / 100; 
-
-                sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
-                sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
- 
-                dbOperations.push(
-                    createTransaction({
-                        userId: sponsor.userId,
-                        type: "direct_income", 
-                        source: "direct",
-                        amount: directBonusAmount,
-                        fromUserId: targetUser.userId,
-                        description: `Direct Bonus (10%) from ${targetUser.name}'s Node Activation`,
-                        status: 'success'
-                    })
-                );
-
-                // 🔥 FAST TRACK OFFER ENGINE 🔥
-                if (sponsor.createdAt) {
-                    const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-                    const timeSinceRegistration = new Date().getTime() - new Date(sponsor.createdAt).getTime();
-
-                    if (timeSinceRegistration <= thirtyDaysInMs) {
-                        try {
-                            const FastTrack = require('../models/FastTrack');
-                            dbOperations.push(
-                                FastTrack.create({
-                                    sponsorId: sponsor.userId,
-                                    directUserId: targetUser.userId,
-                                    dailyAmount: 1, 
-                                    daysPaid: 0,    
-                                    maxDays: 10,    
-                                    status: 'active'
-                                })
-                            );
-                        } catch (ftErr) {
-                            console.error("Fast Track Entry Error:", ftErr);
-                        }
-                    }
-                }
-
-                // 🏆 TEAM REWARD (BONANZA) SYSTEM CHECK
-                const legStats = await getLegStats(sponsor.userId);
-                if (!sponsor.claimedRewards) sponsor.claimedRewards = [];
-
-                for (let milestone of REWARD_MILESTONES) {
-                    if (legStats.strongLeg >= milestone.strongLeg && legStats.otherLegs >= milestone.otherLegs) {
-                        if (!sponsor.claimedRewards.includes(milestone.target)) {
-                            sponsor.rewardIncome = (sponsor.rewardIncome || 0) + milestone.reward;
-                            sponsor.totalRewardIncome = (sponsor.totalRewardIncome || 0) + milestone.reward;
-                             sponsor.claimedRewards.push(milestone.target);
-                            
-                            dbOperations.push(
-                                createTransaction({
-                                    userId: sponsor.userId,
-                                    type: "reward_income", 
-                                    source: "reward",
-                                    amount: milestone.reward,
-                                    description: `Bonanza Reward Unlocked: ${milestone.title}`,
-                                    status: 'success'
-                                })
-                            );
-                        }
-                    }
-                }
-                await sponsor.save();
-            }
-
-            // 🌟 20 LEVEL INCOME ENGINE 🔥 (Optimized with bulk ops)
-            const LEVEL_PERCENTAGES = [
-                0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 
-                0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25 
-            ];
-
-            let currentUplineId = targetUser.sponsorId; 
-            let currentLevel = 1;
-
-            while (currentUplineId && currentLevel <= 20) {
-                const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId levelIncome totalLevelIncome');
-                if (!upline) break;
-
-                if (currentLevel > 1) {
-                    const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
-                    const levelAmount = (amount * percentage) / 100;
-
-                    if (levelAmount > 0 && upline.isToppedUp) {
-                        
-                        dbOperations.push(
-                             User.updateOne(
-                                 { _id: upline._id }, 
-                                 { $inc: { levelIncome: levelAmount, totalLevelIncome: levelAmount } }
-                             )
-                        );
-
-                        dbOperations.push(
-                             createTransaction({
-                                userId: upline.userId,
-                                type: "level_income",
-                                source: "level",
-                                amount: levelAmount,
-                                fromUserId: targetUser.userId,
-                                description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation`,
-                                status: 'success'
-                            })
-                        );
-                    }
-                }
-
-                currentUplineId = upline.sponsorId;
-                currentLevel++;
-            }
-        }
-      }
-
-      // 🔹 4. Target User Profile Update ($30 Plan)
       if (!targetUser.packages) targetUser.packages = [];
-      targetUser.packages.push({
-        plan: "Global Auto-Pool",
-        amount: amount,
-        startDate: new Date(),
-        withdrawn: 0
-      });
+      targetUser.packages.push({ plan: "Global Auto-Pool", amount: amount, startDate: new Date(), withdrawn: 0 });
       targetUser.topUpAmount = Math.max(targetUser.topUpAmount || 0, amount);
       targetUser.updatedAt = new Date(); 
+      if (isFirstTopup) {
+          targetUser.isToppedUp = true;
+          targetUser.topUpDate = new Date();
+      }
       await targetUser.save();
 
       let txDescription = isFirstTopup ? `Node Activated with $${amount}` : `Node Upgrade with $${amount}`;
-      dbOperations.push(
-          createTransaction({
+      await createTransaction({
             userId: targetUser.userId,
             type: "topup",
             amount,
@@ -674,23 +529,109 @@ router.put(
             toUserId: targetUser.userId,
             description: txDescription,
             status: 'success'
-          })
-      );
-
-      // Execute all background database operations concurrently without waiting for them to finish one by one
-      if(dbOperations.length > 0) {
-          Promise.allSettled(dbOperations).catch(e => console.error("Background task error:", e));
-      }
-
-      // Send response immediately after essential updates are done
-      res.json({
-        success: true,
-        message: `Top-up successful! $${amount} Node Activated.`,
       });
+
+      // 🚀 BINGO! User ko turant response bhej diya, frontend popup turant aa jayega!
+      res.json({ success: true, message: `Top-up successful! $${amount} Node Activated.` });
+
+
+      // =======================================================
+      // 🔹 4. BACKGROUND MLM ENGINE (Runs behind the scenes)
+      // =======================================================
+      // Yahan se aage ka code user ko wait nahi karwayega
+      (async () => {
+          try {
+              if (isFirstTopup) {
+                  await User.updateMany(
+                      { isToppedUp: true, userId: { $ne: targetUser.userId } }, 
+                      { $inc: { globalTeamCount: 1 } }
+                  );
+
+                  if (targetUser.sponsorId) {
+                      const sponsor = await User.findOne({ userId: targetUser.sponsorId });
+                      if (sponsor) {
+                          // 🌟 DIRECT INCOME
+                          sponsor.directCount = (sponsor.directCount || 0) + 1;
+                          const DIRECT_PERCENT = 10; 
+                          const directBonusAmount = (amount * DIRECT_PERCENT) / 100; 
+
+                          sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
+                          sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
+                          
+                          await createTransaction({
+                              userId: sponsor.userId, type: "direct_income", source: "direct",
+                              amount: directBonusAmount, fromUserId: targetUser.userId,
+                              description: `Direct Bonus (10%) from ${targetUser.name}'s Node Activation`, status: 'success'
+                          });
+
+                          // 🔥 FAST TRACK
+                          if (sponsor.createdAt) {
+                              const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+                              if ((new Date().getTime() - new Date(sponsor.createdAt).getTime()) <= thirtyDaysInMs) {
+                                  const FastTrack = require('../models/FastTrack');
+                                  await FastTrack.create({
+                                      sponsorId: sponsor.userId, directUserId: targetUser.userId,
+                                      dailyAmount: 1, daysPaid: 0, maxDays: 10, status: 'active'
+                                  }).catch(e => console.log("Fast Track Error", e));
+                              }
+                          }
+
+                          // 🏆 REWARDS
+                          const legStats = await getLegStats(sponsor.userId);
+                          if (!sponsor.claimedRewards) sponsor.claimedRewards = [];
+                          for (let milestone of REWARD_MILESTONES) {
+                              if (legStats.strongLeg >= milestone.strongLeg && legStats.otherLegs >= milestone.otherLegs) {
+                                  if (!sponsor.claimedRewards.includes(milestone.target)) {
+                                      sponsor.rewardIncome = (sponsor.rewardIncome || 0) + milestone.reward;
+                                      sponsor.totalRewardIncome = (sponsor.totalRewardIncome || 0) + milestone.reward;
+                                      sponsor.claimedRewards.push(milestone.target);
+                                      await createTransaction({
+                                          userId: sponsor.userId, type: "reward_income", source: "reward", amount: milestone.reward,
+                                          description: `Bonanza Reward Unlocked: ${milestone.title}`, status: 'success'
+                                      });
+                                  }
+                              }
+                          }
+                          await sponsor.save();
+                      }
+
+                      // 🌟 20 LEVEL DISTRIBUTION
+                      const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
+                      let currentUplineId = targetUser.sponsorId; 
+                      let currentLevel = 1;
+
+                      while (currentUplineId && currentLevel <= 20) {
+                          const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId');
+                          if (!upline) break;
+
+                          if (currentLevel > 1) {
+                              const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
+                              const levelAmount = (amount * percentage) / 100;
+
+                              if (levelAmount > 0 && upline.isToppedUp) {
+                                  await User.updateOne({ _id: upline._id }, { $inc: { levelIncome: levelAmount, totalLevelIncome: levelAmount } });
+                                  await createTransaction({
+                                      userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
+                                      fromUserId: targetUser.userId, description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation`, status: 'success'
+                                  });
+                              }
+                          }
+                          currentUplineId = upline.sponsorId;
+                          currentLevel++;
+                      }
+                  }
+              }
+          } catch (bgError) {
+              console.error("Background MLM Engine Error:", bgError);
+          }
+      })(); 
+      // Background process bracket closed here
 
     } catch (err) {
       console.error('Top-up Error:', err);
-      res.status(500).json({ message: 'Server error during top-up' });
+      if (!res.headersSent) {
+          res.status(500).json({ message: 'Server error during top-up' });
+      }
     }
   }
 );
