@@ -1,29 +1,31 @@
 import React, { useEffect, useState } from "react";
-import api from "../../api/userAxios"; 
+import api from "../../api/axios"; 
 import { QRCodeCanvas } from "qrcode.react";
 import { Copy, CheckCircle2, AlertTriangle, X, Wallet, QrCode } from "lucide-react";
 
-export default function DepositModal({ isOpen, onClose }) {
+// 🔥 FIX: 'isOpen' yahan se hata diya kyunki UserLayout already condition check kar raha hai
+export default function DepositModal({ onClose, user, userId }) {
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   // Fetch the permanent address when the modal opens
   useEffect(() => {
-    if (isOpen) {
+    // 🔥 FIX: Jaise hi ye load hoga, turant API hit karega
+    if (userId) {
       fetchDepositAddress();
-    } else {
-      // Reset state when closed
-      setAddress("");
-      setLoading(true);
-      setCopied(false);
     }
-  }, [isOpen]);
+  }, [userId]);
 
   const fetchDepositAddress = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/deposit/get-address"); 
+      const token = localStorage.getItem('token');
+      
+      const res = await api.get("/deposit/get-address", {
+        headers: { Authorization: `Bearer ${token}` }
+      }); 
+      
       setAddress(res.data.address);
     } catch (err) {
       console.error("Failed to fetch address", err);
@@ -54,7 +56,7 @@ export default function DepositModal({ isOpen, onClose }) {
     }
   };
 
-  if (!isOpen) return null;
+  // 🔥 FIX: Wo 'return null' wali line yahan se completely hata di hai!
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1000] flex justify-center items-center p-4">
@@ -103,7 +105,7 @@ export default function DepositModal({ isOpen, onClose }) {
                 Send any amount of USDT to this address. Your wallet will be credited automatically.
               </p>
 
-              {/* QR Code Container - Size reduced from 150 to 120 */}
+              {/* QR Code Container */}
               <div className="flex justify-center mb-4 relative">
                  <div className="absolute inset-0 bg-green-100 rounded-3xl blur-[15px] opacity-60"></div>
                  <div className="relative p-2.5 bg-white rounded-2xl border-2 border-slate-100 shadow-md flex flex-col items-center">
@@ -114,7 +116,7 @@ export default function DepositModal({ isOpen, onClose }) {
                  </div>
               </div>
 
-              {/* Address Display & Copy - Padding slimmed down */}
+              {/* Address Display & Copy */}
               <div className="w-full">
                 <label className="block text-[9px] font-bold text-black mb-1 ml-1 uppercase tracking-wider">
                   Your Permanent Deposit Address
@@ -139,7 +141,7 @@ export default function DepositModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* Warning Note - Margin & Padding reduced */}
+              {/* Warning Note */}
               <div className="mt-4 bg-red-50 border border-red-200 p-3 rounded-xl flex items-start gap-2 shadow-sm">
                 <AlertTriangle className="text-red-500 shrink-0 w-4 h-4 mt-0.5" />
                 <p className="text-red-600 text-[9px] md:text-[10px] font-bold leading-relaxed">
@@ -147,7 +149,7 @@ export default function DepositModal({ isOpen, onClose }) {
                 </p>
               </div>
 
-              {/* Cancel Button - Margin & Padding reduced */}
+              {/* Cancel Button */}
               <div className="mt-4 pt-3 border-t border-slate-100 w-full">
                  <button 
                    onClick={onClose} 

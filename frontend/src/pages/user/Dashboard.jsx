@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from "react";
 import api from "../../api/axios"; 
 import { useNavigate } from "react-router-dom"; 
 import { useAuth } from "../../context/AuthContext";
-// ✅ CalendarDays icon add kiya hai date dikhane ke liye
 import { Globe, ChevronRight, CalendarDays } from "lucide-react"; 
 
 // Components Imports
@@ -10,27 +9,22 @@ import TotalSystemUsers from "../../components/dashboard/TotalSystemUsers";
 import IncomeSummary from "../../components/dashboard/IncomeSummary";
 import ReferralLink from "../../components/dashboard/ReferralLink";
 import WalletBalance from "../../components/dashboard/WalletBalance";
-import QuickActions from "../../components/dashboard/QuickActions";
+// 🔥 FIX: QuickActions ka import yahan se hata diya kyunki wo ab UserLayout me hai
 import DailyROIPlan from "../../components/dashboard/DailyROI";
 import SpinnerOverlay from "../../components/common/SpinnerOverlay";
-import Modals from "../../components/modals/Modals";
 import SuccessModal from "../../components/modals/SuccessModal";
-import TopUpModalWithInput from "../../components/modals/TopUpModalWithInput";
-import CreditToWalletModal from "../../components/modals/CreditToWalletModal";
 import TelegramPopup from "../../components/TelegramPopup";
 
-const Dashboard = () => {
+const Dashboard = ({ setModalState }) => {
   const { user, token, setUser, logout } = useAuth();
   const navigate = useNavigate(); 
 
   const [walletRefreshKey, setWalletRefreshKey] = useState(0);
   const [loading, setLoading] = useState(false);
   
-  // Real aur Fake count ko store karne ke liye
   const [totalRealUsers, setTotalRealUsers] = useState(0);
   const [globalFakeCount, setGlobalFakeCount] = useState(0);
   
-  // NAYI STATE: Latest 5 Global Users ke liye
   const [latestGlobalUsers, setLatestGlobalUsers] = useState([]);
   
   const [income, setIncome] = useState({
@@ -39,14 +33,6 @@ const Dashboard = () => {
     dailyIncome: 0,
     spinIncome: 0,
     availableSpins: 0,
-  });
-
-  const [modalState, setModalState] = useState({
-    showDeposit: false,
-    showWalletTransfer: false,
-    showWithdrawalModal: false,
-    showTopUpForm: false,
-    showCreditToWallet: false,
   });
 
   const [successModal, setSuccessModal] = useState({
@@ -61,7 +47,6 @@ const Dashboard = () => {
     if (!token || !user?.userId) return;
     try {
         setLoading(true);
-        // Dashboard data fetch kar rahe hain
         const userRes = await api.get(`/user/${user.userId}?t=${new Date().getTime()}`, { headers: { Authorization: `Bearer ${token}` } });
         
         setUser(userRes.data.user); 
@@ -85,12 +70,9 @@ const Dashboard = () => {
           totalFastTrackIncome: incomeRes.data.totalFastTrackIncome || incomeRes.data.income?.totalFastTrackIncome || 0,
         });
 
-
-        // NAYA FETCH: Top 5 Global Community Members
         try {
             const globalRes = await api.get('/community/global-list');
             if(globalRes.data.success) {
-                // Sirf pehle 5 users uthayenge
                 setLatestGlobalUsers(globalRes.data.data.slice(0, 5));
             }
         } catch(globalErr) {
@@ -154,12 +136,10 @@ const Dashboard = () => {
 
       <div className="space-y-6 md:space-y-8 relative z-10">
         
-        {/* Wallet Balance Container */}
         <section>
           <WalletBalance userId={user.userId} refreshKey={walletRefreshKey} income={income} />
         </section>
          
-        {/* Total System Users Container */}
         <section>
            <TotalSystemUsers 
              user={user} 
@@ -168,30 +148,25 @@ const Dashboard = () => {
            />
         </section>
 
-        {/* Referral Link Container */}
         <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
              <ReferralLink link={referralLink} />
         </div>
         
-        {/* Income Summary */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
            <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
              <IncomeSummary income={income} user={user} />
            </div>
         </div>
 
-        {/* Daily ROI Claim Section */}
         <section className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
             <DailyROIPlan dailyROI={user.dailyROI || []} onClaim={claimDailyROI} />
         </section>
 
-        {/* ✅ LIVE GLOBAL COMMUNITY PREVIEW BOX (UPDATED UI) */}
         {latestGlobalUsers.length > 0 && (
           <section 
              onClick={() => navigate('/global-community')}
              className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group p-4 md:p-5"
           >
-             {/* Header */}
              <div className="flex justify-between items-center mb-4">
                  <h3 className="font-black text-slate-800 flex items-center gap-2 text-sm md:text-base uppercase tracking-tight">
                     <Globe className="text-blue-500 animate-pulse" size={20}/> Live All Community
@@ -201,15 +176,12 @@ const Dashboard = () => {
                  </span>
              </div>
 
-             {/* 5 Users List with Flag Images, Date and Amount */}
              <div className="space-y-2">
                  {latestGlobalUsers.map((u, idx) => (
                      <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50 hover:bg-slate-100 transition-colors p-3 rounded-xl border border-slate-100 gap-2 sm:gap-0">
                          
-                         {/* Left Side: Flag, Name, ID & Mobile Amount */}
                          <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
                              <div className="flex items-center gap-3">
-                                 {/* ✅ FLAG IMAGE */}
                                  <img 
                                     src={`https://flagcdn.com/w40/${(u.country || 'in').toLowerCase()}.png`} 
                                     alt={u.country}
@@ -222,16 +194,13 @@ const Dashboard = () => {
                                  </div>
                              </div>
                              
-                             {/* Only visible on Mobile (Amount on top row) */}
                              <div className="sm:hidden flex items-center gap-1 bg-green-50 border border-green-100 text-green-600 px-2 py-1 rounded-md">
                                  <span className="font-black text-[10px]">${u.amount || 30}</span>
                                  <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse"></span>
                              </div>
                          </div>
 
-                         {/* Right Side: Date & Desktop Amount */}
                          <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t sm:border-t-0 border-slate-200 sm:border-transparent pt-2 sm:pt-0">
-                             {/* ✅ DATE */}
                              <div className="flex items-center gap-1.5 text-slate-500">
                                 <CalendarDays size={12} className="opacity-70" />
                                 <span className="font-bold text-[10px] sm:text-xs">
@@ -239,7 +208,6 @@ const Dashboard = () => {
                                 </span>
                              </div>
                              
-                             {/* Only visible on PC/Desktop */}
                              <div className="hidden sm:flex items-center gap-1.5 bg-green-50 border border-green-100 text-green-600 px-2.5 py-1 rounded-lg">
                                  <span className="font-black text-xs">${u.amount || 30}</span>
                                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
@@ -255,55 +223,14 @@ const Dashboard = () => {
         
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR (FIXED) */}
-      <div className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-[60] pt-2 pb-4 px-2 md:static md:bg-transparent md:border-none md:shadow-none md:p-0 md:mt-8 md:z-10">
-          <QuickActions
-            onDepositClick={() => setModalState((prev) => ({ ...prev, showDeposit: true }))}
-            onTopUpClick={() => setModalState((prev) => ({ ...prev, showTopUpForm: true }))}
-            onWalletTransferClick={() => setModalState((prev) => ({ ...prev, showWalletTransfer: true }))}
-            onWithdrawClick={() => setModalState((prev) => ({ ...prev, showWithdrawalModal: true }))}
-            onCreditToWalletClick={() => setModalState((prev) => ({ ...prev, showCreditToWallet: true }))}
-          />
-      </div>
+      {/* 🔥 FIX: Desktop QuickActions yahan se remove kar diya gaya hai */}
 
-      {/* General Modals */}
-      <Modals
-        user={user}
-        modalState={modalState}
-        setModalState={setModalState}
-        setUser={setUser}
-        onTopUpSuccess={handleTopUpSuccess}
-      />
-
-      {/* Success Modal */}
       <SuccessModal
         isOpen={successModal.isOpen}
         userId={successModal.userId}
         amount={successModal.amount}
         onClose={() => setSuccessModal((prev) => ({ ...prev, isOpen: false }))}
       />
-
-      {/* TopUp Modal */}
-      {modalState.showTopUpForm && (
-        <TopUpModalWithInput
-          onClose={() => setModalState((prev) => ({ ...prev, showTopUpForm: false }))}
-          onTopUpSuccess={(amount) => handleTopUpSuccess(amount, user.userId)}
-        />
-      )}
-
-      {/* Credit to Wallet Modal */}
-      {modalState.showCreditToWallet && (
-        <CreditToWalletModal
-          userId={user.userId}
-          balances={{
-            direct: income.directIncome,
-            level: income.levelIncome,
-            reward: income.rewardIncome 
-          }}
-          onClose={() => setModalState((prev) => ({ ...prev, showCreditToWallet: false }))}
-          onSuccess={(amount) => handleTopUpSuccess(amount, user.userId)}
-        />
-      )}
 
       {!loading && user && <TelegramPopup currentUser={user} />}
       

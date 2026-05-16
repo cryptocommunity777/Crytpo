@@ -7,6 +7,12 @@ const TopNav = ({ onHamburgerClick }) => {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
+  // 🔥 UPDATE: Naya function jo Dashboard pe bhi le jayega aur page ko top par bhi scroll karega
+  const handleLogoClick = () => {
+    navigate("/dashboard");
+    window.scrollTo({ top: 0, behavior: "smooth" }); // Smooth scroll to top
+  };
+
   return (
     // 🔥 UPDATE: Background changed to White Glass with soft shadow
     <header className="fixed top-0 left-0 w-full bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm z-50">
@@ -29,7 +35,7 @@ const TopNav = ({ onHamburgerClick }) => {
           {/* 2. Center Section: Brand Name (Centered on Mobile & PC) */}
           <div
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer flex items-center justify-center w-[60%] md:w-auto"
-            onClick={() => navigate("/dashboard")}
+            onClick={handleLogoClick} // 👈 Yahan naya function call kiya hai
           >
             {/* 🔥 UPDATE: Orange gradient hata kar Dark Slate aur Green color diya */}
             <span className="text-base sm:text-lg md:text-2xl font-black tracking-widest uppercase text-center whitespace-nowrap">
