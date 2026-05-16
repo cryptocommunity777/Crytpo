@@ -194,7 +194,7 @@ const Dashboard = () => {
              {/* Header */}
              <div className="flex justify-between items-center mb-4">
                  <h3 className="font-black text-slate-800 flex items-center gap-2 text-sm md:text-base uppercase tracking-tight">
-                    <Globe className="text-blue-500 animate-pulse" size={20}/> Live Global Community
+                    <Globe className="text-blue-500 animate-pulse" size={20}/> Live All Community
                  </h3>
                  <span className="text-[10px] md:text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md flex items-center gap-1 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                     View All <ChevronRight size={14}/>

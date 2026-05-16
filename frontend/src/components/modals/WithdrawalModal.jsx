@@ -14,12 +14,12 @@ const GLOBAL_POOLS = [
   { level: 4,  globalTeam: 200,   reqDirects: 4,  earning: 80   },
   { level: 5,  globalTeam: 400,   reqDirects: 5,  earning: 150  },
   { level: 6,  globalTeam: 1600,  reqDirects: 6,  earning: 200  },
-  { level: 7,  globalTeam: 2000,  reqDirects: 8,  earning: 500  }, // 6 + 2 = 8
-  { level: 8,  globalTeam: 3000,  reqDirects: 10, earning: 700  }, // 8 + 2 = 10
-  { level: 9,  globalTeam: 4000,  reqDirects: 12, earning: 1000 }, // 10 + 2 = 12
-  { level: 10, globalTeam: 5000,  reqDirects: 14, earning: 1500 }, // 12 + 2 = 14
-  { level: 11, globalTeam: 7500,  reqDirects: 16, earning: 3000 }, // 14 + 2 = 16
-  { level: 12, globalTeam: 10000, reqDirects: 18, earning: 5000 }  // 16 + 2 = 18
+  { level: 7,  globalTeam: 2000,  reqDirects: 8,  earning: 500  }, 
+  { level: 8,  globalTeam: 3000,  reqDirects: 10, earning: 700  }, 
+  { level: 9,  globalTeam: 4000,  reqDirects: 12, earning: 1000 }, 
+  { level: 10, globalTeam: 5000,  reqDirects: 14, earning: 1500 }, 
+  { level: 11, globalTeam: 7500,  reqDirects: 16, earning: 3000 }, 
+  { level: 12, globalTeam: 10000, reqDirects: 18, earning: 5000 }  
 ];
 
 const WithdrawalModal = ({ userId, onClose }) => {
@@ -47,7 +47,8 @@ const WithdrawalModal = ({ userId, onClose }) => {
   const [isAddressMissing, setIsAddressMissing] = useState(false);
   
   const [successOpen, setSuccessOpen] = useState(false);
-  const [successData, setSuccessData] = useState({ userId: "", amount: 0, source: "" });
+  // ✅ UPDATE: Added userName in state
+  const [successData, setSuccessData] = useState({ userId: "", userName: "", amount: 0, source: "" });
   const [messageModal, setMessageModal] = useState({ open: false, title: "", message: "", type: "info" });
 
   const { user: loggedInUser, token } = useAuth();
@@ -109,15 +110,14 @@ const WithdrawalModal = ({ userId, onClose }) => {
             return { ...lvl, generated };
         });
 
-        // 3. 🚨 BULLETPROOF FALLBACK: Agar API ne activePools data nahi bheja, par total pool balance $2 hai
-        // toh us $2 ko automatically in boxes me distribute kar do!
+        // 3. 🚨 BULLETPROOF FALLBACK
         if (totalGenerated === 0 && actualAvailablePool > 0 && boxData.length > 0) {
             let splitAmt = actualAvailablePool / boxData.length;
             boxData = boxData.map(b => ({ ...b, generated: splitAmt }));
             totalGenerated = actualAvailablePool;
         }
 
-        // 4. Calculate kitna nikal chuka hai (Total Generated minus Current Available)
+        // 4. Calculate kitna nikal chuka hai
         let alreadyWithdrawn = Math.max(0, totalGenerated - actualAvailablePool);
 
         // 5. Finalize boxes data with exact available balance
@@ -130,7 +130,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
             return {
                 level: box.level,
                 earning: box.earning,
-                available: available > 0 ? available : 0 // Ensure no negative values
+                available: available > 0 ? available : 0 
             };
         });
         
@@ -188,7 +188,6 @@ const WithdrawalModal = ({ userId, onClose }) => {
       checkAndPush("level", withdrawals.level, balances.level, "Level Income");
       checkAndPush("reward", withdrawals.reward, balances.reward, "Team Reward");
 
-      // Pool Withdrawals calculate kar rahe hain
       unlockedLevels.forEach(lvl => {
         const amt = Number(withdrawals[`pool_${lvl.level}`] || 0);
         if (amt > 0) {
@@ -205,7 +204,6 @@ const WithdrawalModal = ({ userId, onClose }) => {
       }
 
       if (totalRequested === 0) return showMessage("Warning", "Enter amount to withdraw.");
-      // ✅ UPDATE: Minimum 10 karna hai jaisa backend me kiya tha (Frontend warning bhi change kardi)
       if (!isPromo && totalRequested < 10) return showMessage("Warning", "Minimum total withdrawal amount is $10.");
       if (!transactionPassword.trim()) return showMessage("Warning", "Enter transaction password.");
 
@@ -219,8 +217,17 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
       const uniqueSources = [...new Set(successMessages)].join(", ");
       const finalUserId = (isPromo && response.data.generatedId) ? response.data.generatedId : userId;
+      // ✅ UPDATE: Getting user name correctly
+      const finalUserName = isPromo ? "Demo User" : (loggedInUser?.name || "");
 
-      setSuccessData({ userId: finalUserId, amount: totalRequested, source: uniqueSources });
+      // ✅ UPDATE: Saving userName in state
+      setSuccessData({ 
+        userId: finalUserId, 
+        userName: finalUserName, 
+        amount: totalRequested, 
+        source: uniqueSources 
+      });
+      
       setSuccessOpen(true);
       setWithdrawals({ direct: "", level: "", reward: "" }); 
       setTransactionPassword("");
@@ -228,9 +235,6 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
     } catch (err) {
       console.error(err);
-      
-      // ✅ YAHAN MAINE ERROR MESSAGE EXTRACTION THEEK KAR DIYA HAI
-      // Agar backend se proper message aaya hai, toh use dikhao, warna default message dikhao
       let errorMsg = "Withdrawal failed due to a server error.";
       
       if (err.response && err.response.data && err.response.data.message) {
@@ -239,7 +243,6 @@ const WithdrawalModal = ({ userId, onClose }) => {
          errorMsg = err.message;
       }
 
-      // Check for strict 403 status 
       if (err.response?.status === 403) {
           errorMsg = "Invalid Transaction Password";
       }
@@ -293,8 +296,17 @@ const WithdrawalModal = ({ userId, onClose }) => {
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
       `}</style>
 
+      {/* ✅ UPDATE: Passing userName to SuccessModal */}
       {successOpen && (
-        <SuccessModal isOpen={successOpen} onClose={() => { setSuccessOpen(false); onClose(); }} type="withdrawal" userId={successData.userId} amount={successData.amount} source={successData.source} />
+        <SuccessModal 
+           isOpen={successOpen} 
+           onClose={() => { setSuccessOpen(false); onClose(); }} 
+           type="withdrawal" 
+           userId={successData.userId} 
+           userName={successData.userName} 
+           amount={successData.amount} 
+           source={successData.source} 
+        />
       )}
 
       {messageModal.open && (

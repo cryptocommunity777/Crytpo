@@ -207,13 +207,9 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
                       <div className="text-[10px] font-mono text-black mt-0.5">ID: {userInfo.userId}</div>
                     </div>
                     <div className="text-right">
-                      {isBought ? (
+                      {isBought && (
                         <div className="text-green-600 font-black text-[10px] uppercase flex items-center gap-1">
                            <CheckCircle size={12}/> Active
-                        </div>
-                      ) : (
-                        <div className="text-black font-bold text-[10px] uppercase">
-                           Pending
                         </div>
                       )}
                     </div>
@@ -267,11 +263,12 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
         </div>
       </div>
 
-      <SuccessModal
+    <SuccessModal
         isOpen={successModalOpen}
         onClose={() => { setSuccessModalOpen(false); onClose(); }}
         type="topup"
         userId={successData.userId}
+        userName={successData.name} // ✅ Yahan `name` se map kar diya
         amount={successData.amount}
         reward={0}
       />

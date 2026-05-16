@@ -1,4 +1,3 @@
-// src/components/modals/WalletTransferModal.jsx
 import React, { useEffect, useState } from "react";
 import api from "../../api/axios"; 
 import { useAuth } from "../../context/AuthContext"; 
@@ -250,12 +249,13 @@ const WalletTransferModal = ({ onClose }) => {
         </div>
       )}
 
-      {/* External Modals */}
+      {/* ✅ Yahan update kiya hai: userName={userName} add kiya hai */}
       <SuccessModal 
         isOpen={successOpen} 
         onClose={handleSuccessClose} 
         type="transfer" 
-        userId={userId} 
+        userId={userId}
+        userName={userName} 
         amount={amount} 
         zIndex={10000}
       />

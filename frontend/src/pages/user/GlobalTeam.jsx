@@ -33,12 +33,19 @@ const GlobalTeam = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
+ useEffect(() => {
     const fetchGlobalTeam = async () => {
       try {
         const res = await api.get('/community/global-list');
-        if (res.data.success) {
-          setMembers(res.data.data.slice(0, 100));
+        if (res.data.success && res.data.data) {
+          
+          // 🔥 CRITICAL FIX: Data ko Date ke hisaab se ulta (Newest First) sort karo
+          const sortedMembers = res.data.data.sort((a, b) => {
+            return new Date(b.date) - new Date(a.date);
+          });
+
+          // Ab sabse naye wale top 100 uthao
+          setMembers(sortedMembers.slice(0, 100));
         }
       } catch (err) {
         console.error("Failed to fetch global team", err);
@@ -48,7 +55,7 @@ const GlobalTeam = () => {
     };
 
     fetchGlobalTeam(); 
-    const interval = setInterval(fetchGlobalTeam, 30000);
+    const interval = setInterval(fetchGlobalTeam, 30000); // Har 30 second me refresh
     return () => clearInterval(interval);
   }, []);
 
@@ -72,7 +79,7 @@ const GlobalTeam = () => {
              <Globe className="text-blue-500" size={28} /> Live All Community
           </h2>
           <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
-            Real-time latest 100 joinings across the globe
+            Real-time latest 100 joinings across the World
           </p>
         </div>
         <div className="bg-blue-50 text-blue-600 px-4 py-2.5 rounded-xl border border-blue-100 flex items-center gap-2 font-black text-xs uppercase tracking-wider shadow-sm w-max">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../api/axios';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { User, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, Globe, Sparkles, Home } from 'lucide-react';
+import { User, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, Globe, Sparkles, Home, Download } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 
@@ -41,7 +41,7 @@ const UserLogin = () => {
         // 3. URL ko saaf karo
         window.history.replaceState({}, document.title, '/login');
         
-        // 4. Force Redirect to Dashboard (Isse login page par rukne wali bimari theek ho jayegi)
+        // 4. Force Redirect to Dashboard
         window.location.href = '/dashboard'; 
       } catch (err) {
         console.error('Auto-login data parsing failed', err);
@@ -277,6 +277,7 @@ const UserLogin = () => {
                   </Link>
               </div>
 
+              {/* Login Button */}
               <button type="submit" disabled={loading} className={`w-full py-4 mt-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black text-sm tracking-widest uppercase shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)] hover:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.7)] transition-all flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-wait' : 'hover:-translate-y-1 active:scale-95'}`}>
                 {loading ? (
                   <>
@@ -287,6 +288,24 @@ const UserLogin = () => {
                   <>LOGIN <ArrowRight size={18} strokeWidth={3} /></>
                 )}
               </button>
+              
+              {/* PDF Download Button Divider */}
+              <div className="relative flex py-3 items-center">
+                <div className="flex-grow border-t border-slate-200"></div>
+                <span className="flex-shrink-0 mx-4 text-slate-400 text-xs font-bold uppercase tracking-widest">Or</span>
+                <div className="flex-grow border-t border-slate-200"></div>
+              </div>
+
+              {/* 🔥 DOWNLOAD PDF BUTTON 🔥 */}
+              <a 
+                href="/cryptocommunity.pdf" 
+                download="CryptoCommunity
+                .pdf"
+                className="w-full py-3.5 rounded-xl bg-white border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 font-black text-sm tracking-widest uppercase transition-all flex items-center justify-center gap-2 hover:-translate-y-1 active:scale-95 shadow-sm"
+              >
+                <Download size={18} strokeWidth={2.5} /> DOWNLOAD BUSINESS PLAN
+              </a>
+
             </form>
          </div>
       </div>
