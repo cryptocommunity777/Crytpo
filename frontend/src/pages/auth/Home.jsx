@@ -4,8 +4,8 @@ import {
   ArrowRight, Zap, Layers, 
   Network, Rocket, ShieldCheck, 
   Globe2, ChevronRight, Activity,
-  Hexagon, Users, Cpu, DollarSign,
-  Gift, Target, Trophy, Medal, Crown
+  Hexagon, Users, DollarSign,
+  Gift, Target, Trophy, Medal, Crown, Calendar
 } from 'lucide-react';
 
 // --- PREMIUM ANIMATED COUNTER ---
@@ -56,14 +56,15 @@ const communityPlan = [
   { sr: 12, team: "10000", directs: 2, daily: 10,  income: "5000" }
 ];
 
+// 🔥 UPDATED MONTHLY REWARDS FROM FLYER
 const rewardsPlan = [
-  { pts: 50, rank: "Bronze", reward: 30, icon: <Medal className="text-orange-500" /> },
-  { pts: 200, rank: "Silver", reward: 100, icon: <Medal className="text-slate-400" /> },
-  { pts: 500, rank: "Gold", reward: 200, icon: <Medal className="text-yellow-500" /> },
-  { pts: 1000, rank: "Platinum", reward: 300, icon: <Trophy className="text-teal-500" /> },
-  { pts: 2000, rank: "Ruby", reward: 500, icon: <Target className="text-red-500" /> },
-  { pts: 3000, rank: "Sapphire", reward: 1000, icon: <Target className="text-blue-500" /> },
-  { pts: 5000, rank: "Diamond", reward: 1500, icon: <Crown className="text-indigo-500" /> },
+  { pts: 50, rank: "PHOENIX", reward: 30, icon: <ShieldCheck className="text-orange-600" /> },
+  { pts: 200, rank: "WOLF", reward: 100, icon: <ShieldCheck className="text-slate-300" /> },
+  { pts: 500, rank: "VICTOR", reward: 200, icon: <Trophy className="text-yellow-500" /> },
+  { pts: 1000, rank: "PIONEER", reward: 300, icon: <ShieldCheck className="text-blue-300" /> },
+  { pts: 2000, rank: "ROYAL", reward: 500, icon: <Crown className="text-red-500" /> },
+  { pts: 3000, rank: "TITAN", reward: 1000, icon: <Target className="text-blue-500" /> },
+  { pts: 5000, rank: "LEGEND", reward: 1500, icon: <Hexagon className="text-purple-500 fill-purple-500/20" /> },
 ];
 
 const Home = () => {
@@ -188,7 +189,7 @@ const Home = () => {
               { label: "Activation", prefix: "$", end: 30, suffix: " Only" },
               { label: "Community Bonus", prefix: "Max $", end: 12200, suffix: "" },
               { label: "Referral Levels", end: 20, suffix: " Levels" },
-              { label: "Cycle Bonus", prefix: "$", end: 1000, suffix: "/Cycle" }
+              { label: "Fast Track Bonus", prefix: "$", end: 10, suffix: "/Direct" } // REPLACED CYCLE BONUS HERE
             ].map((stat, i) => (
               <div key={i} className="flex-1 min-w-[140px]">
                 <div className="text-theme-green text-3xl md:text-4xl font-black mb-1 drop-shadow-sm">
@@ -212,8 +213,8 @@ const Home = () => {
               { title: "Direct Earning", icon: <Users />, desc: "Get massive direct commissions instantly when you refer someone with your link." },
               { title: "Community Earning", icon: <Globe2 />, desc: "Earn up to $12,200 purely from global team growth. The system builds this for you." },
               { title: "20 Level Earning", icon: <Layers />, desc: "Earn percentage-based deep income from your team's network up to 20 levels." },
-              { title: "Direct Cycle Bonus", icon: <Activity />, desc: "Complete a direct cycle and earn a massive $1000 bonus for every completion." },
-              { title: "Awards & Rewards", icon: <Gift />, desc: "Accumulate points (1 Member = 1 Pt) to win monthly cash rewards up to $1500." }
+              { title: "Fast Track Offer", icon: <Gift />, desc: "Bring a direct $30 top-up within your first 30 days and earn an extra $1 daily for 10 days!" },
+              { title: "Monthly Rewards", icon: <Trophy />, desc: "Accumulate points (1 Member = 1 Pt) to win monthly cash rewards up to $1500." }
             ].map((item, i) => (
               <div key={i} className="glass-panel p-8 rounded-3xl hover:border-green-500/50 hover:bg-green-50/50 transition-all duration-300 group transform hover:-translate-y-1">
                 <div className="w-14 h-14 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform border border-green-300">
@@ -269,8 +270,6 @@ const Home = () => {
                             ${row.daily}
                           </td>
                           
-                          
-                          
                           <td className="p-4 text-right text-emerald-600 font-black text-lg">
                             ${row.income}
                           </td>
@@ -324,35 +323,54 @@ const Home = () => {
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-green-500/10 blur-[100px] rounded-full"></div>
           
           <div className="max-w-6xl mx-auto relative z-10">
-            <div className="text-center mb-14">
-              <h2 className="text-3xl md:text-5xl font-black mb-4">Monthly <span className="text-green-400">Awards & Rewards</span></h2>
-              <p className="text-slate-400 text-lg">1 Member Team = 1 Point. Hit the target before the monthly closing date!</p>
+            <div className="text-center mb-10">
+              <h2 className="text-3xl md:text-5xl font-black mb-4">MONTHLY <span className="text-green-400">REWARDS</span></h2>
+              <p className="inline-block bg-slate-800 text-green-400 px-6 py-2 rounded-full border border-green-500/30 text-lg font-bold">
+                <Users size={18} className="inline mr-2 -mt-1" /> 1 Member team = 1 point
+              </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               {rewardsPlan.map((reward, i) => (
                 <div key={i} className="bg-slate-800/50 border border-slate-700 p-6 rounded-3xl text-center hover:bg-slate-800 hover:border-green-500/50 transition-all group">
                   <div className="flex justify-center mb-4 transform group-hover:scale-110 transition-transform">
-                    {React.cloneElement(reward.icon, { size: 40 })}
+                    {React.cloneElement(reward.icon, { size: 50 })}
                   </div>
-                  <h3 className="text-xl font-bold mb-1">{reward.rank}</h3>
-                  <p className="text-slate-400 text-sm mb-4">{reward.pts} Points</p>
+                  <h3 className="text-xl font-black tracking-widest mb-1 text-white">{reward.rank}</h3>
+                  <p className="text-slate-400 text-sm font-bold mb-4">{reward.pts} POINTS</p>
                   <div className="bg-slate-900 rounded-xl py-2 border border-slate-700">
-                    <span className="text-green-400 font-black text-xl">${reward.reward}</span>
+                    <span className="text-green-400 font-black text-2xl">${reward.reward}</span>
                   </div>
                 </div>
               ))}
               
-              {/* Direct Cycle Highlight Card */}
-              <div className="bg-gradient-to-br from-green-500 to-emerald-700 border border-green-400 p-6 rounded-3xl text-center col-span-2 md:col-span-3 lg:col-span-1 flex flex-col justify-center transform hover:scale-105 transition-all shadow-lg">
-                <Activity size={40} className="mx-auto mb-3 text-white" />
-                <h3 className="text-xl font-bold text-white mb-1">Direct Cycle</h3>
-                <p className="text-green-100 text-xs mb-3 uppercase tracking-wider font-bold">Cycle Complete = Bonus</p>
+              {/* FAST TRACK HIGHLIGHT CARD */}
+              <div className="bg-gradient-to-br from-green-500 to-emerald-700 border border-green-400 p-6 rounded-3xl text-center col-span-2 md:col-span-4 lg:col-span-1 flex flex-col justify-center transform hover:scale-105 transition-all shadow-lg">
+                <Gift size={40} className="mx-auto mb-3 text-white" />
+                <h3 className="text-xl font-bold text-white mb-1">Fast Track</h3>
+                <p className="text-green-100 text-xs mb-3 uppercase tracking-wider font-bold">1 Direct = $1/Day for 10 Days</p>
                 <div className="bg-white/20 rounded-xl py-3 border border-white/30 backdrop-blur-sm">
-                  <span className="text-white font-black text-2xl">$1000</span>
+                  <span className="text-white font-black text-2xl">$10 / Direct</span>
                 </div>
               </div>
             </div>
+
+            {/* RULES SECTION FROM FLYER */}
+            <div className="max-w-3xl mx-auto mt-12 space-y-3">
+              <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex items-start gap-4 text-left">
+                <Network className="text-green-400 shrink-0 mt-1" size={20} />
+                <p className="text-slate-300 text-sm leading-relaxed">Reward points will be calculated based on <span className="text-white font-bold">one strong leg</span>, and matching will be done with <span className="text-white font-bold">all other legs</span>.</p>
+              </div>
+              <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex items-start gap-4 text-left">
+                <Calendar className="text-green-400 shrink-0 mt-1" size={20} />
+                <p className="text-slate-300 text-sm leading-relaxed">Rewards will be <span className="text-white font-bold">closed every month</span>, and higher rewards will be distributed every month.</p>
+              </div>
+              <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex items-start gap-4 text-left">
+                <DollarSign className="text-green-400 shrink-0 mt-1" size={20} />
+                <p className="text-slate-300 text-sm leading-relaxed">Reward withdrawals will be release on <span className="text-white font-bold">1st day of every month</span>.</p>
+              </div>
+            </div>
+
           </div>
         </section>
 

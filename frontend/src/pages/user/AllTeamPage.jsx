@@ -91,8 +91,8 @@ const AllTeamPage = () => {
 
   const tableColumns = [
     { label: "Sr", key: null, center: true },
-        { label: "Joined", key: "createdAt", right: true },
-    { label: "Lvl", key: "level", center: true },
+        { label: "Date", key: "createdAt", right: true },
+    { label: "Level", key: "level", center: true },
     { label: "User ID", key: "userId" },
     { label: "Top-Up", key: "topUpAmount", center: true },
     { label: "Name", key: "name" },

@@ -110,9 +110,10 @@ const DepositHistory = () => {
             <thead className="bg-slate-50 text-green-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black w-16 text-center">Sr.</th>
+                                <th className="p-4 font-black text-right">Date & Time</th>
+
                 <th className="p-4 font-black">Type</th>
                 <th className="p-4 font-black text-center">Amount</th>
-                <th className="p-4 font-black text-right">Date & Time</th>
               </tr>
             </thead>
             <tbody className="text-slate-600">
@@ -138,6 +139,19 @@ const DepositHistory = () => {
                     <tr key={record._id || index} className="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-white">
                       <td className="p-4 font-bold text-gray-500 text-center">{index + 1}</td>
 
+    {/* ✅ User Friendly Date & Time */}
+                      <td className="p-4 text-right">
+                        <div className="flex flex-col items-end gap-0.5">
+                          <div className="flex items-center gap-1 text-slate-800 font-bold text-xs">
+                            <Calendar size={12} className="text-blue-500" />
+                            {recordDate ? format(new Date(recordDate), 'dd MMM yyyy') : 'N/A'}
+                          </div>
+                          <div className="flex items-center gap-1 text-slate-400 font-medium text-[10px]">
+                            <Clock size={10} />
+                            {recordDate ? format(new Date(recordDate), 'hh:mm a') : '--:--'}
+                          </div>
+                        </div>
+                      </td>
                       <td className="p-4">
                         <span className="inline-flex items-center gap-1.5 bg-green-500/10 text-green-500 border border-green-500/20 py-1 px-2.5 rounded-md text-[10px] font-black tracking-widest uppercase">
                           <ArrowDownCircle size={12} /> Deposit
@@ -151,19 +165,7 @@ const DepositHistory = () => {
                         </span>
                       </td>
 
-                      {/* ✅ User Friendly Date & Time */}
-                      <td className="p-4 text-right">
-                        <div className="flex flex-col items-end gap-0.5">
-                          <div className="flex items-center gap-1 text-slate-800 font-bold text-xs">
-                            <Calendar size={12} className="text-blue-500" />
-                            {recordDate ? format(new Date(recordDate), 'dd MMM yyyy') : 'N/A'}
-                          </div>
-                          <div className="flex items-center gap-1 text-slate-400 font-medium text-[10px]">
-                            <Clock size={10} />
-                            {recordDate ? format(new Date(recordDate), 'hh:mm a') : '--:--'}
-                          </div>
-                        </div>
-                      </td>
+                  
                     </tr>
                   );
                 })

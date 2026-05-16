@@ -69,7 +69,7 @@ const GlobalTeam = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
-             <Globe className="text-blue-500" size={28} /> Live Global Community
+             <Globe className="text-blue-500" size={28} /> Live All Community
           </h2>
           <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
             Real-time latest 100 joinings across the globe

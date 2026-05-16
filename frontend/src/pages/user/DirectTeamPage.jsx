@@ -119,7 +119,7 @@ const DirectTeamPage = () => {
             <thead className="bg-slate-50 text-slate-600 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center">Sr.</th>
-                                <th className="p-4 font-black text-right">Joined Date</th>
+                                <th className="p-4 font-black text-right">Date</th>
                 <th className="p-4 font-black">User ID</th>
                 <th className="p-4 font-black">Name</th>
                 <th className="p-4 font-black text-center">Directs</th>

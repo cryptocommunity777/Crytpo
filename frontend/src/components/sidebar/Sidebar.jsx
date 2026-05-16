@@ -87,7 +87,7 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
     { label: "Transactions", icon: Wallet, path: "/transaction-details" },
     { label: "Help & Support", icon: HelpCircle, path: "/support" },
     // ✅ YAHAN GLOBAL COMMUNITY ADD KIYA HAI
-    { label: "Global Community", icon: Globe, path: "/global-community" } 
+    { label: "All Community", icon: Globe, path: "/global-community" } 
   ];
 
   return (

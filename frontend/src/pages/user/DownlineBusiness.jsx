@@ -120,12 +120,7 @@ const DownlineBusiness = () => {
 
         <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full lg:w-auto">
            {/* Date Range */}
-           <div className="flex items-center gap-2 w-full sm:w-auto bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus-within:border-green-500 focus-within:bg-white transition-colors">
-              <Calendar size={16} className="text-slate-400" />
-              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="bg-transparent text-slate-900 text-xs md:text-sm font-bold outline-none" />
-              <span className="text-slate-400">to</span>
-              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="bg-transparent text-slate-900 text-xs md:text-sm font-bold outline-none" />
-           </div>
+          
 
            {/* Business Total Badge */}
            <div className="bg-green-600 text-white px-4 py-2.5 rounded-xl flex flex-col items-end shadow-md shadow-green-200">

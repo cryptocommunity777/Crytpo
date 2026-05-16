@@ -8,18 +8,18 @@ import { Link } from "react-router-dom";
 
 // ✅ GLOBAL POOL CONFIG
 const GLOBAL_POOLS = [
-  { level: 1, globalTeam: 20, reqDirects: 1, earning: 10 },
-  { level: 2, globalTeam: 40, reqDirects: 1, earning: 20 },
-  { level: 3, globalTeam: 100, reqDirects: 1, earning: 40 },
-  { level: 4, globalTeam: 200, reqDirects: 1, earning: 80 },
-  { level: 5, globalTeam: 400, reqDirects: 1, earning: 150 },
-  { level: 6, globalTeam: 1600, reqDirects: 1, earning: 200 },
-  { level: 7, globalTeam: 2000, reqDirects: 2, earning: 500 },
-  { level: 8, globalTeam: 3000, reqDirects: 2, earning: 700 },
-  { level: 9, globalTeam: 4000, reqDirects: 2, earning: 1000 },
-  { level: 10, globalTeam: 5000, reqDirects: 2, earning: 1500 },
-  { level: 11, globalTeam: 7500, reqDirects: 2, earning: 3000 },
-  { level: 12, globalTeam: 10000, reqDirects: 2, earning: 5000 }
+  { level: 1,  globalTeam: 20,    reqDirects: 1,  earning: 10   },
+  { level: 2,  globalTeam: 40,    reqDirects: 2,  earning: 20   },
+  { level: 3,  globalTeam: 100,   reqDirects: 3,  earning: 40   },
+  { level: 4,  globalTeam: 200,   reqDirects: 4,  earning: 80   },
+  { level: 5,  globalTeam: 400,   reqDirects: 5,  earning: 150  },
+  { level: 6,  globalTeam: 1600,  reqDirects: 6,  earning: 200  },
+  { level: 7,  globalTeam: 2000,  reqDirects: 8,  earning: 500  }, // 6 + 2 = 8
+  { level: 8,  globalTeam: 3000,  reqDirects: 10, earning: 700  }, // 8 + 2 = 10
+  { level: 9,  globalTeam: 4000,  reqDirects: 12, earning: 1000 }, // 10 + 2 = 12
+  { level: 10, globalTeam: 5000,  reqDirects: 14, earning: 1500 }, // 12 + 2 = 14
+  { level: 11, globalTeam: 7500,  reqDirects: 16, earning: 3000 }, // 14 + 2 = 16
+  { level: 12, globalTeam: 10000, reqDirects: 18, earning: 5000 }  // 16 + 2 = 18
 ];
 
 const WithdrawalModal = ({ userId, onClose }) => {
