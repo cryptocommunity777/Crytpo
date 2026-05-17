@@ -307,8 +307,10 @@ router.post('/forgot-password', checkFeature(), async (req, res) => {
     user.resetTokenExpiry = Date.now() + 3600000; // 1 hour
     await user.save();
 
-const resetLink = `${FRONTEND_URL.trim()}/reset-password/${resetToken}`;
+// const resetLink = `${FRONTEND_URL.trim()}/reset-password/${resetToken}`;
+// Isko hata kar seedha ye likh do:
 
+const resetLink = `https://cryptocommunity.live/reset-password/${resetToken}`;
     await sendEmail({
       email: user.email,
       subject: '🔐 Password Reset Request',
