@@ -307,7 +307,7 @@ router.post('/forgot-password', checkFeature(), async (req, res) => {
     user.resetTokenExpiry = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    const resetLink = `${FRONTEND_URL}/reset-password/${resetToken}`;
+const resetLink = `${FRONTEND_URL.trim()}/reset-password/${resetToken}`;
 
     await sendEmail({
       email: user.email,
