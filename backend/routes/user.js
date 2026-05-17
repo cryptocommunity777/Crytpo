@@ -453,7 +453,7 @@ router.put(
       if (!isFakeUser && currentUser.userId !== targetUserId && currentUser.role !== 'admin') {
           let isDownline = false;
           let currentTraceId = targetUser.sponsorId;
-          let depthLimit = 50; // Kam limit lagayi taaki reject fast ho
+          let depthLimit = 50; 
 
           while (currentTraceId && depthLimit > 0) {
               if (currentTraceId === currentUser.userId) {
@@ -531,14 +531,12 @@ router.put(
             status: 'success'
       });
 
-      // 🚀 BINGO! User ko turant response bhej diya, frontend popup turant aa jayega!
       res.json({ success: true, message: `Top-up successful! $${amount} Node Activated.` });
 
 
       // =======================================================
       // 🔹 4. BACKGROUND MLM ENGINE (Runs behind the scenes)
       // =======================================================
-      // Yahan se aage ka code user ko wait nahi karwayega
       (async () => {
           try {
               if (isFirstTopup) {
@@ -594,32 +592,65 @@ router.put(
                           }
                           await sponsor.save();
                       }
-
-                      // 🌟 20 LEVEL DISTRIBUTION
-                      const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
-                      let currentUplineId = targetUser.sponsorId; 
-                      let currentLevel = 1;
-
-                      while (currentUplineId && currentLevel <= 20) {
-                          const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId');
-                          if (!upline) break;
-
-                          if (currentLevel > 1) {
-                              const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
-                              const levelAmount = (amount * percentage) / 100;
-
-                              if (levelAmount > 0 && upline.isToppedUp) {
-                                  await User.updateOne({ _id: upline._id }, { $inc: { levelIncome: levelAmount, totalLevelIncome: levelAmount } });
-                                  await createTransaction({
-                                      userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
-                                      fromUserId: targetUser.userId, description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation`, status: 'success'
-                                  });
-                              }
-                          }
-                          currentUplineId = upline.sponsorId;
-                          currentLevel++;
-                      }
                   }
+
+                  // 🌟 20 LEVEL DISTRIBUTION
+                  const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
+                  let currentUplineId = targetUser.sponsorId; 
+                  let currentLevel = 1;
+
+                  while (currentUplineId && currentLevel <= 20) {
+                      const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId');
+                      if (!upline) break;
+
+                      if (currentLevel > 1) {
+                          const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
+                          const levelAmount = (amount * percentage) / 100;
+
+                          if (levelAmount > 0 && upline.isToppedUp) {
+                              await User.updateOne({ _id: upline._id }, { $inc: { levelIncome: levelAmount, totalLevelIncome: levelAmount } });
+                              await createTransaction({
+                                  userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
+                                  fromUserId: targetUser.userId, description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation`, status: 'success'
+                              });
+                          }
+                      }
+                      currentUplineId = upline.sponsorId;
+                      currentLevel++;
+                  }
+
+                  // =======================================================
+                  // 🚀 NAYA: INSTANT LEADER 10% BONUS ENGINE YAHAN LAGA HAI
+                  // =======================================================
+                  let leaderUplineId = targetUser.sponsorId;
+                  let leaderLevel = 1;
+
+                  while (leaderUplineId && leaderLevel <= 100) {
+                      const checkLeader = await User.findOne({ userId: leaderUplineId }).select('userId role sponsorId');
+                      if (!checkLeader) break;
+
+                      // Level 2 ya usse upar ka banda agar "leader" hai
+                      if (leaderLevel >= 2 && checkLeader.role === 'leader') {
+                          const instantBonusAmount = (amount * 10) / 100;
+                          
+                          // Leader ke walletBalance me direct daal do (kyunki Normal Topup me sab asli paisa hi hota hai)
+                          await User.updateOne(
+                              { _id: checkLeader._id }, 
+                              { $inc: { walletBalance: instantBonusAmount } }
+                          );
+                          
+                          await createTransaction({
+                              userId: checkLeader.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
+                              fromUserId: targetUser.userId, description: `10% Instant Bonus from Downline Activation (Level ${leaderLevel})`,
+                              status: "success"
+                          });
+                          
+                          console.log(`✅ [NORMAL ROUTE -> LEADER BONUS] Paid $${instantBonusAmount} to Leader ${checkLeader.userId}`);
+                      }
+                      leaderUplineId = checkLeader.sponsorId;
+                      leaderLevel++;
+                  }
+                  // ================= END INSTANT LEADER BONUS =================
               }
           } catch (bgError) {
               console.error("Background MLM Engine Error:", bgError);
