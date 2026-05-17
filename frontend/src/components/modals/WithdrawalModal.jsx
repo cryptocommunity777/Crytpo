@@ -52,14 +52,11 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
   const { user: loggedInUser, token } = useAuth();
   const isPromo = loggedInUser?.role === "promo";
-  
-  // 🔥 NAYA: Leader check
   const isLeader = loggedInUser?.role === "leader";
 
   const showMessage = (title, message, type = "error") =>
     setMessageModal({ open: true, title, message, type });
 
-  // --- LOGIC: Fetch Data ---
   const fetchData = useCallback(async () => {
     try {
       const res = await api.get(`/wallet/withdrawable/${userId}`);
@@ -76,7 +73,6 @@ const WithdrawalModal = ({ userId, onClose }) => {
         });
       }
 
-      // Safe user extraction
       const u = profileRes.data?.user || profileRes.data;
 
       if (u) {
@@ -84,7 +80,6 @@ const WithdrawalModal = ({ userId, onClose }) => {
         setWalletAddress(addr);
         setIsAddressMissing(!addr);
 
-        // 🔥 THE ULTIMATE FOOLPROOF POOL CALCULATION 🔥
         const userGlobal = Number(u.globalTeamCount) || 0;
         const userDirects = Number(u.directCount) || 0;
         const activePoolsData = u.activePools || []; 
@@ -93,17 +88,20 @@ const WithdrawalModal = ({ userId, onClose }) => {
         let cumulativeGlobal = 0;
         let unlockedLevelsTemp = [];
 
-        // 1. Find all Unlocked Levels
+        // Global check karega, direct check baad me hoga withdraw ke time
         for (const lvl of GLOBAL_POOLS) {
             cumulativeGlobal += lvl.globalTeam;
-            if (userGlobal >= cumulativeGlobal && userDirects >= lvl.reqDirects) {
-                unlockedLevelsTemp.push({ ...lvl });
+            if (userGlobal >= cumulativeGlobal) {
+                unlockedLevelsTemp.push({ 
+                    ...lvl, 
+                    isDirectMet: userDirects >= lvl.reqDirects, 
+                    reqDirects: lvl.reqDirects 
+                });
             } else {
-                break; // Aage wale locked hain
+                break; 
             }
         }
 
-        // 2. Calculate generated amount for each unlocked box
         let totalGenerated = 0;
         let boxData = unlockedLevelsTemp.map(lvl => {
             const p = activePoolsData.find(ap => Number(ap.level) === Number(lvl.level));
@@ -112,26 +110,21 @@ const WithdrawalModal = ({ userId, onClose }) => {
             return { ...lvl, generated };
         });
 
-        // 3. 🚨 BULLETPROOF FALLBACK
         if (totalGenerated === 0 && actualAvailablePool > 0 && boxData.length > 0) {
             let splitAmt = actualAvailablePool / boxData.length;
             boxData = boxData.map(b => ({ ...b, generated: splitAmt }));
             totalGenerated = actualAvailablePool;
         }
 
-        // 4. Calculate kitna nikal chuka hai
         let alreadyWithdrawn = Math.max(0, totalGenerated - actualAvailablePool);
 
-        // 5. Finalize boxes data with exact available balance
         let calculatedUnlocked = boxData.map(box => {
             let deducted = Math.min(box.generated, alreadyWithdrawn);
             alreadyWithdrawn -= deducted;
-            
             let available = box.generated - deducted;
 
             return {
-                level: box.level,
-                earning: box.earning,
+                ...box,
                 available: available > 0 ? available : 0 
             };
         });
@@ -147,8 +140,9 @@ const WithdrawalModal = ({ userId, onClose }) => {
     fetchData();
   }, [fetchData]);
 
-  const totalAvailable = balances.direct + balances.level + balances.reward + balances.pool;
+  const hasMainIncome = balances.direct > 0 || balances.level > 0 || balances.reward > 0;
 
+  // Inline handle input change to stop keypad focus issues
   const handleInputChange = (e, source) => {
     const value = e.target.value;
     if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
@@ -156,14 +150,8 @@ const WithdrawalModal = ({ userId, onClose }) => {
     }
   };
 
-  const setMaxAmount = (source, overrideBalance = null) => {
-      const maxVal = overrideBalance !== null ? overrideBalance : balances[source];
-      setWithdrawals(prev => ({...prev, [source]: maxVal}));
-  };
-
   const handleWithdraw = async () => {
     try {
-      // 🔥 NAYA: Leader Security Check
       if (isLeader) {
          return showMessage("Action Denied", "Leaders cannot withdraw funds directly from here.");
       }
@@ -195,9 +183,13 @@ const WithdrawalModal = ({ userId, onClose }) => {
       checkAndPush("level", withdrawals.level, balances.level, "Level Income");
       checkAndPush("reward", withdrawals.reward, balances.reward, "Team Reward");
 
+      // Auto-pool withdrawal logic with Direct Checking
       unlockedLevels.forEach(lvl => {
         const amt = Number(withdrawals[`pool_${lvl.level}`] || 0);
         if (amt > 0) {
+            if (!lvl.isDirectMet) {
+                throw new Error(`Please complete Total ${lvl.reqDirects} Direct${lvl.reqDirects > 1 ? 's' : ''} to withdraw from Community Lvl ${lvl.level}.`);
+            }
             if (!isPromo && amt > lvl.available) throw new Error(`Insufficient funds in Level ${lvl.level} Pool.`);
             poolRequestedTotal += amt;
             successMessages.push(` Lvl ${lvl.level}`);
@@ -258,38 +250,6 @@ const WithdrawalModal = ({ userId, onClose }) => {
     }
   };
 
-  const IncomeBox = ({ title, icon: Icon, iconColor, source, balance, val, overrideMax }) => (
-      <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">
-        <div className="flex justify-between items-end mb-1.5 px-1">
-            <h3 className="text-slate-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                <Icon size={12} className={iconColor} /> {title}
-            </h3>
-            <span className="text-black text-[9px] font-bold bg-white px-1.5 py-0.5 rounded border border-slate-200">
-                Avail: ${Number(balance).toFixed(2)}
-            </span>
-        </div>
-        <div className="flex items-center gap-2 bg-white p-1.5 rounded-lg border border-slate-200 shadow-inner">
-            <span className={`${iconColor} font-bold text-base pl-1`}>$</span>
-            <input 
-                type="number" 
-                placeholder="0.00" 
-                className="flex-1 bg-transparent border-none text-slate-800 text-sm font-black outline-none w-full placeholder-slate-300 py-0.5"
-                value={val || ""} 
-                onChange={e => handleInputChange(e, source)} 
-                max={balance} 
-                disabled={balance === 0 || isLeader} // 🔥 Leader inputs locked
-            />
-            <button 
-                onClick={() => overrideMax !== undefined ? setMaxAmount(source, overrideMax) : setMaxAmount(source)}
-                disabled={balance === 0 || isLeader} // 🔥 Leader max button locked
-                className="bg-slate-100 hover:bg-slate-200 text-slate-600 text-[9px] font-bold px-2 py-1 rounded-md transition-colors border border-slate-200 disabled:opacity-50"
-            >MAX</button>
-        </div>
-      </div>
-  );
-
-  const hasMainIncome = balances.direct > 0 || balances.level > 0 || balances.reward > 0;
-
   return (
     <>
       <style>{`
@@ -338,13 +298,12 @@ const WithdrawalModal = ({ userId, onClose }) => {
             </div>
 
             {/* Body */}
-            <div className="p-3 overflow-y-auto custom-scroll flex-1 flex flex-col gap-2 bg-white relative z-10">
+            <div className="p-3 overflow-y-auto custom-scroll flex-1 flex flex-col gap-3 bg-white relative z-10">
               
               <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl flex items-center justify-between shadow-sm">
-                
-                 <div className="text-right">
+                 <div className="text-right w-full">
                     <p className="text-black text-[9px] font-bold uppercase tracking-widest">Main Wallet</p>
-                    <h3 className="text-base font-black text-emerald-600">${balances.walletBalance.toFixed(2)}</h3>
+                    <h3 className="text-xl font-black text-emerald-600">${balances.walletBalance.toFixed(2)}</h3>
                  </div>
               </div>
 
@@ -370,36 +329,121 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
               {/* MAIN INCOMES */}
               {hasMainIncome && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1">
-                    {balances.direct > 0 && <IncomeBox title="Direct" icon={Zap} iconColor="text-amber-500" source="direct" balance={balances.direct} val={withdrawals.direct} />}
-                    {balances.level > 0 && <IncomeBox title="Level" icon={Users} iconColor="text-blue-500" source="level" balance={balances.level} val={withdrawals.level} />}
-                    {balances.reward > 0 && <IncomeBox title="Team Reward" icon={Trophy} iconColor="text-indigo-500" source="reward" balance={balances.reward} val={withdrawals.reward} />}
+                  <div className="flex flex-col gap-3">
+                    {/* DIRECT */}
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">
+                        <div className="flex justify-between items-center mb-2 px-1">
+                            <h3 className="text-slate-700 text-[11px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                                <Zap size={14} className="text-amber-500" /> Direct Income
+                            </h3>
+                        </div>
+                        <div className="flex flex-row gap-1.5 items-stretch">
+                            <div className="w-1/3 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
+                                <span className="text-[14px] font-black text-blue-500">${Number(balances.direct).toFixed(2)}</span>
+                            </div>
+                            <div className="w-2/3 flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-inner">
+                                <span className="text-amber-500 font-bold text-sm pl-2">$</span>
+                                <input 
+                                    type="number" 
+                                    placeholder="0.00" 
+                                    className="flex-1 bg-transparent border-none text-slate-800 text-[12px] font-black outline-none w-full placeholder-slate-300 py-1 px-1"
+                                    value={withdrawals.direct || ""} 
+                                    onChange={e => handleInputChange(e, "direct")} 
+                                    disabled={isLeader} 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* LEVEL */}
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">
+                        <div className="flex justify-between items-center mb-2 px-1">
+                            <h3 className="text-slate-700 text-[11px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                                <Users size={14} className="text-blue-500" /> Level Income
+                            </h3>
+                        </div>
+                        <div className="flex flex-row gap-1.5 items-stretch">
+                            <div className="w-1/3 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
+                                <span className="text-[14px] font-black text-blue-500">${Number(balances.level).toFixed(2)}</span>
+                            </div>
+                            <div className="w-2/3 flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-inner">
+                                <span className="text-blue-500 font-bold text-sm pl-2">$</span>
+                                <input 
+                                    type="number" 
+                                    placeholder="0.00" 
+                                    className="flex-1 bg-transparent border-none text-slate-800 text-[12px] font-black outline-none w-full placeholder-slate-300 py-1 px-1"
+                                    value={withdrawals.level || ""} 
+                                    onChange={e => handleInputChange(e, "level")} 
+                                    disabled={isLeader} 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* REWARD */}
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">
+                        <div className="flex justify-between items-center mb-2 px-1">
+                            <h3 className="text-slate-700 text-[11px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                                <Trophy size={14} className="text-indigo-500" /> Team Reward
+                            </h3>
+                        </div>
+                        <div className="flex flex-row gap-1.5 items-stretch">
+                            <div className="w-1/3 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
+                                <span className="text-[14px] font-black text-blue-500">${Number(balances.reward).toFixed(2)}</span>
+                            </div>
+                            <div className="w-2/3 flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-inner">
+                                <span className="text-indigo-500 font-bold text-sm pl-2">$</span>
+                                <input 
+                                    type="number" 
+                                    placeholder="0.00" 
+                                    className="flex-1 bg-transparent border-none text-slate-800 text-[12px] font-black outline-none w-full placeholder-slate-300 py-1 px-1"
+                                    value={withdrawals.reward || ""} 
+                                    onChange={e => handleInputChange(e, "reward")} 
+                                    disabled={isLeader} 
+                                />
+                            </div>
+                        </div>
+                    </div>
                   </div>
               )}
 
-              {/* 🔥 INDIVIDUAL AUTO-POOL LEVELS BOXES 🔥 */}
-              <div className="mt-1">
-                 {unlockedLevels.length > 0 && (
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {unlockedLevels.map(lvl => (
-                            <IncomeBox 
-                                key={lvl.level}
-                                title={`Community Lvl ${lvl.level}`} 
-                                icon={Layers} 
-                                iconColor="text-emerald-500" 
-                                source={`pool_${lvl.level}`} 
-                                balance={lvl.available} 
-                                val={withdrawals[`pool_${lvl.level}`]} 
-                                overrideMax={lvl.available}
-                            />
-                        ))}
-                     </div>
-                 )}
+              {/* 🔥 AUTO-POOL BOXES 🔥 */}
+              <div className="flex flex-col gap-3">
+                 {unlockedLevels.length > 0 && unlockedLevels.map(lvl => (
+                    <div key={lvl.level} className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">
+                        <div className="flex justify-between items-center mb-2 px-1">
+                            <h3 className="text-slate-700 text-[11px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                                <Layers size={14} className="text-emerald-500" /> Community Lvl {lvl.level}
+                            </h3>
+                        </div>
+
+                        <div className="flex flex-row gap-1.5 items-stretch">
+                            <div className="w-1/4 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
+                                <span className="text-[12px] font-black text-emerald-600">${lvl.earning}</span>
+                            </div>
+                            <div className="w-1/4 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
+                                <span className="text-[12px] font-black text-blue-500">${lvl.available.toFixed(2)}</span>
+                            </div>
+                            <div className="w-2/4 flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-inner">
+                                <span className="text-emerald-500 font-bold text-sm pl-2">$</span>
+                                <input 
+                                    type="number" 
+                                    placeholder="0.00" 
+                                    className="flex-1 bg-transparent border-none text-slate-800 text-[12px] font-black outline-none w-full placeholder-slate-300 py-1 px-1"
+                                    value={withdrawals[`pool_${lvl.level}`] || ""} 
+                                    onChange={e => handleInputChange(e, `pool_${lvl.level}`)} 
+                                    disabled={isLeader} 
+                                />
+                            </div>
+                        </div>
+                    </div>
+                 ))}
               </div>
 
               {/* SECURITY */}
               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mt-1">
                   <label className="text-[9px] text-black block mb-1 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
+                  <input type="text" name="fakeusernameremembered" style={{display: 'none'}} />
                   <input 
                     type="password" 
                     autoComplete="new-password"
@@ -407,7 +451,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
                     className="w-full bg-white border border-slate-200 text-slate-800 p-2.5 rounded-lg outline-none font-mono text-xs transition-all shadow-inner focus:border-green-400 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
                     value={transactionPassword} 
                     onChange={e => setTransactionPassword(e.target.value)} 
-                    disabled={isLeader} // 🔥 Disabled for leaders
+                    disabled={isLeader} 
                   />
               </div>
 
@@ -415,27 +459,34 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
             {/* ACTION BUTTONS */}
             <div className="p-3 border-t border-slate-200 bg-slate-50 z-10 shrink-0">
-              <div className="flex gap-2">
+              {isLeader ? (
                  <button 
                    onClick={onClose} 
-                   className="w-1/3 py-2.5 rounded-lg font-bold text-[11px] bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors shadow-sm uppercase tracking-wider"
+                   className="w-full py-2.5 rounded-lg font-bold text-[11px] bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors shadow-sm uppercase tracking-wider"
                  >
                     Cancel
                  </button>
-                 
-                 {/* 🔥 NAYA: Button logic updated for Leader */}
-                 <button 
-                   onClick={handleWithdraw} 
-                   disabled={loading || isAddressMissing || isLeader} 
-                   className={`w-2/3 py-2.5 rounded-lg font-black text-[11px] md:text-xs uppercase tracking-widest transition-all ${
-                     (loading || isAddressMissing || isLeader)
-                       ? 'bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300' 
-                       : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-[0_4px_10px_rgba(34,197,94,0.3)] hover:-translate-y-0.5 active:scale-95'
-                   }`}
-                 >
-                   {loading ? "PROCESSING..." : isLeader ? "WITHDRAW FUNDS" : "WITHDRAW FUNDS"}
-                 </button>
-              </div>
+              ) : (
+                 <div className="flex gap-2">
+                   <button 
+                     onClick={onClose} 
+                     className="w-1/3 py-2.5 rounded-lg font-bold text-[11px] bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors shadow-sm uppercase tracking-wider"
+                   >
+                      Cancel
+                   </button>
+                   <button 
+                     onClick={handleWithdraw} 
+                     disabled={loading} 
+                     className={`w-2/3 py-2.5 rounded-lg font-black text-[11px] md:text-xs uppercase tracking-widest transition-all ${
+                       loading
+                         ? 'bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300' 
+                         : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-[0_4px_10px_rgba(34,197,94,0.3)] hover:-translate-y-0.5 active:scale-95'
+                     }`}
+                   >
+                     {loading ? "PROCESSING..." : "WITHDRAW FUNDS"}
+                   </button>
+                 </div>
+              )}
             </div>
 
           </div>
