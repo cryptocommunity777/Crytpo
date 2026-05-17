@@ -198,7 +198,7 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
         const amt = Number(credits[`pool_${lvl.level}`] || 0);
         if (amt > 0) {
             if (!lvl.isDirectMet) {
-                throw new Error(`Please complete ${lvl.reqDirects} Direct${lvl.reqDirects > 1 ? 's' : ''} to credit from Community Lvl ${lvl.level}.`);
+                throw new Error(`Please complete Total ${lvl.reqDirects} Direct${lvl.reqDirects > 1 ? 's' : ''} to credit from Community Lvl ${lvl.level}.`);
             }
             if (amt > lvl.available) throw new Error(`Insufficient funds in Level ${lvl.level} Pool.`);
             poolRequestedTotal += amt;
