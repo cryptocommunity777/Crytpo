@@ -12,8 +12,7 @@ const { startCron } = require('./roiCron');
 // 🔥 1. USER MODEL UNCOMMENT KAR DIYA HAI (Agar aapka file naam alag hai, toh './models/User' ko theek kar lena)
 const User = require('./models/User'); 
 const startGlobalGrowthCron = require('./cron/autoGlobalGrowth');
-const runDailyLeaderClosing = require('./cron/dailyClosing');
-
+  
 const app = express();
 app.set('trust proxy', true);
 
@@ -108,6 +107,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // ====================== 6. DATABASE & SERVER ======================
+// ====================== 6. DATABASE & SERVER ======================
 mongoose.connect(process.env.MONGO_URI) 
   .then(async () => { 
     console.log('✅ MongoDB connected successfully!'); 
@@ -121,12 +121,18 @@ mongoose.connect(process.env.MONGO_URI)
       startGlobalGrowthCron();
       console.log('✅ Global Auto-Growth Cron Started (1 ID every 14 mins)');
 
-     
+      // 👇 NAYA FIX: Ye line aap bhool gaye the 👇
+      if(typeof runDailyLeaderClosing === 'function') runDailyLeaderClosing();
+      console.log('✅ Daily Leader Closing Cron Started');
+      // 👆 ===================================== 👆
 
       // 👇👇👇 NAYA FAST TRACK CRON YAHAN ADD KIYA HAI 👇👇👇
       require('./cron/fastTrackCron'); 
       console.log('✅ Fast Track Offer Daily Cron Started (Runs at 12:05 AM)');
       // 👆👆👆 ========================================= 👆👆👆
+
+      require('./cron/monthlyRewardCron');
+      console.log('✅ Monthly Reward Cron Started');
 
     } catch (error) {
       console.error('⚠️ Error starting Cron Jobs:', error);

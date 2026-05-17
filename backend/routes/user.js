@@ -339,66 +339,11 @@ router.get('/fix-missed-rewards', async (req, res) => {
 
 // ---------------------------
 // (Yahan se aapka aage ka code start hoga, jaise Top-up Route wagarah...)
-
-// ---------------------------
-// Top-up Route with Daily ROI
-// 📌 Top-up API
-// 🛑 Top par ye import zaroor karna (agar rewardLogic.js utils folder me banaya hai)
-// 🛑 Top par ye import zaroor check kar lena
  
- 
+
 // =======================================================
-// 🏆 POOL & REWARDS CONFIGURATION (Strong/Other Legs)
+// 🔥 NEW $30 GLOBAL AUTO-POOL TOP-UP ROUTE 🔥
 // =======================================================
-// 🔥 REWARD BONANZA CONFIGURATION (50% Strong Leg : 50% Other Legs) 🔥
-// Logic: Target 1 = 50 (25 Strong + 25 Others). Target 2 = 250 (125 Strong + 125 Others) etc.
-const REWARD_MILESTONES = [
-  { target: 50, strongLeg: 25, otherLegs: 25, reward: 30, title: "Target 1 (50 Points)" },
-  { target: 250, strongLeg: 125, otherLegs: 125, reward: 100, title: "Target 2 (250 Points)" },
-  { target: 750, strongLeg: 375, otherLegs: 375, reward: 200, title: "Target 3 (750 Points)" },
-  { target: 1750, strongLeg: 875, otherLegs: 875, reward: 300, title: "Target 4 (1750 Points)" },
-  { target: 3750, strongLeg: 1875, otherLegs: 1875, reward: 500, title: "Target 5 (3750 Points)" },
-  { target: 6750, strongLeg: 3375, otherLegs: 3375, reward: 1000, title: "Target 6 (6750 Points)" },
-  { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7 (11750 Points)" },
-  { target: 21750, strongLeg: 10875, otherLegs: 10875, reward: 3000, title: "Target 8 (21750 Points)" }
-];
-
-// 🚀 NAYA HELPER: Har ek direct leg ko alag se count karega aur Strong vs Other nikalega
-const getLegStats = async (sponsorId) => {
-    const directs = await User.find({ sponsorId: sponsorId }, 'userId isToppedUp');
-    let legSizes = [];
-
-    for (let direct of directs) {
-        let currentLegSize = 0;
-        if (direct.isToppedUp) currentLegSize += 1; // Sirf Active IDs
-
-        let queue = [direct.userId];
-        while (queue.length > 0) {
-            const currentId = queue.shift();
-            const downlines = await User.find({ sponsorId: currentId }, 'userId isToppedUp');
-            
-            for (let d of downlines) {
-                if (d.isToppedUp) currentLegSize += 1; // Sirf Active IDs
-                queue.push(d.userId);
-            }
-        }
-        legSizes.push(currentLegSize);
-    }
-
-    // Legs ko descending order mein sort karo (Sabse badi leg sabse pehle)
-    legSizes.sort((a, b) => b - a);
-
-    // Strong Leg = Sabse badi leg. Other Legs = Baaki sab ka Total.
-    const strongLegCount = legSizes.length > 0 ? legSizes[0] : 0;
-    const otherLegsCount = legSizes.length > 1 ? legSizes.slice(1).reduce((a, b) => a + b, 0) : 0;
-
-    return { 
-        strongLeg: strongLegCount, 
-        otherLegs: otherLegsCount, 
-        total: strongLegCount + otherLegsCount 
-    };
-};
-
 // =======================================================
 // 🔥 NEW $30 GLOBAL AUTO-POOL TOP-UP ROUTE 🔥
 // =======================================================
@@ -516,7 +461,7 @@ router.put(
       targetUser.updatedAt = new Date(); 
       if (isFirstTopup) {
           targetUser.isToppedUp = true;
-          targetUser.topUpDate = new Date();
+          targetUser.topUpDate = new Date(); // 🔥 Ye date Monthly cron check karega
       }
       await targetUser.save();
 
@@ -573,23 +518,10 @@ router.put(
                                   }).catch(e => console.log("Fast Track Error", e));
                               }
                           }
-
-                          // 🏆 REWARDS
-                          const legStats = await getLegStats(sponsor.userId);
-                          if (!sponsor.claimedRewards) sponsor.claimedRewards = [];
-                          for (let milestone of REWARD_MILESTONES) {
-                              if (legStats.strongLeg >= milestone.strongLeg && legStats.otherLegs >= milestone.otherLegs) {
-                                  if (!sponsor.claimedRewards.includes(milestone.target)) {
-                                      sponsor.rewardIncome = (sponsor.rewardIncome || 0) + milestone.reward;
-                                      sponsor.totalRewardIncome = (sponsor.totalRewardIncome || 0) + milestone.reward;
-                                      sponsor.claimedRewards.push(milestone.target);
-                                      await createTransaction({
-                                          userId: sponsor.userId, type: "reward_income", source: "reward", amount: milestone.reward,
-                                          description: `Bonanza Reward Unlocked: ${milestone.title}`, status: 'success'
-                                      });
-                                  }
-                              }
-                          }
+                          
+                          // 🚀 INSTANT REWARDS BLOCK REMOVED SUCCESSFULLY 🚀
+                          
+                          // Save the sponsor updates (Direct Count, Direct Income)
                           await sponsor.save();
                       }
                   }
@@ -619,9 +551,7 @@ router.put(
                       currentLevel++;
                   }
 
-                  // =======================================================
-                  // 🚀 NAYA: INSTANT LEADER 10% BONUS ENGINE YAHAN LAGA HAI
-                  // =======================================================
+                  // 🚀 INSTANT LEADER 10% BONUS ENGINE YAHAN LAGA HAI
                   let leaderUplineId = targetUser.sponsorId;
                   let leaderLevel = 1;
 
@@ -696,9 +626,7 @@ router.put(
       const targetUser = await User.findOne({ userId: targetUserId });
       if (!targetUser) return res.status(404).json({ message: 'Target user not found' });
 
-      // =======================================================
       // 🔹 2. RELATIONSHIP CHECK (Direct, Self, or Downline)
-      // =======================================================
       const isDirectReferral = Number(targetUser.sponsorId) === Number(currentUser.userId);
       const isSelfTopup = Number(targetUser.userId) === Number(currentUser.userId);
       
@@ -729,9 +657,7 @@ router.put(
       // 🔥 IS IT A DUMMY (SHOWCASE) TOPUP?
       const isDummyTopup = isDirectReferral || isSelfTopup;
 
-      // =======================================================
       // 🔹 3. SMART WALLET CHECK
-      // =======================================================
       let usableBalance = 0;
 
       if (isDummyTopup) {
@@ -761,9 +687,7 @@ router.put(
          return Transaction.create({ ...data, date: new Date() });
       };
 
-      // =======================================================
       // 🔹 4. INSTANT RESPONSE & PROFILE UPDATE
-      // =======================================================
       let isFirstTopup = !targetUser.isToppedUp;
       
       if (!targetUser.packages) targetUser.packages = [];
@@ -788,13 +712,8 @@ router.put(
 
       let txDescription = isFirstTopup ? `Node Activated with $${amount}` : `Node Upgrade with $${amount}`;
       await createTransaction({
-        userId: targetUser.userId,
-        type: "topup",
-        amount,
-        fromUserId: currentUser.userId,
-        toUserId: targetUser.userId,
-        description: txDescription,
-        status: 'success'
+        userId: targetUser.userId, type: "topup", amount, fromUserId: currentUser.userId, toUserId: targetUser.userId,
+        description: txDescription, status: 'success'
       });
 
       // 🔥 Send response instantly
@@ -805,9 +724,7 @@ router.put(
       res.json({ success: true, message: successMsg });
 
 
-      // =======================================================
       // 🔹 5. BACKGROUND MLM ENGINE
-      // =======================================================
       (async () => {
           try {
               if (isFirstTopup) {
@@ -830,8 +747,6 @@ router.put(
 
                           sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
                           sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
-                          
-                         
 
                           await createTransaction({
                               userId: sponsor.userId, type: "direct_income", source: "direct",
@@ -852,27 +767,8 @@ router.put(
                               }
                           }
 
-                          // 🏆 REWARDS (Only for Real Topups)
-                          if (!isDummyTopup) {
-                              const legStats = await getLegStats(sponsor.userId);
-                              if (!sponsor.claimedRewards) sponsor.claimedRewards = [];
+                          // 🚀 INSTANT REWARDS BLOCK REMOVED SUCCESSFULLY 🚀
 
-                              for (let milestone of REWARD_MILESTONES) {
-                                  if (legStats.strongLeg >= milestone.strongLeg && legStats.otherLegs >= milestone.otherLegs) {
-                                      if (!sponsor.claimedRewards.includes(milestone.target)) {
-                                          sponsor.rewardIncome = (sponsor.rewardIncome || 0) + milestone.reward;
-                                          sponsor.totalRewardIncome = (sponsor.totalRewardIncome || 0) + milestone.reward;
-                                          
-
-                                          sponsor.claimedRewards.push(milestone.target);
-                                          await createTransaction({
-                                              userId: sponsor.userId, type: "reward_income", source: "reward", amount: milestone.reward,
-                                              description: `Bonanza Reward Unlocked: ${milestone.title}`, status: 'success'
-                                          });
-                                      }
-                                  }
-                              }
-                          }
                           await sponsor.save();
                       }
                   }
@@ -893,8 +789,6 @@ router.put(
                           if (levelAmount > 0 && upline.isToppedUp) {
                               let incUpdate = { levelIncome: levelAmount, totalLevelIncome: levelAmount };
                               
-                             
-
                               await User.updateOne({ userId: upline.userId }, { $inc: incUpdate });
                               
                               await createTransaction({
