@@ -433,7 +433,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
                        : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-[0_4px_10px_rgba(34,197,94,0.3)] hover:-translate-y-0.5 active:scale-95'
                    }`}
                  >
-                   {loading ? "PROCESSING..." : isLeader ? "Withdraw" : "WITHDRAW FUNDS"}
+                   {loading ? "PROCESSING..." : isLeader ? "WITHDRAW FUNDS" : "WITHDRAW FUNDS"}
                  </button>
               </div>
             </div>
