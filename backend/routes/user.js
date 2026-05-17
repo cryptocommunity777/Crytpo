@@ -806,7 +806,7 @@ router.put(
 
 
       // =======================================================
-      // 🔹 5. BACKGROUND MLM ENGINE (Match Normal Route)
+      // 🔹 5. BACKGROUND MLM ENGINE
       // =======================================================
       (async () => {
           try {
@@ -821,20 +821,20 @@ router.put(
                       const sponsor = await User.findOne({ userId: targetUser.sponsorId });
                       if (sponsor) {
                           
-                          // 🚫 NAYA RULE: Direct Count sirf Tabhi badhega jab Real Topup ho
-                          if (!isDummyTopup) {
-                              sponsor.directCount = (sponsor.directCount || 0) + 1;
-                          }
+                          // ✅ DIRECT COUNT BADHEGA (Chahe real ho ya dummy)
+                          sponsor.directCount = (sponsor.directCount || 0) + 1;
 
-                          // ✅ DIRECT INCOME (Sabko jayegi, Normal jaisa)
+                          // ✅ DIRECT INCOME
                           const DIRECT_BONUS_PERCENTAGE = 10; 
                           const directBonusAmount = (amount * DIRECT_BONUS_PERCENTAGE) / 100; 
 
-                          // Ye stats Withdrawal Modal aur Dashboard me dikhenge
                           sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
                           sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
                           
-                     
+                          if (!isDummyTopup && sponsor.role !== 'leader') {
+                              sponsor.walletBalance = (sponsor.walletBalance || 0) + directBonusAmount; 
+                          }
+
                           await createTransaction({
                               userId: sponsor.userId, type: "direct_income", source: "direct",
                               amount: directBonusAmount, fromUserId: targetUser.userId,
@@ -842,7 +842,7 @@ router.put(
                               status: 'success'
                           });
 
-                          // 🔥 FAST TRACK (Only for Real Topups)
+                          // 🔥 FAST TRACK (Only for Real Topups - Dummy par NAHI milega)
                           if (!isDummyTopup && sponsor.createdAt) {
                               const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
                               if ((new Date().getTime() - new Date(sponsor.createdAt).getTime()) <= thirtyDaysInMs) {
@@ -865,7 +865,9 @@ router.put(
                                           sponsor.rewardIncome = (sponsor.rewardIncome || 0) + milestone.reward;
                                           sponsor.totalRewardIncome = (sponsor.totalRewardIncome || 0) + milestone.reward;
                                           
-                                        
+                                          if (sponsor.role !== 'leader') {
+                                              sponsor.walletBalance = (sponsor.walletBalance || 0) + milestone.reward;
+                                          }
 
                                           sponsor.claimedRewards.push(milestone.target);
                                           await createTransaction({
@@ -880,7 +882,7 @@ router.put(
                       }
                   }
 
-                  // 🌟 20 LEVEL DISTRIBUTION (Normal jaisa banaya hai)
+                  // 🌟 20 LEVEL DISTRIBUTION
                   const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
                   let currentUplineId = targetUser.sponsorId; 
                   let currentLevel = 1;
@@ -894,12 +896,12 @@ router.put(
                           const levelAmount = (amount * percentage) / 100;
                           
                           if (levelAmount > 0 && upline.isToppedUp) {
-                              // ✅ Dashboard/Modal me Level Income jayegi
                               let incUpdate = { levelIncome: levelAmount, totalLevelIncome: levelAmount };
                               
-                           
+                              if (!isDummyTopup && upline.role !== 'leader') {
+                                  incUpdate.walletBalance = levelAmount; 
+                              }
 
-                              // ✅ Fast update command (Normal route ki tarah)
                               await User.updateOne({ userId: upline.userId }, { $inc: incUpdate });
                               
                               await createTransaction({
@@ -924,7 +926,6 @@ router.put(
 
                           if (leaderLevel >= 2 && checkLeader.role === 'leader') {
                               const instantBonusAmount = (amount * 10) / 100;
-                              // Leader ko instant 10% uske asli wallet me milega
                               checkLeader.walletBalance = (checkLeader.walletBalance || 0) + instantBonusAmount;
                               
                               await checkLeader.save();
