@@ -92,7 +92,7 @@ const WalletBalance = ({ income = {} }) => {
         
         {/* 🔥 NAYA: ID aur Copy Button */}
         <div className="mt-2 flex items-center gap-2">
-          <p className="text-xs md:text-sm text-gray-500 font-medium">
+          <p className="text-lg md:text-3xl text-gray-500 font-medium">
             ID: <span className="text-gray-800 font-bold">{user?.userId || user?._id || "N/A"}</span>
           </p>
           <button 

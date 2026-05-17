@@ -1495,24 +1495,32 @@ router.post('/check-wallet', async (req, res) => {
 // Password Change
 router.put('/change-password/:userId', async (req, res) => {
   const { oldPassword, newPassword, oldTxnPassword, newTxnPassword } = req.body;
+  
   try {
     const user = await User.findOne({ userId: Number(req.params.userId) });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    // 🔥 1. LOGIN PASSWORD CHECK (Plain Text)
     if (oldPassword && newPassword) {
-      const match = await bcrypt.compare(oldPassword, user.password);
-      if (!match) return res.status(403).json({ message: 'Incorrect old password' });
-      user.password = await bcrypt.hash(newPassword, 10);
+      if (oldPassword !== user.password) {
+        return res.status(403).json({ message: 'Incorrect old login password' });
+      }
+      // Naya password normal text mein save hoga
+      user.password = newPassword; 
     }
 
+    // 🔥 2. TRANSACTION PASSWORD CHECK (Plain Text)
     if (oldTxnPassword && newTxnPassword) {
-const matchTxn = (oldTxnPassword === user.transactionPassword);
-      if (!matchTxn) return res.status(403).json({ message: 'Incorrect old transaction password' });
-      user.transactionPassword = await bcrypt.hash(newTxnPassword, 10);
+      if (oldTxnPassword !== user.transactionPassword) {
+        return res.status(403).json({ message: 'Incorrect old transaction password' });
+      }
+      // Naya txn password bhi normal text mein save hoga
+      user.transactionPassword = newTxnPassword; 
     }
 
     await user.save();
     res.json({ message: 'Password(s) updated successfully' });
+
   } catch (err) {
     console.error('Password change error:', err);
     res.status(500).json({ message: 'Server error' });
