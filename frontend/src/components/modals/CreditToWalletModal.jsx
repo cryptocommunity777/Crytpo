@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import api from "../../api/axios";
 import MessageModal from "./MessageModal";
 import SuccessModal from "./SuccessModal";
@@ -17,6 +17,10 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
   const [successData, setSuccessData] = useState({ userId: "", amount: 0 });
   
   const token = localStorage.getItem("token");
+  
+  // 🔥 FETCHING USER DATA FROM CONTEXT FOR LEADER CHECK
+  const { user: loggedInUser } = useAuth();
+  const isLeader = loggedInUser?.role === "leader";
 
   const showMessage = (title, message, type = "info") =>
     setMessageModal({ open: true, title, message, type });
@@ -62,6 +66,11 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
 
   // --- Handle Credit ---
   const handleCredit = async () => {
+    // 🔥 SECURITY CHECK FOR LEADER
+    if (isLeader) {
+        return showMessage("Action Denied", "Leaders cannot credit funds to wallet directly from here.", "error");
+    }
+
     let items = [];
     let totalAmount = 0;
 
@@ -134,11 +143,11 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
                 value={val || ""} 
                 onChange={e => handleInputChange(e, source)} 
                 max={balance} 
-                disabled={balance === 0}
+                disabled={balance === 0 || isLeader} // 🔥 Locked for leader
             />
             <button 
                 onClick={() => setMaxAmount(source)}
-                disabled={balance === 0}
+                disabled={balance === 0 || isLeader} // 🔥 Locked for leader
                 className="bg-slate-100 hover:bg-slate-200 text-slate-600 text-[9px] font-bold px-2 py-1 rounded-md transition-colors border border-slate-200 disabled:opacity-50"
             >MAX</button>
         </div>
@@ -167,7 +176,6 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
       {!successModalOpen && (
         <div className="fixed inset-0 mt-8 bg-slate-900/60 backdrop-blur-sm z-[1000] flex justify-center items-center p-4">
           
-          {/* 🔥 MAIN MODAL CONTAINER (Compact height, removed mt-10) 🔥 */}
           <div className="bg-white w-full max-w-[480px] rounded-[20px] border border-slate-200 shadow-2xl flex flex-col max-h-[85vh] relative overflow-hidden animate-in zoom-in duration-300">
             
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-100 blur-[50px] pointer-events-none rounded-full"></div>
@@ -215,6 +223,7 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
                     className="w-full bg-white border border-slate-200 text-slate-800 p-2.5 rounded-lg outline-none font-mono text-xs transition-all shadow-inner focus:border-green-400 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
                     value={transactionPassword} 
                     onChange={e => setTransactionPassword(e.target.value)} 
+                    disabled={isLeader} // 🔥 Locked for leader
                   />
               </div>
 
@@ -229,16 +238,18 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
                  >
                     Cancel
                  </button>
+                 
+                 {/* 🔥 NAYA: Button logic updated for Leader */}
                  <button 
                    onClick={handleCredit} 
-                   disabled={loading} 
+                   disabled={loading || isLeader} 
                    className={`w-2/3 py-2.5 rounded-lg font-black text-[11px] md:text-xs uppercase tracking-widest transition-all ${
-                     loading 
-                       ? 'bg-slate-200 text-black cursor-not-allowed border border-slate-300' 
+                     (loading || isLeader) 
+                       ? 'bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300' 
                        : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-[0_4px_10px_rgba(34,197,94,0.3)] hover:-translate-y-0.5 active:scale-95'
                    }`}
                  >
-                   {loading ? "PROCESSING..." : "CREDIT TO WALLET"}
+                   {loading ? "PROCESSING..." : isLeader ? "LOCKED FOR LEADER" : "CREDIT TO WALLET"}
                  </button>
               </div>
             </div>

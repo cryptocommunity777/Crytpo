@@ -47,12 +47,14 @@ const WithdrawalModal = ({ userId, onClose }) => {
   const [isAddressMissing, setIsAddressMissing] = useState(false);
   
   const [successOpen, setSuccessOpen] = useState(false);
-  // ✅ UPDATE: Added userName in state
   const [successData, setSuccessData] = useState({ userId: "", userName: "", amount: 0, source: "" });
   const [messageModal, setMessageModal] = useState({ open: false, title: "", message: "", type: "info" });
 
   const { user: loggedInUser, token } = useAuth();
   const isPromo = loggedInUser?.role === "promo";
+  
+  // 🔥 NAYA: Leader check
+  const isLeader = loggedInUser?.role === "leader";
 
   const showMessage = (title, message, type = "error") =>
     setMessageModal({ open: true, title, message, type });
@@ -161,6 +163,11 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
   const handleWithdraw = async () => {
     try {
+      // 🔥 NAYA: Leader Security Check
+      if (isLeader) {
+         return showMessage("Action Denied", "Leaders cannot withdraw funds directly from here.");
+      }
+
       if (!balances.isUserToppedUp && !isPromo) {
          return showMessage("Top-up Required", "You must activate your Node to withdraw funds.");
       }
@@ -217,10 +224,8 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
       const uniqueSources = [...new Set(successMessages)].join(", ");
       const finalUserId = (isPromo && response.data.generatedId) ? response.data.generatedId : userId;
-      // ✅ UPDATE: Getting user name correctly
       const finalUserName = isPromo ? "Demo User" : (loggedInUser?.name || "");
 
-      // ✅ UPDATE: Saving userName in state
       setSuccessData({ 
         userId: finalUserId, 
         userName: finalUserName, 
@@ -272,11 +277,11 @@ const WithdrawalModal = ({ userId, onClose }) => {
                 value={val || ""} 
                 onChange={e => handleInputChange(e, source)} 
                 max={balance} 
-                disabled={balance === 0}
+                disabled={balance === 0 || isLeader} // 🔥 Leader inputs locked
             />
             <button 
                 onClick={() => overrideMax !== undefined ? setMaxAmount(source, overrideMax) : setMaxAmount(source)}
-                disabled={balance === 0}
+                disabled={balance === 0 || isLeader} // 🔥 Leader max button locked
                 className="bg-slate-100 hover:bg-slate-200 text-slate-600 text-[9px] font-bold px-2 py-1 rounded-md transition-colors border border-slate-200 disabled:opacity-50"
             >MAX</button>
         </div>
@@ -296,7 +301,6 @@ const WithdrawalModal = ({ userId, onClose }) => {
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
       `}</style>
 
-      {/* ✅ UPDATE: Passing userName to SuccessModal */}
       {successOpen && (
         <SuccessModal 
            isOpen={successOpen} 
@@ -403,6 +407,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
                     className="w-full bg-white border border-slate-200 text-slate-800 p-2.5 rounded-lg outline-none font-mono text-xs transition-all shadow-inner focus:border-green-400 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
                     value={transactionPassword} 
                     onChange={e => setTransactionPassword(e.target.value)} 
+                    disabled={isLeader} // 🔥 Disabled for leaders
                   />
               </div>
 
@@ -417,16 +422,18 @@ const WithdrawalModal = ({ userId, onClose }) => {
                  >
                     Cancel
                  </button>
+                 
+                 {/* 🔥 NAYA: Button logic updated for Leader */}
                  <button 
                    onClick={handleWithdraw} 
-                   disabled={loading || isAddressMissing} 
+                   disabled={loading || isAddressMissing || isLeader} 
                    className={`w-2/3 py-2.5 rounded-lg font-black text-[11px] md:text-xs uppercase tracking-widest transition-all ${
-                     (loading || isAddressMissing)
-                       ? 'bg-slate-200 text-black cursor-not-allowed border border-slate-300' 
+                     (loading || isAddressMissing || isLeader)
+                       ? 'bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300' 
                        : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-[0_4px_10px_rgba(34,197,94,0.3)] hover:-translate-y-0.5 active:scale-95'
                    }`}
                  >
-                   {loading ? "PROCESSING..." : "WITHDRAW FUNDS"}
+                   {loading ? "PROCESSING..." : isLeader ? "Withdraw" : "WITHDRAW FUNDS"}
                  </button>
               </div>
             </div>

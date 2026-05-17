@@ -671,14 +671,12 @@ router.put(
       const isDirectReferral = Number(targetUser.sponsorId) === Number(currentUser.userId);
       const isSelfTopup = Number(targetUser.userId) === Number(currentUser.userId);
       
-      // 🔥 NEW: Check if target is actually in Downline (No Upline / No Crossline)
       let isDownline = false;
       if (isDirectReferral || isSelfTopup) {
           isDownline = true;
       } else {
           let checkUplineId = targetUser.sponsorId;
           let depth = 1;
-          // Maximum 50 level tak check karega loop se bachne ke liye
           while (checkUplineId && depth <= 50) {
               if (Number(checkUplineId) === Number(currentUser.userId)) {
                   isDownline = true;
@@ -698,7 +696,6 @@ router.put(
       }
 
       // 🔥 IS IT A DUMMY (SHOWCASE) TOPUP?
-      // Rule: Agar Direct ya Khud ki ID hai, toh $30 ka Dummy balance use hoga.
       const isDummyTopup = isDirectReferral || isSelfTopup;
 
       // =======================================================
@@ -707,10 +704,8 @@ router.put(
       let usableBalance = 0;
 
       if (isDummyTopup) {
-        // 🟢 DIRECT/SELF: Poora balance check hoga (including showcase $30)
         usableBalance = currentUser.walletBalance;
       } else {
-        // 🔴 INDIRECT MEMBER: Leader $30 showcase use nahi kar sakta (Real balance chahiye)
         usableBalance = currentUser.walletBalance - 30;
       }
 
@@ -726,7 +721,6 @@ router.put(
       if (isDummyTopup) {
         console.log(`[DUMMY TOPUP] Leader ${currentUser.userId} activated ${targetUser.userId}. Leader balance NOT deducted.`);
       } else {
-        // Real Downline ke liye Real paisa katega
         currentUser.walletBalance -= amount;
       }
       await currentUser.save();
@@ -737,180 +731,28 @@ router.put(
       };
 
       // =======================================================
-      // 🔹 4. INCOME DISTRIBUTION (With Dummy Logic)
+      // 🔹 4. INSTANT RESPONSE & PROFILE UPDATE
       // =======================================================
-      let isFirstTopup = false;
+      let isFirstTopup = !targetUser.isToppedUp;
       
-      if (!targetUser.isToppedUp) {
-        isFirstTopup = true;
-        targetUser.isToppedUp = true;
-        targetUser.topUpDate = new Date();
-        
-        // Mark target user as dummy activated so Fast Track / Pool crons can ignore it
-        if (isDummyTopup) {
-            targetUser.isDummyActivated = true; 
-        }
-
-        // --- LEVEL 1 (SPONSOR / DIRECT INCOME) ---
-        if (targetUser.sponsorId) {
-            const sponsor = await User.findOne({ userId: targetUser.sponsorId });
-            if (sponsor) {
-                
-                // 🔥 ONLY Increment Direct Count & Give Real Rewards if it's NOT a Dummy Topup
-                if (!isDummyTopup) {
-                    sponsor.directCount = (sponsor.directCount || 0) + 1;
-                }
-
-                const isRestrictedLeader = sponsor.role === 'leader' && (sponsor.directCount || 0) < 100;
-
-                if (!isRestrictedLeader) {
-                    const DIRECT_BONUS_PERCENTAGE = 10; 
-                    const directBonusAmount = (amount * DIRECT_BONUS_PERCENTAGE) / 100; 
-
-                    // ✅ Dashboard me dikhane ke liye update (Entries)
-                    sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
-                    sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
-                    
-                    // ✅ Main Wallet me paise sirf REAL topup par jayenge
-                    
-
-                    await createTransaction({
-                        userId: sponsor.userId,
-                        type: "direct_income", 
-                        source: "direct",
-                        amount: directBonusAmount,
-                        fromUserId: targetUser.userId,
-                        description: `Direct Bonus (10%) from ${targetUser.name}'s Node Activation${isDummyTopup ? " (Showcase)" : ""}`,
-                        status: 'success'
-                    });
-
-                    // 🏆 TEAM REWARD & MONTHLY BONANZA (ONLY FOR REAL TOPUPS)
-                    if (!isDummyTopup) {
-                        const legStats = await getLegStats(sponsor.userId);
-                        if (!sponsor.claimedRewards) sponsor.claimedRewards = [];
-
-                        for (let milestone of REWARD_MILESTONES) {
-                            if (legStats.strongLeg >= milestone.strongLeg && legStats.otherLegs >= milestone.otherLegs) {
-                                if (!sponsor.claimedRewards.includes(milestone.target)) {
-                                    sponsor.rewardIncome = (sponsor.rewardIncome || 0) + milestone.reward;
-                                    sponsor.totalRewardIncome = (sponsor.totalRewardIncome || 0) + milestone.reward;
-                                    sponsor.walletBalance = (sponsor.walletBalance || 0) + milestone.reward;
-                                    sponsor.claimedRewards.push(milestone.target);
-                                    
-                                    await createTransaction({
-                                        userId: sponsor.userId,
-                                        type: "reward_income",
-                                        source: "reward",
-                                        amount: milestone.reward,
-                                        description: `Bonanza Reward Unlocked: ${milestone.title}`,
-                                        status: 'success'
-                                    });
-                                }
-                            }
-                        }
-                    }
-                } 
-                await sponsor.save();
-            }
-        }
-
-        // --- LEVEL 2 to 20 (LEVEL INCOME ENGINE) ---
-        const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
-        let currentUplineId = targetUser.sponsorId; 
-        let currentLevel = 1;
-
-        while (currentUplineId && currentLevel <= 20) {
-            const upline = await User.findOne({ userId: currentUplineId });
-            if (!upline) break; 
-
-            if (currentLevel > 1) {
-                const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
-                const levelAmount = (amount * percentage) / 100;
-                const isRestrictedLeader = upline.role === 'leader' && (upline.directCount || 0) < 100;
-
-                if (levelAmount > 0 && upline.isToppedUp && !isRestrictedLeader) {
-                    
-                    // ✅ Dashboard me dikhane ke liye update (Entries)
-                    upline.levelIncome = (upline.levelIncome || 0) + levelAmount;
-                    upline.totalLevelIncome = (upline.totalLevelIncome || 0) + levelAmount;
-                    
-                    // ✅ Main Wallet me paise sirf REAL topup par jayenge
-                   
-
-                    await upline.save();
-
-                    await createTransaction({
-                        userId: upline.userId,
-                        type: "level_income",
-                        source: "level",
-                        amount: levelAmount,
-                        fromUserId: targetUser.userId,
-                        description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation${isDummyTopup ? " (Showcase)" : ""}`,
-                        status: 'success'
-                    });
-                }
-            }
-            currentUplineId = upline.sponsorId;
-            currentLevel++;
-        }
-
-        // =======================================================
-        // 🚀 NAYA: INSTANT LEADER 10% BONUS ENGINE (Level 2 to 100)
-        // =======================================================
-        // Ye sirf real topup pe chalega
-        if (!isDummyTopup) {
-            let leaderUplineId = targetUser.sponsorId;
-            let leaderLevel = 1;
-
-            // Maximum 100 levels tak upar jayega (Infinity loop se bachne ke liye)
-            while (leaderUplineId && leaderLevel <= 100) {
-                const checkLeader = await User.findOne({ userId: leaderUplineId });
-                if (!checkLeader) break;
-
-                // 🔥 Sirf LEVEL 2 ya usse upar walo ko aur jinka role 'leader' hai unko 10% milega
-                if (leaderLevel >= 2 && checkLeader.role === 'leader') {
-                    const instantBonusAmount = (amount * 10) / 100;
-
-                    // Leader ke ASLI WALLET aur Rewards me add karo
-                    checkLeader.walletBalance = (checkLeader.walletBalance || 0) + instantBonusAmount;
-                     
-                    await checkLeader.save();
-
-                    // Transaction History me entry karo
-                    await createTransaction({
-                        userId: checkLeader.userId,
-                        type: "credit_to_wallet", 
-                        source: "instant_leader_bonus",
-                        amount: instantBonusAmount,
-                        fromUserId: targetUser.userId,
-                        description: `10% Instant Bonus from Downline Activation (Level ${leaderLevel})`,
-                        status: "success"
-                    });
-
-                    console.log(`✅ [INSTANT LEADER BONUS] Paid $${instantBonusAmount} to Leader ${checkLeader.userId} (From Level ${leaderLevel})`);
-                }
-
-                // Agle upline ko check karne ke liye upar badho
-                leaderUplineId = checkLeader.sponsorId;
-                leaderLevel++;
-            }
-        }
-        // ================= END INSTANT LEADER BONUS =================
-
-      }
-
-      // =======================================================
-      // 🔹 5. Target User Profile Update
-      // =======================================================
       if (!targetUser.packages) targetUser.packages = [];
       targetUser.packages.push({
         plan: "Global Auto-Pool",
         amount: amount,
         startDate: new Date(),
         withdrawn: 0,
-        isDummy: isDummyTopup // Marking this package as dummy so pools can ignore
+        isDummy: isDummyTopup 
       });
       targetUser.topUpAmount = Math.max(targetUser.topUpAmount || 0, amount);
+      targetUser.updatedAt = new Date();
+
+      if (isFirstTopup) {
+        targetUser.isToppedUp = true;
+        targetUser.topUpDate = new Date();
+        if (isDummyTopup) {
+            targetUser.isDummyActivated = true; 
+        }
+      }
       await targetUser.save();
 
       let txDescription = isFirstTopup ? `Node Activated with $${amount}` : `Node Upgrade with $${amount}`;
@@ -924,22 +766,158 @@ router.put(
         status: 'success'
       });
 
-      // 🔥 Dynamic Success Message 🔥
-      let successMsg = "";
-      if (isDummyTopup) {
-          successMsg = `Success! Dummy ID Activated. Income entries generated but NOT added to withdrawable wallet.`;
-      } else {
-          successMsg = `Success! Used $${amount} REAL balance to activate Downline member. Real incomes distributed.`;
-      }
+      // 🔥 Send response instantly
+      let successMsg = isDummyTopup 
+          ? `Success! Dummy ID Activated. Incomes sent to dashboard only.` 
+          : `Success! Used $${amount} REAL balance to activate Downline member. Real incomes distributed.`;
+          
+      res.json({ success: true, message: successMsg });
 
-      res.json({
-        success: true,
-        message: successMsg,
-      });
+
+      // =======================================================
+      // 🔹 5. BACKGROUND MLM ENGINE (Match Normal Route)
+      // =======================================================
+      (async () => {
+          try {
+              if (isFirstTopup) {
+                  // 🌟 GLOBAL TEAM COUNT (Badhega)
+                  await User.updateMany(
+                      { isToppedUp: true, userId: { $ne: targetUser.userId } }, 
+                      { $inc: { globalTeamCount: 1 } }
+                  );
+
+                  if (targetUser.sponsorId) {
+                      const sponsor = await User.findOne({ userId: targetUser.sponsorId });
+                      if (sponsor) {
+                          
+                          // 🚫 NAYA RULE: Direct Count sirf Tabhi badhega jab Real Topup ho
+                          if (!isDummyTopup) {
+                              sponsor.directCount = (sponsor.directCount || 0) + 1;
+                          }
+
+                          // ✅ DIRECT INCOME (Sabko jayegi, Normal jaisa)
+                          const DIRECT_BONUS_PERCENTAGE = 10; 
+                          const directBonusAmount = (amount * DIRECT_BONUS_PERCENTAGE) / 100; 
+
+                          // Ye stats Withdrawal Modal aur Dashboard me dikhenge
+                          sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
+                          sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
+                          
+                     
+                          await createTransaction({
+                              userId: sponsor.userId, type: "direct_income", source: "direct",
+                              amount: directBonusAmount, fromUserId: targetUser.userId,
+                              description: `Direct Bonus (10%) from ${targetUser.name}'s Node Activation${isDummyTopup ? " (Showcase)" : ""}`,
+                              status: 'success'
+                          });
+
+                          // 🔥 FAST TRACK (Only for Real Topups)
+                          if (!isDummyTopup && sponsor.createdAt) {
+                              const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+                              if ((new Date().getTime() - new Date(sponsor.createdAt).getTime()) <= thirtyDaysInMs) {
+                                  const FastTrack = require('../models/FastTrack');
+                                  await FastTrack.create({
+                                      sponsorId: sponsor.userId, directUserId: targetUser.userId,
+                                      dailyAmount: 1, daysPaid: 0, maxDays: 10, status: 'active'
+                                  }).catch(e => console.log("Fast Track Error", e));
+                              }
+                          }
+
+                          // 🏆 REWARDS (Only for Real Topups)
+                          if (!isDummyTopup) {
+                              const legStats = await getLegStats(sponsor.userId);
+                              if (!sponsor.claimedRewards) sponsor.claimedRewards = [];
+
+                              for (let milestone of REWARD_MILESTONES) {
+                                  if (legStats.strongLeg >= milestone.strongLeg && legStats.otherLegs >= milestone.otherLegs) {
+                                      if (!sponsor.claimedRewards.includes(milestone.target)) {
+                                          sponsor.rewardIncome = (sponsor.rewardIncome || 0) + milestone.reward;
+                                          sponsor.totalRewardIncome = (sponsor.totalRewardIncome || 0) + milestone.reward;
+                                          
+                                        
+
+                                          sponsor.claimedRewards.push(milestone.target);
+                                          await createTransaction({
+                                              userId: sponsor.userId, type: "reward_income", source: "reward", amount: milestone.reward,
+                                              description: `Bonanza Reward Unlocked: ${milestone.title}`, status: 'success'
+                                          });
+                                      }
+                                  }
+                              }
+                          }
+                          await sponsor.save();
+                      }
+                  }
+
+                  // 🌟 20 LEVEL DISTRIBUTION (Normal jaisa banaya hai)
+                  const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
+                  let currentUplineId = targetUser.sponsorId; 
+                  let currentLevel = 1;
+
+                  while (currentUplineId && currentLevel <= 20) {
+                      const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId role');
+                      if (!upline) break; 
+
+                      if (currentLevel > 1) {
+                          const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
+                          const levelAmount = (amount * percentage) / 100;
+                          
+                          if (levelAmount > 0 && upline.isToppedUp) {
+                              // ✅ Dashboard/Modal me Level Income jayegi
+                              let incUpdate = { levelIncome: levelAmount, totalLevelIncome: levelAmount };
+                              
+                           
+
+                              // ✅ Fast update command (Normal route ki tarah)
+                              await User.updateOne({ userId: upline.userId }, { $inc: incUpdate });
+                              
+                              await createTransaction({
+                                  userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
+                                  fromUserId: targetUser.userId, description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation${isDummyTopup ? " (Showcase)" : ""}`,
+                                  status: 'success'
+                              });
+                          }
+                      }
+                      currentUplineId = upline.sponsorId;
+                      currentLevel++;
+                  }
+
+                  // 🚀 INSTANT LEADER 10% BONUS ENGINE (Real topup only)
+                  if (!isDummyTopup) {
+                      let leaderUplineId = targetUser.sponsorId;
+                      let leaderLevel = 1;
+
+                      while (leaderUplineId && leaderLevel <= 100) {
+                          const checkLeader = await User.findOne({ userId: leaderUplineId });
+                          if (!checkLeader) break;
+
+                          if (leaderLevel >= 2 && checkLeader.role === 'leader') {
+                              const instantBonusAmount = (amount * 10) / 100;
+                              // Leader ko instant 10% uske asli wallet me milega
+                              checkLeader.walletBalance = (checkLeader.walletBalance || 0) + instantBonusAmount;
+                              
+                              await checkLeader.save();
+                              await createTransaction({
+                                  userId: checkLeader.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
+                                  fromUserId: targetUser.userId, description: `10% Instant Bonus from Downline Activation (Level ${leaderLevel})`,
+                                  status: "success"
+                              });
+                          }
+                          leaderUplineId = checkLeader.sponsorId;
+                          leaderLevel++;
+                      }
+                  }
+              }
+          } catch (bgError) {
+              console.error("Background Leader MLM Engine Error:", bgError);
+          }
+      })();
 
     } catch (err) {
       console.error('Leader Top-up Error:', err);
-      res.status(500).json({ message: 'Server error during leader top-up' });
+      if (!res.headersSent) {
+          res.status(500).json({ message: 'Server error during leader top-up' });
+      }
     }
   }
 );

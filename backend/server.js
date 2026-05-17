@@ -121,8 +121,7 @@ mongoose.connect(process.env.MONGO_URI)
       startGlobalGrowthCron();
       console.log('✅ Global Auto-Growth Cron Started (1 ID every 14 mins)');
 
-      runDailyLeaderClosing();
-      console.log('✅ Daily Leaders Closing is also running');
+     
 
       // 👇👇👇 NAYA FAST TRACK CRON YAHAN ADD KIYA HAI 👇👇👇
       require('./cron/fastTrackCron'); 
