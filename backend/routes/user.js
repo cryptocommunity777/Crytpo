@@ -831,9 +831,7 @@ router.put(
                           sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
                           sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
                           
-                          if (!isDummyTopup && sponsor.role !== 'leader') {
-                              sponsor.walletBalance = (sponsor.walletBalance || 0) + directBonusAmount; 
-                          }
+                         
 
                           await createTransaction({
                               userId: sponsor.userId, type: "direct_income", source: "direct",
@@ -865,9 +863,6 @@ router.put(
                                           sponsor.rewardIncome = (sponsor.rewardIncome || 0) + milestone.reward;
                                           sponsor.totalRewardIncome = (sponsor.totalRewardIncome || 0) + milestone.reward;
                                           
-                                          if (sponsor.role !== 'leader') {
-                                              sponsor.walletBalance = (sponsor.walletBalance || 0) + milestone.reward;
-                                          }
 
                                           sponsor.claimedRewards.push(milestone.target);
                                           await createTransaction({
@@ -898,9 +893,7 @@ router.put(
                           if (levelAmount > 0 && upline.isToppedUp) {
                               let incUpdate = { levelIncome: levelAmount, totalLevelIncome: levelAmount };
                               
-                              if (!isDummyTopup && upline.role !== 'leader') {
-                                  incUpdate.walletBalance = levelAmount; 
-                              }
+                             
 
                               await User.updateOne({ userId: upline.userId }, { $inc: incUpdate });
                               
