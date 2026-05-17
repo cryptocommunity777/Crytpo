@@ -190,10 +190,7 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
               
               {/* Balances Top Box */}
               <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl flex items-center justify-between shadow-sm">
-                 <div>
-                    <p className="text-black text-[9px] font-bold uppercase tracking-widest">Total Income Available</p>
-                    <h3 className="text-lg font-black text-slate-800">${totalAvailable.toFixed(2)}</h3>
-                 </div>
+               
                  <div className="text-right">
                     <p className="text-black text-[9px] font-bold uppercase tracking-widest">Main Wallet</p>
                     <h3 className="text-base font-black text-emerald-600">${(available.walletBalance || 0).toFixed(2)}</h3>

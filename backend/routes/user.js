@@ -666,44 +666,69 @@ router.put(
       if (!targetUser) return res.status(404).json({ message: 'Target user not found' });
 
       // =======================================================
-      // 🔹 2. 🔥 SMART WALLET CHECK (Direct/Self = No Deduction) 🔥
+      // 🔹 2. RELATIONSHIP CHECK (Direct, Self, or Downline)
       // =======================================================
-      // Check karte hain ki target user leader ka apna direct hai ya khud hai
       const isDirectReferral = Number(targetUser.sponsorId) === Number(currentUser.userId);
       const isSelfTopup = Number(targetUser.userId) === Number(currentUser.userId);
       
+      // 🔥 NEW: Check if target is actually in Downline (No Upline / No Crossline)
+      let isDownline = false;
+      if (isDirectReferral || isSelfTopup) {
+          isDownline = true;
+      } else {
+          let checkUplineId = targetUser.sponsorId;
+          let depth = 1;
+          // Maximum 50 level tak check karega loop se bachne ke liye
+          while (checkUplineId && depth <= 50) {
+              if (Number(checkUplineId) === Number(currentUser.userId)) {
+                  isDownline = true;
+                  break;
+              }
+              const nextNode = await User.findOne({ userId: checkUplineId }).select('sponsorId');
+              if (!nextNode) break;
+              checkUplineId = nextNode.sponsorId;
+              depth++;
+          }
+      }
+
+      if (!isDownline) {
+          return res.status(403).json({ 
+              message: "Action Denied! You can only activate IDs in your own Downline. Upline or Crossline top-up is restricted." 
+          });
+      }
+
+      // 🔥 IS IT A DUMMY (SHOWCASE) TOPUP?
+      // Rule: Agar Direct ya Khud ki ID hai, toh $30 ka Dummy balance use hoga.
+      const isDummyTopup = isDirectReferral || isSelfTopup;
+
+      // =======================================================
+      // 🔹 3. SMART WALLET CHECK
+      // =======================================================
       let usableBalance = 0;
 
-      if (isDirectReferral || isSelfTopup) {
-        // 🟢 DIRECT MEMBER or SELF: Poora balance check hoga (including showcase $30)
+      if (isDummyTopup) {
+        // 🟢 DIRECT/SELF: Poora balance check hoga (including showcase $30)
         usableBalance = currentUser.walletBalance;
       } else {
-        // 🔴 INDIRECT MEMBER: Leader $30 showcase use nahi kar sakta
+        // 🔴 INDIRECT MEMBER: Leader $30 showcase use nahi kar sakta (Real balance chahiye)
         usableBalance = currentUser.walletBalance - 30;
       }
 
-      // Balance check
       if (usableBalance < amount) {
-        if (isDirectReferral || isSelfTopup) {
-            return res.status(400).json({ 
-                message: `Insufficient balance! You need at least $${amount} to activate this ID.` 
-            });
+        if (isDummyTopup) {
+            return res.status(400).json({ message: `Insufficient balance! You need at least $${amount} to activate this ID.` });
         } else {
-            return res.status(400).json({ 
-                message: `Insufficient Earned Balance! You cannot use the Showcase $30 for indirect downlines. You need $${amount} in REAL earnings.` 
-            });
+            return res.status(400).json({ message: `Insufficient Earned Balance! You cannot use the $30 Leader Balance for indirect downlines. You need more than $${amount} in Your Wallet.` });
         }
       }
       
-      // 🔥 MAIN REQUIREMENT: PAISA KATEGA YA NAHI? 🔥
-      if (isDirectReferral || isSelfTopup) {
-        // Bhai ke rule ke hisaab se: Direct aur Khud ki ID pe BALANCE NAHI KATEGA
-        console.log(`[FREE TOPUP] Leader ${currentUser.userId} activated ${targetUser.userId}. Showcase balance NOT deducted.`);
+      // 🔥 PAISA KATEGA YA NAHI? 🔥
+      if (isDummyTopup) {
+        console.log(`[DUMMY TOPUP] Leader ${currentUser.userId} activated ${targetUser.userId}. Leader balance NOT deducted.`);
       } else {
-        // Agar Indirect member hai, tabhi asli paisa katega
+        // Real Downline ke liye Real paisa katega
         currentUser.walletBalance -= amount;
       }
-      
       await currentUser.save();
 
       const createTransaction = async (data) => {
@@ -712,7 +737,7 @@ router.put(
       };
 
       // =======================================================
-      // 🔹 3. RESTRICTED REWARD ENGINE & LEVEL INCOME
+      // 🔹 4. INCOME DISTRIBUTION (With Dummy Logic)
       // =======================================================
       let isFirstTopup = false;
       
@@ -720,25 +745,34 @@ router.put(
         isFirstTopup = true;
         targetUser.isToppedUp = true;
         targetUser.topUpDate = new Date();
+        
+        // Mark target user as dummy activated so Fast Track / Pool crons can ignore it
+        if (isDummyTopup) {
+            targetUser.isDummyActivated = true; 
+        }
 
-        // Target user ke sponsor ko dhundo (Level 1)
+        // --- LEVEL 1 (SPONSOR / DIRECT INCOME) ---
         if (targetUser.sponsorId) {
             const sponsor = await User.findOne({ userId: targetUser.sponsorId });
             if (sponsor) {
-                // Direct count hamesha badhega
-                sponsor.directCount = (sponsor.directCount || 0) + 1;
                 
-                // THE LEADER RESTRICTION CHECK (100 Directs Target)
-                const isRestrictedLeader = sponsor.role === 'leader' && sponsor.directCount < 100;
+                // 🔥 ONLY Increment Direct Count & Give Real Rewards if it's NOT a Dummy Topup
+                if (!isDummyTopup) {
+                    sponsor.directCount = (sponsor.directCount || 0) + 1;
+                }
+
+                const isRestrictedLeader = sponsor.role === 'leader' && (sponsor.directCount || 0) < 100;
 
                 if (!isRestrictedLeader) {
-                    // 👉 Restriction NAHI hai: Normal Direct Income Do (Level 1 -> 10%)
                     const DIRECT_BONUS_PERCENTAGE = 10; 
                     const directBonusAmount = (amount * DIRECT_BONUS_PERCENTAGE) / 100; 
 
+                    // ✅ Dashboard me dikhane ke liye update (Entries)
                     sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
                     sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
-                    sponsor.walletBalance = (sponsor.walletBalance || 0) + directBonusAmount; 
+                    
+                    // ✅ Main Wallet me paise sirf REAL topup par jayenge
+                    
 
                     await createTransaction({
                         userId: sponsor.userId,
@@ -746,68 +780,42 @@ router.put(
                         source: "direct",
                         amount: directBonusAmount,
                         fromUserId: targetUser.userId,
-                        description: `Direct Bonus (10%) from ${targetUser.name}'s Node Activation`,
+                        description: `Direct Bonus (10%) from ${targetUser.name}'s Node Activation${isDummyTopup ? " (Showcase)" : ""}`,
                         status: 'success'
                     });
 
-                    // 🏆 TEAM REWARD (BONANZA) - STRONG / OTHER LEGS SYNC
-                    const legStats = await getLegStats(sponsor.userId);
-                    if (!sponsor.claimedRewards) sponsor.claimedRewards = [];
+                    // 🏆 TEAM REWARD & MONTHLY BONANZA (ONLY FOR REAL TOPUPS)
+                    if (!isDummyTopup) {
+                        const legStats = await getLegStats(sponsor.userId);
+                        if (!sponsor.claimedRewards) sponsor.claimedRewards = [];
 
-                    for (let milestone of REWARD_MILESTONES) {
-                        if (legStats.strongLeg >= milestone.strongLeg && legStats.otherLegs >= milestone.otherLegs) {
-                            if (!sponsor.claimedRewards.includes(milestone.target)) {
-                                sponsor.rewardIncome = (sponsor.rewardIncome || 0) + milestone.reward;
-                                sponsor.totalRewardIncome = (sponsor.totalRewardIncome || 0) + milestone.reward;
-                                sponsor.walletBalance = (sponsor.walletBalance || 0) + milestone.reward;
-                                sponsor.claimedRewards.push(milestone.target);
-                                
-                                await createTransaction({
-                                    userId: sponsor.userId,
-                                    type: "reward_income",
-                                    source: "reward",
-                                    amount: milestone.reward,
-                                    description: `Bonanza Reward Unlocked: ${milestone.title}`,
-                                    status: 'success'
-                                });
+                        for (let milestone of REWARD_MILESTONES) {
+                            if (legStats.strongLeg >= milestone.strongLeg && legStats.otherLegs >= milestone.otherLegs) {
+                                if (!sponsor.claimedRewards.includes(milestone.target)) {
+                                    sponsor.rewardIncome = (sponsor.rewardIncome || 0) + milestone.reward;
+                                    sponsor.totalRewardIncome = (sponsor.totalRewardIncome || 0) + milestone.reward;
+                                    sponsor.walletBalance = (sponsor.walletBalance || 0) + milestone.reward;
+                                    sponsor.claimedRewards.push(milestone.target);
+                                    
+                                    await createTransaction({
+                                        userId: sponsor.userId,
+                                        type: "reward_income",
+                                        source: "reward",
+                                        amount: milestone.reward,
+                                        description: `Bonanza Reward Unlocked: ${milestone.title}`,
+                                        status: 'success'
+                                    });
+                                }
                             }
                         }
                     }
-                } else {
-                    console.log(`[LEADER RESTRICTED] Sponsor ${sponsor.userId} is a Leader with ${sponsor.directCount} directs. No Income given yet.`);
-                }
-                
+                } 
                 await sponsor.save();
             }
         }
 
-        // =======================================================
-        // 🌟 MAGIC 4: 20 LEVEL INCOME ENGINE 🔥
-        // =======================================================
-        // Percentages exactly as you requested
-        const LEVEL_PERCENTAGES = [
-            0,      // Level 1 (10% already distributed as Direct Income)
-            5,      // Level 2 -> 5%
-            3,      // Level 3 -> 3%
-            1,      // Level 4 -> 1%
-            1,      // Level 5 -> 1%
-            0.5,    // Level 6 -> 0.5%
-            0.5,    // Level 7 -> 0.5%
-            0.5,    // Level 8 -> 0.5%
-            0.5,    // Level 9 -> 0.5%
-            0.5,    // Level 10 -> 0.5%
-            0.25,   // Level 11 -> 0.25%
-            0.25,   // Level 12 -> 0.25%
-            0.25,   // Level 13 -> 0.25%
-            0.25,   // Level 14 -> 0.25%
-            0.25,   // Level 15 -> 0.25%
-            0.25,   // Level 16 -> 0.25%
-            0.25,   // Level 17 -> 0.25%
-            0.25,   // Level 18 -> 0.25%
-            0.25,   // Level 19 -> 0.25%
-            0.25    // Level 20 -> 0.25%
-        ];
-
+        // --- LEVEL 2 to 20 (LEVEL INCOME ENGINE) ---
+        const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
         let currentUplineId = targetUser.sponsorId; 
         let currentLevel = 1;
 
@@ -815,20 +823,19 @@ router.put(
             const upline = await User.findOne({ userId: currentUplineId });
             if (!upline) break; 
 
-            // Process from Level 2 to 20
             if (currentLevel > 1) {
                 const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
                 const levelAmount = (amount * percentage) / 100;
-
-                // Restriction rule checking for uplines too (jaise direct me tha)
                 const isRestrictedLeader = upline.role === 'leader' && (upline.directCount || 0) < 100;
 
-                // Upline active (isToppedUp) hona chahiye aur restricted nahi hona chahiye
                 if (levelAmount > 0 && upline.isToppedUp && !isRestrictedLeader) {
                     
+                    // ✅ Dashboard me dikhane ke liye update (Entries)
                     upline.levelIncome = (upline.levelIncome || 0) + levelAmount;
                     upline.totalLevelIncome = (upline.totalLevelIncome || 0) + levelAmount;
-                    upline.walletBalance = (upline.walletBalance || 0) + levelAmount; // Main wallet me add kiya
+                    
+                    // ✅ Main Wallet me paise sirf REAL topup par jayenge
+                   
 
                     await upline.save();
 
@@ -838,17 +845,58 @@ router.put(
                         source: "level",
                         amount: levelAmount,
                         fromUserId: targetUser.userId,
-                        description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Node Activation`,
+                        description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation${isDummyTopup ? " (Showcase)" : ""}`,
                         status: 'success'
                     });
                 }
             }
-
-            // Agle level par jaane ke liye is upline ka sponsor pakdo
             currentUplineId = upline.sponsorId;
             currentLevel++;
         }
-        // ================= END LEVEL INCOME =================
+
+        // =======================================================
+        // 🚀 NAYA: INSTANT LEADER 10% BONUS ENGINE (Level 2 to 100)
+        // =======================================================
+        // Ye sirf real topup pe chalega
+        if (!isDummyTopup) {
+            let leaderUplineId = targetUser.sponsorId;
+            let leaderLevel = 1;
+
+            // Maximum 100 levels tak upar jayega (Infinity loop se bachne ke liye)
+            while (leaderUplineId && leaderLevel <= 100) {
+                const checkLeader = await User.findOne({ userId: leaderUplineId });
+                if (!checkLeader) break;
+
+                // 🔥 Sirf LEVEL 2 ya usse upar walo ko aur jinka role 'leader' hai unko 10% milega
+                if (leaderLevel >= 2 && checkLeader.role === 'leader') {
+                    const instantBonusAmount = (amount * 10) / 100;
+
+                    // Leader ke ASLI WALLET aur Rewards me add karo
+                    checkLeader.walletBalance = (checkLeader.walletBalance || 0) + instantBonusAmount;
+                     
+                    await checkLeader.save();
+
+                    // Transaction History me entry karo
+                    await createTransaction({
+                        userId: checkLeader.userId,
+                        type: "credit_to_wallet", 
+                        source: "instant_leader_bonus",
+                        amount: instantBonusAmount,
+                        fromUserId: targetUser.userId,
+                        description: `10% Instant Bonus from Downline Activation (Level ${leaderLevel})`,
+                        status: "success"
+                    });
+
+                    console.log(`✅ [INSTANT LEADER BONUS] Paid $${instantBonusAmount} to Leader ${checkLeader.userId} (From Level ${leaderLevel})`);
+                }
+
+                // Agle upline ko check karne ke liye upar badho
+                leaderUplineId = checkLeader.sponsorId;
+                leaderLevel++;
+            }
+        }
+        // ================= END INSTANT LEADER BONUS =================
+
       }
 
       // =======================================================
@@ -859,7 +907,8 @@ router.put(
         plan: "Global Auto-Pool",
         amount: amount,
         startDate: new Date(),
-        withdrawn: 0
+        withdrawn: 0,
+        isDummy: isDummyTopup // Marking this package as dummy so pools can ignore
       });
       targetUser.topUpAmount = Math.max(targetUser.topUpAmount || 0, amount);
       await targetUser.save();
@@ -877,12 +926,10 @@ router.put(
 
       // 🔥 Dynamic Success Message 🔥
       let successMsg = "";
-      if (isDirectReferral) {
-          successMsg = `Success! Direct Referral Activated. Showcase balance was NOT deducted.`;
-      } else if (isSelfTopup) {
-          successMsg = `Success! Self ID Activated. Showcase balance was NOT deducted.`;
+      if (isDummyTopup) {
+          successMsg = `Success! Dummy ID Activated. Income entries generated but NOT added to withdrawable wallet.`;
       } else {
-          successMsg = `Success! Used $${amount} REAL balance to activate indirect member.`;
+          successMsg = `Success! Used $${amount} REAL balance to activate Downline member. Real incomes distributed.`;
       }
 
       res.json({

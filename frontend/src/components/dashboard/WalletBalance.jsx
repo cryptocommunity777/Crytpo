@@ -21,6 +21,9 @@ const globalPoolConfig = {
 const WalletBalance = ({ income = {} }) => {
   const { user } = useAuth();
   const [globalGrowthIncome, setGlobalGrowthIncome] = useState(0);
+  
+  // 🔥 Copy State for ID
+  const [isCopied, setIsCopied] = useState(false);
 
   // 🔥 ID Active/Inactive Check
   const isUserActive = user?.isToppedUp === true || user?.isToppedUp === "true" || (user?.topUpAmount && user?.topUpAmount > 0);
@@ -55,6 +58,16 @@ const WalletBalance = ({ income = {} }) => {
   
   const format = (val) => `$${Number(val || 0).toFixed(2)}`;
 
+  // 🔥 Copy Function
+  const handleCopyId = () => {
+    const userIdToCopy = user?.userId || user?._id || "";
+    if (userIdToCopy) {
+      navigator.clipboard.writeText(userIdToCopy);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000); // 2 second baad wapas copy icon
+    }
+  };
+
   return (
     <div className="grid grid-cols-2 gap-3 md:gap-4 w-full">
       
@@ -68,7 +81,7 @@ const WalletBalance = ({ income = {} }) => {
         </h2>
       </div>
 
-      {/* BOX 2: ACCOUNT STATUS */}
+      {/* BOX 2: ACCOUNT STATUS & ID */}
       <div className={`bg-white p-5 md:p-6 rounded-[20px] border shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px] ${isUserActive ? 'border-emerald-50' : 'border-red-50'}`}>
         <p className=" text-black text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
           Account Status
@@ -76,6 +89,30 @@ const WalletBalance = ({ income = {} }) => {
         <h2 className={`text-[28px] sm:text-3xl md:text-[40px] font-black tracking-tight leading-none uppercase ${isUserActive ? 'text-emerald-600' : 'text-red-500'}`}>
            {isUserActive ? 'ACTIVE' : 'INACTIVE'}
         </h2>
+        
+        {/* 🔥 NAYA: ID aur Copy Button */}
+        <div className="mt-2 flex items-center gap-2">
+          <p className="text-xs md:text-sm text-gray-500 font-medium">
+            ID: <span className="text-gray-800 font-bold">{user?.userId || user?._id || "N/A"}</span>
+          </p>
+          <button 
+            onClick={handleCopyId}
+            className="text-gray-400 hover:text-emerald-500 transition-colors focus:outline-none"
+            title="Copy ID"
+          >
+            {isCopied ? (
+              // Checkmark Icon (Copied)
+              <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              // Copy Icon
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
 
     </div>

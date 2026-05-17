@@ -23,12 +23,11 @@ const AdminManageUsers = () => {
     setLoading(true);
     try {
       const adminToken = localStorage.getItem('adminToken');
-      // 🔥 FIX 1: API route changed to '/admin/all-users' to get the FULL data including 'role'
+      // Fetching all users initially so we can search among them
       const res = await api.get('/admin/all-users?limit=1000', {
         headers: { Authorization: `Bearer ${adminToken}` }
       });
       
-      // Backend agar { success: true, users: [...] } return kare toh usko sahi se extract karna
       if (res.data && res.data.users) {
         setUsers(res.data.users);
       } else if (Array.isArray(res.data)) {
@@ -45,7 +44,15 @@ const AdminManageUsers = () => {
 
   useEffect(() => { fetchUsers(); }, []);
 
+  // 🔥 SMART FILTER LOGIC 🔥
   const filteredUsers = useMemo(() => {
+    if (!search.trim()) {
+      // Agar search box khali hai, toh SIRF Leaders ko list me dikhao
+      return users.filter(user => user.role && user.role.toLowerCase() === 'leader');
+    }
+
+    // Agar Admin kuch search kar raha hai, toh saare users (Normal + Leader) me dhoondo
+    // Taaki admin normal user ko search karke usko Leader ka role de sake
     return users.filter(user => {
       const nameMatch = user.name?.toLowerCase().includes(search.toLowerCase());
       const idMatch = String(user.userId).includes(search);
@@ -132,13 +139,13 @@ const AdminManageUsers = () => {
           <h2 className="text-2xl font-black text-gray-800 uppercase tracking-wide flex items-center gap-2">
              <UserCog className="text-indigo-600" size={26} /> Manage Roles & Leaders
           </h2>
-          <p className="text-gray-500 text-sm font-medium mt-1">Assign Leader roles and manage showcase balances ($30).</p>
+          <p className="text-gray-500 text-sm font-medium mt-1">View all Leaders. Search by ID to assign new roles.</p>
         </div>
 
         <div className="flex flex-col md:flex-row gap-2 w-full xl:w-auto">
           <div className="relative">
             <Search size={16} className="absolute top-3 left-3 text-black" />
-            <input type="text" className="border border-gray-300 text-black rounded px-3 py-2 pl-9 w-full md:w-64" placeholder="Search Name / ID" value={search} onChange={e => setSearch(e.target.value)} />
+            <input type="text" className="border border-gray-300 text-black rounded px-3 py-2 pl-9 w-full md:w-64" placeholder="Search Any ID or Name..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <select className="border border-gray-300 text-black rounded px-3 py-2 bg-white" value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}>
             <option value={10}>Show 10</option>
@@ -161,10 +168,9 @@ const AdminManageUsers = () => {
           </thead>
           <tbody>
             {currentItems.length === 0 ? (
-              <tr><td colSpan="5" className="text-center px-4 py-4 text-gray-500">No users found.</td></tr>
+              <tr><td colSpan="5" className="text-center px-4 py-8 text-gray-500 font-medium">No users found. Try searching by ID to add a new leader.</td></tr>
             ) : (
               currentItems.map((u, idx) => {
-                // 🔥 UI RENDERING LOGIC FIX 🔥
                 const safeRole = u.role ? u.role.toLowerCase() : 'user';
                 
                 return (
@@ -173,7 +179,7 @@ const AdminManageUsers = () => {
                     <td className="px-4 py-2 border font-medium text-gray-800">{u.name}</td>
                     <td className="px-4 py-2 border text-center">
                       {safeRole === 'leader' ? (
-                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase border bg-orange-100 text-green-800 border-orange-200">
+                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase border bg-orange-100 text-orange-800 border-orange-200">
                            <Crown size={12}/> Leader
                          </span>
                       ) : (

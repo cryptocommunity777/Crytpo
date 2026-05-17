@@ -314,8 +314,17 @@ router.post(
       const { toUserId, amount, transactionPassword } = req.body;
       const fromUserId = req.user.userId;
 
-      if (!toUserId || !amount || amount <= 0) {
-        return res.status(400).json({ message: "Valid Target User ID and Amount are required." });
+      // Amount ko Number me convert kar lete hain taaki validation sahi se ho
+      const transferAmount = Number(amount);
+
+      // 🔥 1. MINIMUM $10 CHECK
+      if (!toUserId || !transferAmount || transferAmount < 10) {
+        return res.status(400).json({ message: " Minimum transfer amount is $10." });
+      }
+
+      // 🔥 2. INTEGER CHECK (10, 11, 12 allowed, 10.5 nahi)
+      if (!Number.isInteger(transferAmount)) {
+        return res.status(400).json({ message: "Transfer amount must be a whole number (e.g., 10, 11, 12). Decimals are not allowed." });
       }
 
       if (!transactionPassword) {
@@ -341,31 +350,62 @@ router.post(
       if (!receiver) return res.status(404).json({ message: "Target user not found." });
 
       // =======================================================
-      // 🔹 2. 🔥 REAL BALANCE CHECK (Locked $30 Showcase Logic) 🔥
+      // 🔹 2. 🔥 DOWNLINE ONLY CHECK (No Upline / No Crossline)
       // =======================================================
-      // Leader ka total balance minus 30 = Usable Balance
+      let isDownline = false;
+      const isDirectReferral = Number(receiver.sponsorId) === Number(sender.userId);
+
+      if (isDirectReferral) {
+          isDownline = true;
+      } else {
+          // Upar ki taraf check karenge ki target user ke upline me sender aata hai ya nahi
+          let checkUplineId = receiver.sponsorId;
+          let depth = 1;
+          // Maximum 50 levels tak check karega
+          while (checkUplineId && depth <= 50) {
+              if (Number(checkUplineId) === Number(sender.userId)) {
+                  isDownline = true;
+                  break;
+              }
+              const nextNode = await User.findOne({ userId: checkUplineId }).select('sponsorId');
+              if (!nextNode) break;
+              checkUplineId = nextNode.sponsorId;
+              depth++;
+          }
+      }
+
+      if (!isDownline) {
+          return res.status(403).json({ 
+              message: "Action Denied! You can only transfer funds to your own Downline. Upline or Crossline transfer is restricted." 
+          });
+      }
+
+      // =======================================================
+      // 🔹 3. 🔥 REAL BALANCE CHECK (Locked $30 Showcase Logic)
+      // =======================================================
+      // Leader ka total balance minus 30 = Usable Balance (Transfer ke liye 30 fix locked hai)
       const usableBalance = sender.walletBalance - 30;
 
-      if (amount > usableBalance) {
+      if (transferAmount > usableBalance) {
         return res.status(400).json({ 
-          message: `Insufficient Earned Balance! You cannot transfer the $30 Showcase Balance. You only have $${Math.max(0, usableBalance).toFixed(2)} available to transfer.` 
+          message: `Insufficient Earned Balance! You cannot transfer the $30 Leader Balance. You need more than $30 available to transfer.` 
         });
       }
 
-      // 🔹 3. Deduct and Add
-      sender.walletBalance -= amount;
-      receiver.walletBalance += amount;
+      // 🔹 4. Deduct and Add
+      sender.walletBalance -= transferAmount;
+      receiver.walletBalance += transferAmount;
 
       await sender.save();
       await receiver.save();
 
-      // 🔹 4. Create Transactions
+      // 🔹 5. Create Transactions
       const Transaction = require('../models/Transaction');
 
       await Transaction.create({
         userId: sender.userId,
         type: "transfer",
-        amount: amount,
+        amount: transferAmount,
         fromUserId: sender.userId,
         toUserId: receiver.userId,
         description: `Fund Transferred to ${receiver.name} (${receiver.userId})`,
@@ -376,7 +416,7 @@ router.post(
       await Transaction.create({
         userId: receiver.userId,
         type: "transfer",
-        amount: amount,
+        amount: transferAmount,
         fromUserId: sender.userId,
         toUserId: receiver.userId,
         description: `Fund Received from ${sender.name} (${sender.userId})`,
@@ -386,7 +426,7 @@ router.post(
 
       res.status(200).json({
         success: true,
-        message: `$${amount} successfully transferred to ${receiver.userId}.`
+        message: `$${transferAmount} successfully transferred to ${receiver.userId}.`
       });
 
     } catch (error) {
@@ -395,7 +435,6 @@ router.post(
     }
   }
 );
-
 
 
   

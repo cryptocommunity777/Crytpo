@@ -193,7 +193,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
         if (amt > 0) {
             if (!isPromo && amt > lvl.available) throw new Error(`Insufficient funds in Level ${lvl.level} Pool.`);
             poolRequestedTotal += amt;
-            successMessages.push(`Pool Lvl ${lvl.level}`);
+            successMessages.push(` Lvl ${lvl.level}`);
         }
       });
 
@@ -337,10 +337,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
             <div className="p-3 overflow-y-auto custom-scroll flex-1 flex flex-col gap-2 bg-white relative z-10">
               
               <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl flex items-center justify-between shadow-sm">
-                 <div>
-                    <p className="text-black text-[9px] font-bold uppercase tracking-widest">Total Income Available</p>
-                    <h3 className="text-lg font-black text-slate-800">${totalAvailable.toFixed(2)}</h3>
-                 </div>
+                
                  <div className="text-right">
                     <p className="text-black text-[9px] font-bold uppercase tracking-widest">Main Wallet</p>
                     <h3 className="text-base font-black text-emerald-600">${balances.walletBalance.toFixed(2)}</h3>
@@ -383,7 +380,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
                         {unlockedLevels.map(lvl => (
                             <IncomeBox 
                                 key={lvl.level}
-                                title={`Pool Lvl ${lvl.level}`} 
+                                title={`Community Lvl ${lvl.level}`} 
                                 icon={Layers} 
                                 iconColor="text-emerald-500" 
                                 source={`pool_${lvl.level}`} 

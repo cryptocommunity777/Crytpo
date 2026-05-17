@@ -160,7 +160,7 @@ export default function Plan() {
                   <thead className="text-slate-600 text-[9px] md:text-xs uppercase tracking-widest border-b border-slate-200 bg-slate-50">
                     <tr>
                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Lvl</th>
-                      <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Global Team</th>
+                      <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Community Team</th>
                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Directs</th>
                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Total Earning</th>
                       <th className="py-3 px-2 md:py-4 md:px-4 font-black text-center">Status</th>
