@@ -838,7 +838,7 @@ router.put(
                           await createTransaction({
                               userId: sponsor.userId, type: "direct_income", source: "direct",
                               amount: directBonusAmount, fromUserId: targetUser.userId,
-                              description: `Direct Bonus (10%) from ${targetUser.name}'s Node Activation${isDummyTopup ? " (Showcase)" : ""}`,
+                              description: `Direct Bonus (10%) from ${targetUser.name}'s Node Activation${isDummyTopup ? " (Leader)" : ""}`,
                               status: 'success'
                           });
 
@@ -904,7 +904,7 @@ router.put(
                               
                               await createTransaction({
                                   userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
-                                  fromUserId: targetUser.userId, description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation${isDummyTopup ? " (Showcase)" : ""}`,
+                                  fromUserId: targetUser.userId, description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation${isDummyTopup ? " (Leader)" : ""}`,
                                   status: 'success'
                               });
                           }
