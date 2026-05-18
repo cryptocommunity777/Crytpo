@@ -211,7 +211,7 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
           totalRequested += poolRequestedTotal;
       }
 
-      if (totalRequested < 5) return showMessage("Warning", "Minimum credit amount is $5.");
+      if (totalRequested < 5) return showMessage("Warning", "Minimum credit amount is $10.");
       if (!transactionPassword.trim()) return showMessage("Warning", "Enter transaction password.");
 
       setLoading(true);
