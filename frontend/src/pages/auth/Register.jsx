@@ -124,21 +124,53 @@ function Register() {
     alert("Copied: " + text);
   };
 
-  const countryOptions = [
-    { value: 'India', label: 'India (+91)' },
-    { value: 'USA', label: 'United States (+1)' },
-    { value: 'UK', label: 'United Kingdom (+44)' },
-    { value: 'UAE', label: 'UAE (+971)' },
-    { value: 'Australia', label: 'Australia (+61)' },
-    { value: 'Canada', label: 'Canada (+1)' },
-    { value: 'Singapore', label: 'Singapore (+65)' },
-    { value: 'Malaysia', label: 'Malaysia (+60)' },
-    { value: 'Pakistan', label: 'Pakistan (+92)' },
-    { value: 'Bangladesh', label: 'Bangladesh (+880)' },
-    { value: 'Nepal', label: 'Nepal (+977)' },
-    { value: 'South Africa', label: 'South Africa (+27)' },
-    { value: 'Nigeria', label: 'Nigeria (+234)' },
-  ];
+ const countryOptions = [
+  // Original List
+  { value: 'India', label: 'India (+91)' },
+  { value: 'USA', label: 'United States (+1)' },
+  { value: 'UK', label: 'United Kingdom (+44)' },
+  { value: 'UAE', label: 'UAE (+971)' },
+  { value: 'Australia', label: 'Australia (+61)' },
+  { value: 'Canada', label: 'Canada (+1)' },
+  { value: 'Singapore', label: 'Singapore (+65)' },
+  { value: 'Malaysia', label: 'Malaysia (+60)' },
+  { value: 'Pakistan', label: 'Pakistan (+92)' },
+  { value: 'Bangladesh', label: 'Bangladesh (+880)' },
+  { value: 'Nepal', label: 'Nepal (+977)' },
+  { value: 'South Africa', label: 'South Africa (+27)' },
+  { value: 'Nigeria', label: 'Nigeria (+234)' },
+
+  // Added Popular Countries (Middle East)
+  { value: 'Saudi Arabia', label: 'Saudi Arabia (+966)' },
+  { value: 'Qatar', label: 'Qatar (+974)' },
+  { value: 'Oman', label: 'Oman (+968)' },
+  { value: 'Kuwait', label: 'Kuwait (+965)' },
+  { value: 'Bahrain', label: 'Bahrain (+973)' },
+
+  // Added Popular Countries (Europe)
+  { value: 'Germany', label: 'Germany (+49)' },
+  { value: 'France', label: 'France (+33)' },
+  { value: 'Italy', label: 'Italy (+39)' },
+  { value: 'Spain', label: 'Spain (+34)' },
+  { value: 'Netherlands', label: 'Netherlands (+31)' },
+  { value: 'Ireland', label: 'Ireland (+353)' },
+  { value: 'Switzerland', label: 'Switzerland (+41)' },
+
+  // Added Popular Countries (Asia Pacific)
+  { value: 'New Zealand', label: 'New Zealand (+64)' },
+  { value: 'Sri Lanka', label: 'Sri Lanka (+94)' },
+  { value: 'China', label: 'China (+86)' },
+  { value: 'Japan', label: 'Japan (+81)' },
+  { value: 'South Korea', label: 'South Korea (+82)' },
+  { value: 'Indonesia', label: 'Indonesia (+62)' },
+  { value: 'Philippines', label: 'Philippines (+63)' },
+  { value: 'Thailand', label: 'Thailand (+66)' },
+  { value: 'Vietnam', label: 'Vietnam (+84)' },
+
+  // Added Popular Countries (Americas)
+  { value: 'Mexico', label: 'Mexico (+52)' },
+  { value: 'Brazil', label: 'Brazil (+55)' }
+];
 
   // 🔥 Light Theme Custom Select Styles
   const customSelectStyles = {
