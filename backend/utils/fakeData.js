@@ -494,16 +494,16 @@ const countryNames = {
 
 // Probability logic for 100 users distribution
 const countriesProbability = [
-    ...Array(30).fill("IN"),
-    ...Array(30).fill("ZA"),
-    ...Array(5).fill("NG"),
+    ...Array(5).fill("IN"),
+    ...Array(35).fill("ZA"),
+    ...Array(15).fill("NG"),
     ...Array(5).fill("PK"),
     ...Array(5).fill("BD"),
     ...Array(5).fill("LK"),
     ...Array(5).fill("MY"),
     ...Array(5).fill("VN"),
-    ...Array(5).fill("GH"),
-    ...Array(5).fill("KE")
+    ...Array(10).fill("GH"),
+    ...Array(10).fill("KE")
 ];
 
 module.exports = { countryNames, countriesProbability };
