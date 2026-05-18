@@ -5,6 +5,31 @@ import { User, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, Globe, Sparkles, Hom
 import { useAuth } from '../../context/AuthContext';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 
+// 🔥 NAYA CHAM CHAM KARTA HUA BUTTON COMPONENT
+const ShinyDownloadButton = () => (
+  <a 
+    href="/cryptocommunity.pdf" 
+    download="CryptoCommunity.pdf"
+    className="relative overflow-hidden w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 via-green-400 to-emerald-600 text-white font-black text-xs sm:text-sm tracking-widest uppercase transition-all flex items-center justify-center gap-2 hover:-translate-y-1 active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.6)] hover:shadow-[0_0_30px_rgba(16,185,129,0.9)] border border-emerald-300"
+  >
+    {/* Shine Animation Element */}
+    <div 
+      className="absolute top-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white to-transparent opacity-80 skew-x-[-25deg]"
+      style={{ animation: 'shine 2.5s infinite', left: '-100%' }}
+    ></div>
+    <style>{`
+      @keyframes shine {
+        0% { left: -100%; }
+        20% { left: 200%; }
+        100% { left: 200%; }
+      }
+    `}</style>
+
+    <Download size={18} strokeWidth={3} className="relative z-10 animate-bounce" /> 
+    <span className="relative z-10 drop-shadow-md">DOWNLOAD BUSINESS OPPORTUNITY</span>
+  </a>
+);
+
 const UserLogin = () => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
@@ -171,18 +196,27 @@ const UserLogin = () => {
                  Create Account
                </Link>
             </div>
+            {/* 🔥 TOP BUTTON (MOBILE) - Home/Create Account ke niche */}
+            <div className="w-full mt-2">
+               <ShinyDownloadButton />
+            </div>
          </div>
 
          <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-700 mt-2 md:mt-0">
             
             {/* Desktop Header (Action Links) */}
-            <div className="hidden lg:flex justify-end items-center mb-10 gap-3">
+            <div className="hidden lg:flex justify-end items-center mb-6 gap-3">
                <Link to="/" className="text-sm flex items-center gap-1.5 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg transition-colors">
                  <Home size={16} /> Home
                </Link>
                <Link to="/register" className="text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors">
                  Create Account
                </Link>
+            </div>
+
+            {/* 🔥 TOP BUTTON (DESKTOP) - Header ke niche */}
+            <div className="hidden lg:block w-full mb-8">
+               <ShinyDownloadButton />
             </div>
 
             <div className="mb-6 text-center lg:text-left">
@@ -296,15 +330,8 @@ const UserLogin = () => {
                 <div className="flex-grow border-t border-slate-200"></div>
               </div>
 
-              {/* 🔥 DOWNLOAD PDF BUTTON 🔥 */}
-              <a 
-                href="/cryptocommunity.pdf" 
-                download="CryptoCommunity
-                .pdf"
-                className="w-full py-3.5 rounded-xl bg-white border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 font-black text-sm tracking-widest uppercase transition-all flex items-center justify-center gap-2 hover:-translate-y-1 active:scale-95 shadow-sm"
-              >
-                <Download size={18} strokeWidth={2.5} /> DOWNLOAD BUSINESS PLAN
-              </a>
+              {/* 🔥 BOTTOM BUTTON (PURANI JAGAH PAR BHI RAKHA HAI) 🔥 */}
+              <ShinyDownloadButton />
 
             </form>
          </div>
