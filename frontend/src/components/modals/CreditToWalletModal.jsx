@@ -170,7 +170,7 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
     }
   }, []);
 
-  const handleCredit = async () => {
+ const handleCredit = async () => {
     try {
       if (isLeader) {
          return showMessage("Action Denied", "Leaders cannot credit funds to wallet directly from here.");
@@ -211,7 +211,15 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
           totalRequested += poolRequestedTotal;
       }
 
-      if (totalRequested < 5) return showMessage("Warning", "Minimum credit amount is $10.");
+      // 🔥 NAYE FRONTEND CHECKS (API call hone se pehle hi rok lo)
+      if (totalRequested < 10) {
+          return showMessage("Warning", `Minimum credit amount is $10. You entered $${totalRequested}.`);
+      }
+      
+      if (totalRequested % 10 !== 0) {
+          return showMessage("Warning", `Amount must be in multiples of $10. Your total is $${totalRequested}.`);
+      }
+
       if (!transactionPassword.trim()) return showMessage("Warning", "Enter transaction password.");
 
       setLoading(true);
@@ -234,8 +242,10 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
       }
 
     } catch (err) {
-      console.error(err);
-      showMessage("Error", err.message || err.response?.data?.message || "Error crediting income");
+      console.error("Catch Error:", err);
+      // 🔥 FIX: Ab ye sabse pehle backend ka bheja hua error message dikhayega, na ki "Axios 400"
+      const errorMessage = err.response?.data?.message || err.message || "Error crediting income";
+      showMessage("Error", errorMessage);
     } finally {
       setLoading(false); 
     }

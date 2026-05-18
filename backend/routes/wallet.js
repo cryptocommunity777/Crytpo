@@ -793,10 +793,10 @@ router.post(
       const { items, transactionPassword, userId } = req.body;
 
       const user = await User.findOne({ userId: Number(userId) });
-      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user) return res.status(404).json({ message: "User not found." });
 
       // 🛡️ BASIC CHECKS
-      if (!user.isToppedUp) return res.status(400).json({ message: "You need an Active ID (Top-up required)." });
+      if (!user.isToppedUp) return res.status(400).json({ message: "You need an Active ID (Top-up required) to perform this action." });
       
       const isPasswordValid = (transactionPassword.toLowerCase() === user.transactionPassword.toLowerCase());
       if (!isPasswordValid) return res.status(403).json({ message: "Invalid Transaction Password." });
@@ -809,19 +809,27 @@ router.post(
       let totalAmt = 0;
       for (let item of items) {
         const amt = Math.floor(parseFloat(item.amount));
-        if (amt <= 0) return res.status(400).json({ message: "Invalid amount detected." });
+        if (amt <= 0) return res.status(400).json({ message: "Invalid amount detected. Amount must be greater than 0." });
         
         totalAmt += amt; // Sirf total calculate karo
       }
 
-      // ✨ NAYA CHECK (Loop ke bahar, yani Total Amount par)
-      if (totalAmt % 10 !== 0) {
-          return res.status(400).json({ message: `Total credit amount must be in multiples of $10. Your total is $${totalAmt}.` });
+      // =========================================================
+      // ✨ IMPROVED ERROR CHECKS (Order Sahi Kar Diya Hai)
+      // =========================================================
+      
+      // 1. Pehle check karo ki total $10 se kam toh nahi hai
+      if (totalAmt < 10) {
+        return res.status(400).json({ 
+            message: `Minimum required amount is $10. You only entered $${totalAmt}. Please increase the amount.` 
+        });
       }
 
-      // ✨ UPDATE: Minimum total credit amount is now $10
-      if (totalAmt < 10) {
-        return res.status(400).json({ message: `Minimum total credit amount is $10. You entered $${totalAmt}.` });
+      // 2. Fir check karo ki total $10 ke multiples me hai ya nahi (e.g., 10, 20, 50)
+      if (totalAmt % 10 !== 0) {
+          return res.status(400).json({ 
+              message: `Amount must be in multiples of $10 (e.g., $10, $20, $30). You entered $${totalAmt}.` 
+          });
       }
 
       // =========================================================
@@ -850,19 +858,19 @@ router.post(
         const amt = Math.floor(parseFloat(item.amount));
 
         if (item.source === "direct") {
-          if (simDirect < amt) return res.status(400).json({ message: "Insufficient Direct Income." });
+          if (simDirect < amt) return res.status(400).json({ message: "Insufficient Direct Income balance." });
           simDirect -= amt;
         } else if (item.source === "level") {
-          if (simLevel < amt) return res.status(400).json({ message: "Insufficient Level Income." });
+          if (simLevel < amt) return res.status(400).json({ message: "Insufficient Level Income balance." });
           simLevel -= amt;
         } else if (item.source === "reward") {
-          if (simReward < amt) return res.status(400).json({ message: "Insufficient Team Reward Income." });
+          if (simReward < amt) return res.status(400).json({ message: "Insufficient Team Reward Income balance." });
           simReward -= amt;
         } else if (item.source === "pool") {
-          if (availablePoolBalance < amt) return res.status(400).json({ message: "Insufficient Single Leg Community Income." });
+          if (availablePoolBalance < amt) return res.status(400).json({ message: "Insufficient Single Leg Community Income balance." });
           availablePoolBalance -= amt;
         } else {
-          return res.status(400).json({ message: `Invalid source: ${item.source}` });
+          return res.status(400).json({ message: `Invalid source detected: ${item.source}` });
         }
       }
 
@@ -908,13 +916,13 @@ router.post(
 
       res.json({
         success: true,
-        message: `Successfully credited $${totalNetAmount} after 10% deduction`,
+        message: `Successfully credited $${totalNetAmount} after 10% deduction.`,
         walletBalance: user.walletBalance
       });
 
     } catch (err) {
       console.error("Credit-to-wallet error:", err);
-      res.status(500).json({ message: "Server processing error" });
+      res.status(500).json({ message: "Server processing error. Please try again later." });
     }
   }
 );
