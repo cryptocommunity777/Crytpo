@@ -72,7 +72,7 @@ const PromoVideoBox = () => {
   };
 
   if (loading) {
-    return <div className="w-full bg-white p-3 rounded-2xl border border-slate-200 animate-pulse h-32"></div>;
+    return <div className="w-full bg-white p-3 rounded-2xl border border-slate-200 animate-pulse h-36"></div>;
   }
 
   if (videos.length === 0) return null;
@@ -81,24 +81,23 @@ const PromoVideoBox = () => {
   const embedUrl = getEmbedUrl(currentVideo.youtubeUrl);
 
   return (
-    // 🔥 PADDING AUR KAM KI (p-2.5 sm:p-3) TAAKI BOX CHHOTA LAGE
-    <div className="relative overflow-hidden bg-white p-2.5 sm:p-3 rounded-2xl border border-slate-200 shadow-sm group w-full">
+    <div className="relative overflow-hidden bg-white p-3 md:p-4 rounded-2xl border border-slate-200 shadow-sm group w-full">
       <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-green-100 blur-[40px] rounded-full pointer-events-none"></div>
 
       <div className="relative z-10">
         
-        {/* HEADER - 🔥 HEADING AUR CHHOTI KAR DI */}
-        <div className="mb-2">
-          <h3 className="text-black text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-            <div className="bg-green-50 p-1 rounded border border-green-100">
-              <PlayCircle size={12} className="text-green-600" />
+        {/* HEADER */}
+        <div className="mb-2.5">
+          <h3 className="text-black text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+            <div className="bg-green-50 p-1.5 rounded border border-green-100">
+              <PlayCircle size={14} className="text-green-600" />
             </div>
             Videos
           </h3>
         </div>
 
-        {/* YOUTUBE IFRAME - 🔥 MARGIN KAM KIYA */}
-        <div className="w-full relative rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-900 aspect-video mb-2">
+        {/* YOUTUBE IFRAME */}
+        <div className="w-full relative rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-900 aspect-video mb-3">
           {embedUrl ? (
             <iframe
               className="w-full h-full"
@@ -109,56 +108,57 @@ const PromoVideoBox = () => {
               allowFullScreen
             ></iframe>
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-slate-400 text-[10px]">Invalid URL</div>
+            <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">Invalid URL</div>
           )}
         </div>
 
         {/* BOTTOM CONTROLS: PREV/NEXT (Left) + SHARE & COPY (Right) */}
-        <div className="flex items-center justify-between">
+        {/* 🔥 YAHAN CHANGE KIYA HAI: flex-nowrap lagaya aur gap kam kiya taaki ek hi line me aayein */}
+        <div className="flex flex-nowrap items-center justify-between gap-1 sm:gap-3 mt-2 w-full overflow-x-auto no-scrollbar">
           
           {/* SLIDER CONTROLS */}
           {videos.length > 1 ? (
-            <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-100">
+            <div className="flex items-center gap-1 bg-slate-50 p-1 sm:p-1.5 rounded-xl border border-slate-100 shrink-0">
               <button 
                 onClick={handlePrev} 
-                className="flex items-center justify-center w-5 h-5 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-700 transition-all active:scale-95"
+                className="flex items-center gap-0.5 sm:gap-1 px-2 sm:px-3 py-2 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg text-[10px] sm:text-xs font-bold text-slate-700 transition-all active:scale-95 shadow-sm"
               >
-                <ChevronLeft size={12} />
+                <ChevronLeft size={14} /> <span className="hidden min-[360px]:inline">Prev</span>
               </button>
 
-              <span className="text-[9px] font-black text-slate-500 tracking-widest px-1">
+              <span className="text-[10px] sm:text-xs font-black text-slate-500 tracking-widest px-1.5 sm:px-2">
                 {currentIndex + 1} <span className="text-slate-300">/</span> {videos.length}
               </span>
 
               <button 
                 onClick={handleNext} 
-                className="flex items-center justify-center w-5 h-5 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-700 transition-all active:scale-95"
+                className="flex items-center gap-0.5 sm:gap-1 px-2 sm:px-3 py-2 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg text-[10px] sm:text-xs font-bold text-slate-700 transition-all active:scale-95 shadow-sm"
               >
-                <ChevronRight size={12} />
+                <span className="hidden min-[360px]:inline">Next</span> <ChevronRight size={14} />
               </button>
             </div>
           ) : (
-            <div></div> // Empty div taaki right side wale buttons wahi rahein
+            <div className="w-full sm:w-auto"></div> 
           )}
 
-          {/* 🔥 SHARE & COPY BUTTONS YAHAN HAIN */}
-          <div className="flex items-center gap-1.5">
+          {/* SHARE & COPY BUTTONS */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* COPY BUTTON */}
             <button 
               onClick={handleCopy}
-              className="flex items-center gap-1 text-[8px] sm:text-[9px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-2 py-1.5 rounded-lg transition-colors active:scale-95 border border-slate-200"
+              className="flex items-center gap-1 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors active:scale-95 border border-slate-200 shadow-sm"
             >
-              {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
-              {copied ? "COPIED" : "COPY"}
+              {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+              <span className="hidden min-[360px]:inline">{copied ? "COPIED" : "COPY"}</span>
             </button>
 
             {/* SHARE BUTTON */}
             <button 
               onClick={handleShare}
-              className="flex items-center gap-1 text-[8px] sm:text-[9px] font-bold text-white bg-green-600 hover:bg-green-700 px-2 py-1.5 rounded-lg transition-colors active:scale-95 shadow-sm"
+              className="flex items-center gap-1 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors active:scale-95 shadow-sm"
             >
-              <Share2 size={12} />
-              SHARE
+              <Share2 size={14} />
+              <span className="hidden min-[360px]:inline">SHARE</span>
             </button>
           </div>
 
