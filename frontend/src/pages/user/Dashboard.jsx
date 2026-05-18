@@ -14,6 +14,8 @@ import DailyROIPlan from "../../components/dashboard/DailyROI";
 import SpinnerOverlay from "../../components/common/SpinnerOverlay";
 import SuccessModal from "../../components/modals/SuccessModal";
 import TelegramPopup from "../../components/TelegramPopup";
+// 🔥 NAYA IMPORT
+import PromoVideoBox from "../../components/dashboard/PromoVideoBox"; 
 
 const Dashboard = ({ setModalState }) => {
   const { user, token, setUser, logout } = useAuth();
@@ -147,6 +149,11 @@ const Dashboard = ({ setModalState }) => {
              globalFakeCount={globalFakeCount} 
            />
         </section>
+
+        {/* 🔥 NAYA BOX YAHAN ADD KIYA GAYA HAI REFERRAL LINK KE THIK UPAR */}
+        <div>
+            <PromoVideoBox />
+        </div>
 
         <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
              <ReferralLink link={referralLink} />

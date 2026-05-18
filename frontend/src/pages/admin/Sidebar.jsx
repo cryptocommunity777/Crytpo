@@ -5,7 +5,7 @@ import {
   FaSitemap, FaProjectDiagram, FaExchangeAlt, FaFileAlt, FaUserPlus,FaGift,
   FaArrowCircleUp, FaArrowCircleDown, FaBell, FaClipboardList, FaCoins,
   FaUserSlash, FaBars, FaTimes, FaHistory, FaShieldAlt, FaBan,
-  FaUserCog // 🔥 NAYA ICON ADD KIYA
+  FaUserCog, FaYoutube // 🔥 NAYA ICON 'FaYoutube' ADD KIYA
 } from 'react-icons/fa';
 
 const Sidebar = () => {
@@ -166,6 +166,11 @@ const Sidebar = () => {
             
             <NavLink to={`${BASE_PATH}/support`} className={linkClass} onClick={toggleSidebar}>
               <FaFileAlt className="inline-block mr-2" /> Support
+            </NavLink>
+
+            {/* 🎥 NAYA: PROMO VIDEO LINK YAHAN ADD KIYA HAI */}
+            <NavLink to={`${BASE_PATH}/promo-video`} className={linkClass} onClick={toggleSidebar}>
+              <FaYoutube className="inline-block mr-2 text-red-500" /> Promo Video
             </NavLink>
 
             <NavLink to={`${BASE_PATH}/settings`} className={linkClass} onClick={toggleSidebar}>

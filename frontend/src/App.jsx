@@ -62,6 +62,7 @@ import AddUser from './pages/admin/AddUser.jsx';
 import AdminNotifications from './pages/admin/AdminCreateNotification.jsx';
 import AdminSupport from "./pages/admin/AdminSupport.jsx";
 import ManualDeposit from './pages/admin/ManualDeposit.jsx';
+import AdminPromoVideo from './pages/admin/AdminPromoVideo.jsx';
 import AdminLoginStats from './pages/admin/AdminLoginStats.jsx'; 
 import AdminSecurity from './pages/admin/AdminSecurity.jsx'; 
 import DeviceManager from './pages/admin/DeviceManager.jsx';
@@ -151,6 +152,7 @@ function AppContent() {
               <Route path="login-stats" element={<AdminLoginStats />} />
               <Route path="add-user" element={<AddUser />} />
               <Route path="manual-deposit" element={<ManualDeposit />} />
+              <Route path="promo-video" element={<AdminPromoVideo />} />
               <Route path="device-manager" element={<DeviceManager />} />
               <Route path="manage-users" element={<AdminManageUsers />} />
               <Route path="support" element={<AdminSupport />} />
