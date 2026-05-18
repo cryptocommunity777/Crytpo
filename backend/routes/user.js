@@ -626,6 +626,11 @@ router.put(
       const targetUser = await User.findOne({ userId: targetUserId });
       if (!targetUser) return res.status(404).json({ message: 'Target user not found' });
 
+      // 🔥 NAYA CHECK: Agar ID pehle se topup hai toh yahin rok do 🔥
+      if (targetUser.isToppedUp) {
+          return res.status(400).json({ message: "Action Denied! This ID is already activated (Topped Up)." });
+      }
+
       // 🔹 2. RELATIONSHIP CHECK (Direct, Self, or Downline)
       const isDirectReferral = Number(targetUser.sponsorId) === Number(currentUser.userId);
       const isSelfTopup = Number(targetUser.userId) === Number(currentUser.userId);
