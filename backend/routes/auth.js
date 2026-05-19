@@ -90,11 +90,7 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         }
     }
 
-    // 2. Existing User Check
-    const existingUser = await User.findOne({ $or: [{ email: email }, { mobile: mobile }] });
-    if (existingUser) {
-        return res.status(400).json({ message: existingUser.mobile === mobile ? 'Mobile already registered.' : 'Email already registered.' });
-    }
+   
 
     // 🛡️ SMART REGISTRATION LIMIT (5 Accounts Per IP + Admin Block)
     const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';

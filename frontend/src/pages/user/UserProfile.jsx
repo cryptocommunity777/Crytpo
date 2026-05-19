@@ -24,15 +24,8 @@ function UserProfile() {
     walletAddress: user?.walletAddress || '',
   });
 
-  const checkWalletAddress = async (address) => {
-    try {
-      const res = await api.post('/user/check-wallet', { walletAddress: address });
-      return res.data.exists;
-    } catch (err) {
-      console.error('Wallet check failed', err);
-      return false; 
-    }
-  };
+  // 🔥 Is function ki ab zaroorat nahi kyunki hum same wallet allow kar rahe hain
+  // const checkWalletAddress = async (address) => { ... }
 
   const [profileTxnPassword, setProfileTxnPassword] = useState('');
 
@@ -57,20 +50,18 @@ function UserProfile() {
     if (!user) return null;
     if (user.role === 'admin') return null;
 
+    // Rule 1: Pending withdrawal lock
     if (user.pendingWithdrawals && Object.values(user.pendingWithdrawals).some(v => v > 0)) {
       return 'Wallet address cannot be changed because a withdrawal process has already started.';
     }
 
+    // Rule 2: 24-hour Limit Lock
     if (
       user.walletAddressChangeCount >= 2 &&
       user.walletAddressChangeWindowStart &&
       Date.now() - new Date(user.walletAddressChangeWindowStart).getTime() < 24 * 60 * 60 * 1000
     ) {
       return 'You can change your wallet address only 2 times within 24 hours.';
-    }
-
-    if (user.walletAddress && formData.walletAddress && formData.walletAddress !== user.walletAddress) {
-      return 'Each user can have only one wallet address. Cannot add another.';
     }
 
     return null;
@@ -88,12 +79,9 @@ function UserProfile() {
       return showMessage('Transaction Password Required', 'Please enter your transaction password to update profile.', 'warning');
     }
 
-    if (formData.walletAddress && formData.walletAddress !== user.walletAddress) {
-      const exists = await checkWalletAddress(formData.walletAddress);
-      if (exists) {
-        return showMessage('Wallet Already Used', '❌ This wallet address is already used by another user.', 'error');
-      }
-    }
+    // 🔥 YAHAN SE CHANGE KIYA HAI:
+    // Pehle yahan checkWalletAddress() tha jo same wallet hone par rok deta tha.
+    // Ab usko hata diya hai taaki ek hi address 10 IDs me bhi lag sake!
 
     if (user.pendingWithdrawals && Object.values(user.pendingWithdrawals).some(v => v > 0)) {
       return showMessage('Wallet Address Locked', '🔒 Wallet address cannot be changed because a withdrawal process has already started.', 'error');
@@ -223,7 +211,16 @@ function UserProfile() {
                             <input name="name" value={formData.name} readOnly disabled className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pl-10 text-slate-500 font-bold cursor-not-allowed outline-none text-sm" />
                          </div>
                       </div>
+                      
                       <div>
+                         <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Email Address</label>
+                         <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Mail size={16} className="text-slate-400" /></div>
+                            <input name="email" value={formData.email} readOnly disabled className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pl-10 text-slate-500 font-bold cursor-not-allowed outline-none text-sm" />
+                         </div>
+                      </div>
+
+                      <div className="md:col-span-2">
                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Mobile Number</label>
                          <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Smartphone size={16} className="text-slate-400" /></div>

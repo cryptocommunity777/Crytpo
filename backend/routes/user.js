@@ -1349,17 +1349,18 @@ router.put('/:userId', authMiddleware, async (req, res) => {
         });
       }
 
-      // Check uniqueness
-      const exists = await User.findOne({ walletAddress, userId: { $ne: user.userId } });
-      if (exists) return res.status(403).json({ message: 'Address already in use by another user.' });
+     // 🔥 IS UNIQUE WALE CHECK KO COMMENT YA DELETE KAR DO
+      // const exists = await User.findOne({ walletAddress, userId: { $ne: user.userId } });
+      // if (exists) return res.status(403).json({ message: 'Address already in use by another user.' });
 
+      // 👇 BAS ITNA CODE RAKHNA HAI 👇
       user.walletAddress = walletAddress;
       
-      // Address change tracking (Important)
+      // Address change tracking (Important - Ise mat chhedna)
       user.walletAddressChangeCount = (user.walletAddressChangeCount || 0) + 1;
       user.walletAddressChangeWindowStart = new Date();
     }
-
+    
     // 5. UPDATE OTHER FIELDS (Optional: agar user name/email change karna chahe)
     if (name) user.name = name;
     if (email) user.email = email;
