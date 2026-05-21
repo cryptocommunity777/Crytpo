@@ -47,16 +47,34 @@ const generateUserId = async () => {
 // ====================== REGISTER ======================
 router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
   try {
-    const { name, mobile, email, country, password, sponsorId, deviceId } = req.body;
+    let { name, mobile, email, country, password, sponsorId, deviceId } = req.body;
     const userIP = getClientIP(req);
 
+    // 🔥 SECURITY LAYER 0: Remove extra spaces (trim) so bots can't trick the system
+    name = name ? name.trim() : '';
+    mobile = mobile ? mobile.trim() : '';
+    email = email ? email.trim() : '';
+
+    // 🔥 1. STRICT NAME VALIDATION (Sirf A-Z aur spaces allow karega, max 50 characters)
+    const nameRegex = /^[A-Za-z\s]{3,50}$/;
+    if (!name || !nameRegex.test(name)) {
+        return res.status(400).json({ message: 'Invalid Name. Only alphabets are allowed (No symbols or numbers).' });
+    }
+
+    // 🔥 2. STRICT MOBILE VALIDATION (Sirf Numbers, 10 se 15 digits)
+    const mobileRegex = /^[0-9]{10,15}$/;
+    if (!mobile || !mobileRegex.test(mobile)) {
+        return res.status(400).json({ message: 'Invalid Mobile Number. Enter 10 to 15 digits only.' });
+    }
+
+    // 🔥 3. EMAIL CHECK
     if (!email || !email.toLowerCase().endsWith('@gmail.com')) {
         return res.status(400).json({ message: 'Registration failed: Only @gmail.com emails are accepted.' });
     }
 
     if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
 
-    // 🔥 1. SPONSOR CHECK LOGIC (Real and Fake)
+    // 🔥 4. SPONSOR CHECK LOGIC (Real and Fake)
     let actualSponsorId = parseInt(sponsorId);
     let sponsorExists = await User.findOne({ userId: actualSponsorId });
     let isFakeSponsor = false;
@@ -76,8 +94,7 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         });    
     }
 
-    // ✨ NAYA LOGIC: Agar Sponsor Fake User hai, toh real user ko System (Admin) ke direct me daal do!
-   // ✨ NAYA LOGIC: Agar Sponsor Fake User hai, toh real user ko seedha 100000 wali ID ke direct me daal do!
+    // ✨ NAYA LOGIC: Agar Sponsor Fake User hai, toh real user ko seedha 100000 wali ID ke direct me daal do!
     if (isFakeSponsor) {
         const SYSTEM_TOP_ID = 100000; // 🔥 Aapki fix ki hui Main Earning ID
         
@@ -89,8 +106,6 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
             console.log(`⚠️ WARNING: Top ID ${SYSTEM_TOP_ID} not found in database!`);
         }
     }
-
-   
 
     // 🛡️ SMART REGISTRATION LIMIT (5 Accounts Per IP + Admin Block)
     const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
@@ -144,54 +159,54 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     // 👉 EMAIL TEMPLATE
     try {
         await sendEmail({
-    email: user.email,
-    subject: '🎉 Welcome to Crypto Community!',
-    html: `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea;">
-        
-        <div style="background-color: #2b4450; padding: 40px 20px; text-align: center; color: #ffffff;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🚀 Welcome to Crypto Community</h1>
-            <p style="margin: 10px 0 0 0; font-size: 15px; color: #cccccc;">Your journey to financial growth starts here</p>
-        </div>
-        
-        <div style="padding: 40px 30px; color: #333333;">
-            <p style="font-size: 16px; margin-top: 0; margin-bottom: 15px;">Hello <strong>${user.name}</strong>,</p>
-            
-            <p style="font-size: 15px; line-height: 1.6; color: #555555; margin-bottom: 20px;">
-                Congratulations! Your account has been successfully created. Get ready to build your global network, unlock exciting <strong>Single Leg rewards</strong>, and track your daily growth with our secure platform. We are thrilled to have you on board! 🌟
-            </p>
-            <p style="font-size: 15px; line-height: 1.6; color: #555555; margin-bottom: 30px;">
-                Please find your confidential login details below:
-            </p>
-            
-            <div style="background-color: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 35px; border-left: 4px solid #1e88e5;">
-                <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
-                    <span style="display: inline-block; width: 25px;">👤</span> <strong>User ID:</strong> ${user.userId}
-                </p>
-                <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
-                    <span style="display: inline-block; width: 25px;">🔑</span> <strong>Password:</strong> ${user.password}
-                </p>
-                <p style="margin: 0; font-size: 16px; color: #333;">
-                    <span style="display: inline-block; width: 25px;">🛡️</span> <strong>Transaction Password:</strong> ${user.transactionPassword}
-                </p>
+            email: user.email,
+            subject: '🎉 Welcome to Crypto Community!',
+            html: `
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea;">
+                
+                <div style="background-color: #2b4450; padding: 40px 20px; text-align: center; color: #ffffff;">
+                    <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🚀 Welcome to Crypto Community</h1>
+                    <p style="margin: 10px 0 0 0; font-size: 15px; color: #cccccc;">Your journey to financial growth starts here</p>
+                </div>
+                
+                <div style="padding: 40px 30px; color: #333333;">
+                    <p style="font-size: 16px; margin-top: 0; margin-bottom: 15px;">Hello <strong>${user.name}</strong>,</p>
+                    
+                    <p style="font-size: 15px; line-height: 1.6; color: #555555; margin-bottom: 20px;">
+                        Congratulations! Your account has been successfully created. Get ready to build your global network, unlock exciting <strong>Single Leg rewards</strong>, and track your daily growth with our secure platform. We are thrilled to have you on board! 🌟
+                    </p>
+                    <p style="font-size: 15px; line-height: 1.6; color: #555555; margin-bottom: 30px;">
+                        Please find your confidential login details below:
+                    </p>
+                    
+                    <div style="background-color: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 35px; border-left: 4px solid #1e88e5;">
+                        <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
+                            <span style="display: inline-block; width: 25px;">👤</span> <strong>User ID:</strong> ${user.userId}
+                        </p>
+                        <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
+                            <span style="display: inline-block; width: 25px;">🔑</span> <strong>Password:</strong> ${user.password}
+                        </p>
+                        <p style="margin: 0; font-size: 16px; color: #333;">
+                            <span style="display: inline-block; width: 25px;">🛡️</span> <strong>Transaction Password:</strong> ${user.transactionPassword}
+                        </p>
+                    </div>
+                    
+                    <div style="text-align: center; margin-bottom: 40px;">
+                        <a href="https://cryptocommunity.live/login" style="display: inline-block; background-color: #1e88e5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(30,136,229,0.3);">🔐 Login to Dashboard</a>
+                    </div>
+                    
+                    <p style="font-size: 14px; color: #d32f2f; margin: 0; background-color: #ffebee; padding: 12px; border-radius: 6px;">
+                        ⚠️ <strong>Security Alert:</strong> Please do not share your login or transaction passwords with anyone for your account's safety.
+                    </p>
+                </div>
+                
+                <div style="background-color: #1a1a1a; padding: 20px; text-align: center; color: #888888; font-size: 13px;">
+                    © 2026 Crypto Community. All rights reserved.<br>
+                    <span style="font-size: 11px;">This is an automated message, please do not reply to this email.</span>
+                </div>
             </div>
-            
-            <div style="text-align: center; margin-bottom: 40px;">
-                <a href="https://cryptocommunity.live/login" style="display: inline-block; background-color: #1e88e5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(30,136,229,0.3);">🔐 Login to Dashboard</a>
-            </div>
-            
-            <p style="font-size: 14px; color: #d32f2f; margin: 0; background-color: #ffebee; padding: 12px; border-radius: 6px;">
-                ⚠️ <strong>Security Alert:</strong> Please do not share your login or transaction passwords with anyone for your account's safety.
-            </p>
-        </div>
-        
-        <div style="background-color: #1a1a1a; padding: 20px; text-align: center; color: #888888; font-size: 13px;">
-            © 2026 Crypto Community. All rights reserved.<br>
-            <span style="font-size: 11px;">This is an automated message, please do not reply to this email.</span>
-        </div>
-    </div>
-    ` 
-});
+            ` 
+        });
     } catch (emailErr) { 
         console.error("Email failed:", emailErr); 
     }
