@@ -1,3 +1,4 @@
+ 
 import React, { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
@@ -57,10 +58,11 @@ function Register() {
     }
   };
 
+  // 🔥 MOBILE FIX: Ab 15 digits tak allow karega type karna (taaki international form fix ho)
   const handleMobileChange = (e) => {
     let value = e.target.value.replace(/\D/g, ''); 
     value = value.replace(/^0+/, ''); 
-    if (value.length > 10) value = value.slice(0, 10);
+    if (value.length > 15) value = value.slice(0, 15); // Changed 10 to 15
     setMobile(value);
   };
 
@@ -68,14 +70,38 @@ function Register() {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!name || !mobile || !email || !country || !password || !confirmPassword) {
+    // 🔥 SECURITY: Trim extra spaces
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+    const cleanMobile = mobile.trim();
+
+    if (!cleanName || !cleanMobile || !cleanEmail || !country || !password || !confirmPassword) {
       setErrorMsg('All fields are required.');
       return;
     }
-    if (country === 'India' && mobile.length !== 10) {
-      setErrorMsg('Mobile number must be exactly 10 digits for India.');
+
+    // 🔥 1. FRONTEND NAME VALIDATION (Saves server load from Bots)
+    const nameRegex = /^[A-Za-z\s]{3,50}$/;
+    if (!nameRegex.test(cleanName)) {
+      setErrorMsg('Invalid Name. Only alphabets are allowed (No symbols or numbers).');
       return;
     }
+
+    // 🔥 2. FRONTEND EMAIL VALIDATION
+    if (!cleanEmail.toLowerCase().endsWith('@gmail.com')) {
+      setErrorMsg('Only @gmail.com emails are accepted.');
+      return;
+    }
+
+    // 🔥 3. FRONTEND MOBILE VALIDATION
+    if (country === 'India' && cleanMobile.length !== 10) {
+      setErrorMsg('Mobile number must be exactly 10 digits for India.');
+      return;
+    } else if (cleanMobile.length < 10 || cleanMobile.length > 15) {
+      setErrorMsg('Mobile number must be between 10 to 15 digits.');
+      return;
+    }
+
     if (password.length < 6) {
       setErrorMsg('Password must be at least 6 characters.');
       return;
@@ -93,15 +119,21 @@ function Register() {
       const result = await fp.get();
       const visitorId = result.visitorId;
 
+      // Passing cleaned data to backend
       const response = await api.post('/auth/register', {
-        name, mobile, email, country, password, sponsorId,
+        name: cleanName, 
+        mobile: cleanMobile, 
+        email: cleanEmail, 
+        country, 
+        password, 
+        sponsorId,
         deviceId: visitorId 
       });
 
       setRegisteredData({
         userId: response.data.userId,
         password: response.data.password || password,
-        name: response.data.name || name,
+        name: response.data.name || cleanName,
       });
 
       setShowPopup(true);
@@ -315,7 +347,7 @@ function Register() {
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <User className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                       </div>
-                      <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-bold placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all" />
+                      <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value.replace(/[^A-Za-z\s]/g, ''))} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-bold placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all" />
                   </div>
 
                   <div className="relative group">
@@ -337,7 +369,6 @@ function Register() {
                         <Phone className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                     </div>
                     <input type="tel" placeholder="Mobile Number" value={mobile} onChange={handleMobileChange} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-bold placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all font-mono" />
-                    {country === 'India' }
                   </div>
               </div>
 
