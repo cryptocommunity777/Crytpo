@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+// 🔥 Default axios ki jagah aapka custom api instance import kiya hai
+import api from '../../api/axios'; 
 
 const AdminSecurity = () => {
   // --- States ---
@@ -17,7 +18,7 @@ const AdminSecurity = () => {
   const [liveStats, setLiveStats] = useState([]);
   const [loadingStats, setLoadingStats] = useState(false);
   
-  // Naye Table Controls
+  // Table Controls
   const [tableSearch, setTableSearch] = useState('');
   const [ipCountFilter, setIpCountFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -29,20 +30,26 @@ const AdminSecurity = () => {
     setTimeout(() => setMessage({ type: '', text: '' }), 4000);
   };
 
-  const getAuthToken = () => localStorage.getItem('token'); 
-
-  const axiosConfig = {
-    headers: { Authorization: `Bearer ${getAuthToken()}` }
-  };
-
   // ================= 0. FETCH LIVE STATS =================
   const fetchLiveStats = async () => {
     setLoadingStats(true);
     try {
-      const res = await axios.get('/api/admin/live-ip-stats', axiosConfig);
-      setLiveStats(res.data);
+      // 🔥 Custom api instance use kiya hai (no /api prefix needed)
+      const res = await api.get('/admin/live-ip-stats');
+      
+      let statsArray = [];
+      if (Array.isArray(res.data)) {
+        statsArray = res.data;
+      } else if (res.data && Array.isArray(res.data.data)) {
+        statsArray = res.data.data;
+      } else if (res.data && Array.isArray(res.data.stats)) {
+        statsArray = res.data.stats;
+      }
+      
+      setLiveStats(statsArray);
     } catch (err) {
-      console.error("Failed to fetch live stats");
+      console.error("Failed to fetch live stats", err);
+      setLiveStats([]); 
     }
     setLoadingStats(false);
   };
@@ -52,15 +59,17 @@ const AdminSecurity = () => {
   }, []);
 
   // ================= DATA FILTERING & PAGINATION =================
-  const filteredStats = liveStats.filter(stat => {
-    // 1. Search Logic (User ID, Name, ya IP)
+  const safeLiveStats = Array.isArray(liveStats) ? liveStats : [];
+  
+  const filteredStats = safeLiveStats.filter(stat => {
+    if (!stat) return false;
+
     const searchLower = tableSearch.toLowerCase();
     const matchesSearch = 
-      String(stat.userId).toLowerCase().includes(searchLower) ||
-      (stat.name && stat.name.toLowerCase().includes(searchLower)) ||
-      (stat.ipAddress && stat.ipAddress.toLowerCase().includes(searchLower));
+      String(stat.userId || '').toLowerCase().includes(searchLower) ||
+      (stat.name && String(stat.name).toLowerCase().includes(searchLower)) ||
+      (stat.ipAddress && String(stat.ipAddress).toLowerCase().includes(searchLower));
     
-    // 2. IP Count Filter Logic
     let matchesCount = true;
     if (ipCountFilter !== 'all') {
       if (ipCountFilter === 'above6') {
@@ -73,12 +82,10 @@ const AdminSecurity = () => {
     return matchesSearch && matchesCount;
   });
 
-  // Jab bhi filter ya search badle, Page 1 par wapas aao
   useEffect(() => {
     setCurrentPage(1);
   }, [tableSearch, ipCountFilter, itemsPerPage]);
 
-  // Pagination Calculations
   const totalPages = Math.ceil(filteredStats.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -89,7 +96,7 @@ const AdminSecurity = () => {
     if (!searchUserId) return;
     setLoading(true);
     try {
-      const res = await axios.post('/api/admin/search-user', { userId: searchUserId }, axiosConfig);
+      const res = await api.post('/admin/search-user', { userId: searchUserId });
       setUserData(res.data);
       showMessage('success', 'User found successfully.');
     } catch (err) {
@@ -104,7 +111,7 @@ const AdminSecurity = () => {
     if (!ipToSearch) return;
     setLoading(true);
     try {
-      const res = await axios.post('/api/admin/search-ip', { ipAddress: ipToSearch }, axiosConfig);
+      const res = await api.post('/admin/search-ip', { ipAddress: ipToSearch });
       setIpData(res.data.users);
       setIpRule({
         limit: res.data.rule?.limit || 5,
@@ -125,9 +132,9 @@ const AdminSecurity = () => {
     if (!searchIp) return;
     setLoading(true);
     try {
-      await axios.post('/api/admin/update-ip-rule', {
+      await api.post('/admin/update-ip-rule', {
         ipAddress: searchIp, limit: ipRule.limit, isBlocked: ipRule.isBlocked
-      }, axiosConfig);
+      });
       showMessage('success', 'IP Rules Updated Successfully! 🛡️');
     } catch (err) { showMessage('error', 'Failed to update IP Rule'); }
     setLoading(false);
@@ -138,7 +145,7 @@ const AdminSecurity = () => {
     if (!userData) return;
     setLoading(true);
     try {
-      await axios.post('/api/admin/toggle-sponsor', { userId: userData.user.userId, status }, axiosConfig);
+      await api.post('/admin/toggle-sponsor', { userId: userData.user.userId, status });
       showMessage('success', status ? 'Sponsor Deactivated! 🚫' : 'Sponsor Activated! ✅');
       handleSearchUser(); 
     } catch (err) { showMessage('error', 'Failed to update Sponsor status'); }
@@ -238,7 +245,6 @@ const AdminSecurity = () => {
               </div>
               <button onClick={handleUpdateIpRule} style={{ ...styles.btnPrimary, width: '100%', background: '#2c3e50' }} disabled={loading}>💾 Save Security Rules</button>
 
-              {/* 🔥 YAHAN WAPAS AAYA LIST OF USERS ON THIS IP 🔥 */}
               <div style={{ marginTop: '25px', borderTop: '1px solid #ddd', paddingTop: '15px' }}>
                 <h4>Users active on this IP ({ipData.length}):</h4>
                 {ipData.length > 0 ? (
@@ -268,7 +274,6 @@ const AdminSecurity = () => {
           </button>
         </div>
 
-        {/* NAYE TABLE CONTROLS (Responsive) */}
         <div style={styles.controlsWrap}>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
             <select style={styles.controlSelect} value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))}>
@@ -298,7 +303,6 @@ const AdminSecurity = () => {
           />
         </div>
         
-        {/* Responsive Table Wrapper */}
         <div style={styles.tableResponsive}>
           <table style={styles.table}>
             <thead>
@@ -346,7 +350,6 @@ const AdminSecurity = () => {
           </table>
         </div>
 
-        {/* PAGINATION FOOTER */}
         {filteredStats.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee' }}>
             <span style={{ fontSize: '14px', color: '#7f8c8d', marginBottom: '10px' }}>
