@@ -49,7 +49,6 @@ const WalletHistory = () => {
     setError("");
     const res = await api.get(`/wallet/history/${uid}?t=${new Date().getTime()}`);
 
- 
     // 🛡️ Safe data extraction: success:true wale format ke liye
     let txns = [];
     if (res.data && Array.isArray(res.data.history)) {
@@ -61,11 +60,17 @@ const WalletHistory = () => {
     const formattedHistory = txns
       .filter(t => allTypes.includes(t.type))
       .filter(t => {
-        if(t.type === 'fast_track') {
-     }
-        // 🔥 AUTO-POOL HIDE KARO
+        // 🔥 AUTO-POOL, UNLOCK, AUR DAILY SINGLE LEG ENTRY HIDE KARO
         const desc = (t.description || "").toLowerCase();
-        return !(desc.includes("auto-pool") || desc.includes("pool level") || desc.includes("pool income"));
+        return !(
+          desc.includes("auto-pool") || 
+          desc.includes("pool level") || 
+          desc.includes("pool income") ||
+          desc.includes("singel leg") ||      // Old typo hide
+          desc.includes("single leg") ||      // New correct spelling hide
+          desc.includes("community income") || // Daily single leg community income hide
+          desc.includes("unlocked")           // Unlocked entry hide
+        );
       })
       .map(t => {
         // 💰 Universal Amount Extractor: Sab kuch handle karega
@@ -96,8 +101,6 @@ const WalletHistory = () => {
     setLoading(false);
   }
 };
-
-
 
  const calculateBalances = () => {
   let runningBalance = 0; // Local variable to track running total
@@ -383,7 +386,7 @@ const WalletHistory = () => {
                       <td className="p-4 font-mono text-black text-xs">
                         {partyInfo !== "-" ? <span className="bg-slate-50 px-2 py-1 border border-slate-200 rounded">{partyInfo}</span> : "-"}
                       </td>
-                      <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={txn.description || "-"}>
+                      <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize whitespace-normal min-w-[200px]" title={txn.description || "-"}>
                         {txn.description || "-"}
                       </td>
                     
@@ -400,7 +403,7 @@ const WalletHistory = () => {
            <div className="p-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-10">
               <div className="flex items-center gap-3">
                  <span className="text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Rows:</span>
-                 <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="bg-white border border-slate-200 text-slate-900 text-xs font-bold rounded-lg px-2 py-1 focus:border-green-500 outline-none">
+                 <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="bg-white border border-slate-200 text-slate-900 text-xs font-bold rounded-lg px-2 py-1 focus:border-green-50 outline-none">
                    <option value={10}>10</option>
                    <option value={20}>20</option>
                    <option value={50}>50</option>

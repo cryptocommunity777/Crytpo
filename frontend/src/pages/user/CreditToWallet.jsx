@@ -30,8 +30,21 @@ const CreditToWalletHistory = () => {
         const creditTxs = rawData
           .filter(
             (tx) =>
-              tx.type === "credit_to_wallet" || tx.type === "binary_income"
+              tx.type === "credit_to_wallet" || tx.type === "binary_income" || tx.type === "credit"
           )
+          // 🔥 YAHAN FIX KIYA HAI: Single Leg / Pool / Unlocked wali saari entries HIDE kar di hain
+          .filter(tx => {
+             const desc = (tx.description || "").toLowerCase();
+             const source = (tx.source || "").toLowerCase();
+             return !(
+                 source === "pool" ||
+                 desc.includes("single leg") ||
+                 desc.includes("singel leg") ||
+                 desc.includes("community income") ||
+                 desc.includes("auto-pool") ||
+                 desc.includes("unlocked")
+             );
+          })
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         setTransactions(creditTxs);
@@ -160,8 +173,19 @@ const CreditToWalletHistory = () => {
                   const date = new Date(txn.createdAt);
                   const isBinary = txn.type === "binary_income";
                   
+                  // 🔥 YAHAN FIX KIYA HAI: Safe Number Conversion (NaN issue gone)
+                  let val = 0;
+                  if (txn.amount && typeof txn.amount === 'object' && txn.amount.$numberDecimal) {
+                    val = parseFloat(txn.amount.$numberDecimal);
+                  } else if (txn.amount !== undefined && txn.amount !== null) {
+                    val = parseFloat(txn.amount);
+                  } else {
+                    val = parseFloat(txn.grossAmount || 0);
+                  }
+                  const validAmount = isNaN(val) ? 0 : val;
+                  
                   return (
-                    <tr key={txn._id || idx} className="border-b border-slate-100 hover:bg-white/5 transition-colors bg-white">
+                    <tr key={txn._id || idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-white">
                       
                       <td className="p-4 font-bold text-gray-500 text-center">
                         {indexOfFirst + idx + 1}
@@ -176,8 +200,8 @@ const CreditToWalletHistory = () => {
                       <td className="p-4">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border ${
                           isBinary 
-                            ? "bg-purple-500/10 text-purple-400 border-purple-500/30" 
-                            : "bg-blue-500/10 text-blue-400 border-blue-500/30"
+                            ? "bg-purple-100 text-purple-600 border-purple-200" 
+                            : "bg-blue-100 text-blue-600 border-blue-200"
                         }`}>
                           {isBinary ? <ArrowRightLeft size={12} /> : <ArrowDownLeft size={12} />}
                           {isBinary ? "Binary Income" : "Credit"}
@@ -189,8 +213,8 @@ const CreditToWalletHistory = () => {
                       </td>
 
                       <td className="p-4 font-black text-center">
-                        <span className="text-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.3)] text-base">
-                          + ${Number(txn.amount || 0).toFixed(2)}
+                        <span className="text-green-500 text-base">
+                          + ${validAmount.toFixed(2)}
                         </span>
                       </td>
 
@@ -205,7 +229,7 @@ const CreditToWalletHistory = () => {
 
         {/* Pagination Footer */}
         {!loading && !errorMessage && filtered.length > 0 && (
-           <div className="p-4 border-t border-slate-100 bg-slate-50/40 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-10">
+           <div className="p-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-10">
               <span className="text-gray-500 text-[10px] md:text-xs font-black uppercase tracking-widest">
                 Showing {indexOfFirst + 1} to {Math.min(indexOfLast, filtered.length)} of {filtered.length} Entries
               </span>
@@ -214,19 +238,19 @@ const CreditToWalletHistory = () => {
                  <button
                    onClick={handlePrev}
                    disabled={currentPage === 1}
-                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === 1 ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-white/10 text-slate-900 hover:bg-green-500/20 hover:text-green-500 border border-transparent hover:border-green-500/30'}`}
+                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === 1 ? 'bg-slate-100 text-gray-400 cursor-not-allowed border border-slate-200' : 'bg-white text-slate-900 hover:bg-green-50 hover:text-green-600 border border-slate-200 shadow-sm'}`}
                  >
                    <ChevronLeft size={18} />
                  </button>
                  
-                 <span className="bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-2 rounded-lg">
+                 <span className="bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-2 rounded-lg shadow-sm">
                     {currentPage} / {totalPages}
                  </span>
                  
                  <button
                    onClick={handleNext}
                    disabled={currentPage === totalPages}
-                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === totalPages ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-white/10 text-slate-900 hover:bg-green-500/20 hover:text-green-500 border border-transparent hover:border-green-500/30'}`}
+                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === totalPages ? 'bg-slate-100 text-gray-400 cursor-not-allowed border border-slate-200' : 'bg-white text-slate-900 hover:bg-green-50 hover:text-green-600 border border-slate-200 shadow-sm'}`}
                  >
                    <ChevronRight size={18} />
                  </button>

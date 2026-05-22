@@ -4,23 +4,22 @@ const User = require('../models/User');
 const SystemStat = require('../models/SystemStat'); 
 const Transaction = require('../models/Transaction'); 
 const FakeUser = require('../models/FakeUser'); 
-// ✅ YAHAN FIX KIYA HAI: Naye variables import kiye hain
 const { countryNames, countriesProbability } = require('../utils/fakeData'); 
 
 // 12 Levels Global Auto-Pool Plan Logic ($30)
 const GLOBAL_POOLS = [
-    { level: 1,  globalTeam: 20,    reqDirects: 1,  daily: 1,  days: 10  }, // +1 Step (1)
-    { level: 2,  globalTeam: 40,    reqDirects: 2,  daily: 1,  days: 20  }, // +1 Step (2)
-    { level: 3,  globalTeam: 100,   reqDirects: 3,  daily: 1,  days: 40  }, // +1 Step (3)
-    { level: 4,  globalTeam: 200,   reqDirects: 4,  daily: 1,  days: 80  }, // +1 Step (4)
-    { level: 5,  globalTeam: 400,   reqDirects: 5,  daily: 1,  days: 150 }, // +1 Step (5)
-    { level: 6,  globalTeam: 1600,  reqDirects: 6,  daily: 1,  days: 200 }, // +1 Step (6)
-    { level: 7,  globalTeam: 2000,  reqDirects: 8,  daily: 2,  days: 250 }, // 🔥 +2 Step Starting (6 + 2 = 8)
-    { level: 8,  globalTeam: 3000,  reqDirects: 10, daily: 2,  days: 350 }, // +2 Step (8 + 2 = 10)
-    { level: 9,  globalTeam: 4000,  reqDirects: 12, daily: 2,  days: 500 }, // +2 Step (10 + 2 = 12)
-    { level: 10, globalTeam: 5000,  reqDirects: 14, daily: 3,  days: 500 }, // +2 Step (12 + 2 = 14)
-    { level: 11, globalTeam: 7500,  reqDirects: 16, daily: 6,  days: 500 }, // +2 Step (14 + 2 = 16)
-    { level: 12, globalTeam: 10000, reqDirects: 18, daily: 10, days: 500 }  // +2 Step (16 + 2 = 18)
+    { level: 1,  globalTeam: 20,    reqDirects: 1,  daily: 1,  days: 10  }, 
+    { level: 2,  globalTeam: 40,    reqDirects: 2,  daily: 1,  days: 20  }, 
+    { level: 3,  globalTeam: 100,   reqDirects: 3,  daily: 1,  days: 40  }, 
+    { level: 4,  globalTeam: 200,   reqDirects: 4,  daily: 1,  days: 80  }, 
+    { level: 5,  globalTeam: 400,   reqDirects: 5,  daily: 1,  days: 150 }, 
+    { level: 6,  globalTeam: 1600,  reqDirects: 6,  daily: 1,  days: 200 }, 
+    { level: 7,  globalTeam: 2000,  reqDirects: 8,  daily: 2,  days: 250 }, 
+    { level: 8,  globalTeam: 3000,  reqDirects: 10, daily: 2,  days: 350 }, 
+    { level: 9,  globalTeam: 4000,  reqDirects: 12, daily: 2,  days: 500 }, 
+    { level: 10, globalTeam: 5000,  reqDirects: 14, daily: 3,  days: 500 }, 
+    { level: 11, globalTeam: 7500,  reqDirects: 16, daily: 6,  days: 500 }, 
+    { level: 12, globalTeam: 10000, reqDirects: 18, daily: 10, days: 500 }  
 ];
 
 const startGlobalGrowthCron = () => {
@@ -31,14 +30,42 @@ const startGlobalGrowthCron = () => {
     cron.schedule('* * * * *', async () => {
         try {
             // 🔥 1. FAKE/SYSTEM GROWTH LOGIC 
-            // 🚨 TESTING MODE: Har 2 minute mein exactly 1 ID giregi
-            const shouldAddFakeUser = Math.random() < (100 / 1440);            
-             if (shouldAddFakeUser) {
-                // A. Ab sirf unhi users ki downline badhegi jinka ID Top-up (Active) hai
+            const shouldAddFakeUser = Math.random() < (100 / 1440);  
+              if (shouldAddFakeUser) {
+                
+                // =======================================================
+                // 🚀 A. NAYA SMART DISTRIBUTION LOGIC ("Beech me mat rokna" Rule)
+                // =======================================================
+                
+                // // YAHAN FIX KIYA HAI: Saare caps (Milestones) cumulative (judte hue) define kiye hain.
+                // // L4=360, L5=760, L6=2360, L7=4360, L8=7360, L9=11360, L10=16360, L11=23860, L12=33860
+                const allMilestones = [360, 760, 2360, 4360, 7360, 11360, 16360, 23860, 33860];
+
+                // // YAHAN FIX KIYA HAI: Stop conditions lagayi hain. 
+                // // Agar user in limits ke EXACT number par hai, tabhi rukega, beech raaste me bilkul nahi rukega.
+                const stopConditions = [
+                    // 1. Inactive (Red ID) kisi bhi aane wale milestone par aakar ruk jayegi
+                    { isToppedUp: false, globalTeamCount: { $in: allMilestones } },
+                    
+                    // 2. Active (Green ID) apne directs ke hisaab se exact milestones par rukenge
+                    { isToppedUp: true, directCount: { $lt: 5 }, globalTeamCount: { $in: [760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
+                    { isToppedUp: true, directCount: { $lt: 6 }, globalTeamCount: { $in: [2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
+                    { isToppedUp: true, directCount: { $lt: 8 }, globalTeamCount: { $in: [4360, 7360, 11360, 16360, 23860, 33860] } },
+                    { isToppedUp: true, directCount: { $lt: 10 }, globalTeamCount: { $in: [7360, 11360, 16360, 23860, 33860] } },
+                    { isToppedUp: true, directCount: { $lt: 12 }, globalTeamCount: { $in: [11360, 16360, 23860, 33860] } },
+                    { isToppedUp: true, directCount: { $lt: 14 }, globalTeamCount: { $in: [16360, 23860, 33860] } },
+                    { isToppedUp: true, directCount: { $lt: 16 }, globalTeamCount: { $in: [23860, 33860] } },
+                    { isToppedUp: true, directCount: { $lt: 18 }, globalTeamCount: { $in: [33860] } }
+                ];
+
+                // // YAHAN FIX KIYA HAI: Ek single super-fast command jo un sabhi ko +1 karegi jo 'stopConditions' mein NAHI aate.
+                // // Agar koi 800 par hai (0 direct ke sath), toh wo condition me match nahi hoga, aur 2360 tak safely badhta rahega.
                 await User.updateMany(
-                    { isToppedUp: true }, 
+                    { $nor: stopConditions },
                     { $inc: { globalTeamCount: 1 } }
                 );
+                // =======================================================
+
 
                 // B. SYSTEM TOTAL FAKE COUNT (Ye hamesha badhega system stats ke liye)
                 await SystemStat.findOneAndUpdate(
@@ -47,20 +74,17 @@ const startGlobalGrowthCron = () => {
                     { upsert: true, returnDocument: 'after' }
                 );            
                 
-                // ✨ C. NAYA LOGIC: Ekdum Real Jaisi ID (Crash-Proof)
+                // C. EK NAYI FAKE ID CREATE KARNA
                 const randomId = Math.floor(1000000 + Math.random() * 9000000); 
-
                 const isRealUser = await User.exists({ userId: randomId });
                 const isFakeUser = await FakeUser.exists({ userId: randomId });
 
                 if (!isRealUser && !isFakeUser) {
-                    // 🛡️ CRASH-PROOF COUNTRY CHECK (Naye variable ke sath)
                     let randomCountry = "IN";
                     if (typeof countriesProbability !== 'undefined' && countriesProbability?.length > 0) {
                         randomCountry = countriesProbability[Math.floor(Math.random() * countriesProbability.length)];
                     }
 
-                    // 🛡️ CRASH-PROOF NAME CHECK (Naye variable ke sath)
                     let randomName = "Crypto User";
                     if (typeof countryNames !== 'undefined') {
                         const namePool = countryNames[randomCountry] || countryNames["IN"];
@@ -95,7 +119,6 @@ const startGlobalGrowthCron = () => {
                 for (let lvl of GLOBAL_POOLS) {
                     cumulativeGlobalTeam += lvl.globalTeam;
 
-                    // ✅ Directs ki shart aapke naye +1/+2 array se match karegi
                     if (user.globalTeamCount >= cumulativeGlobalTeam && user.directCount >= lvl.reqDirects) {
                         const existingPool = user.activePools?.find(p => p.level === lvl.level);
                         
@@ -148,7 +171,6 @@ const startGlobalGrowthCron = () => {
                 for (let pool of user.activePools) {
                     if (pool.status === 'ACTIVE' && pool.daysPaid < pool.totalDays) {
                         
-                        // Agar aaj ka paisa pehle hi mil chuka hai (jaise unlock wale din), toh skip karo
                         if (pool.lastPaidDate === todayStr) {
                             continue; 
                         }
