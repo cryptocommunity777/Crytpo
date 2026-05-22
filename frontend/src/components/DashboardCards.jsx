@@ -31,6 +31,36 @@ function DashboardCards({ stats }) {
       bg: 'bg-sky-100',
       border: 'border-sky-200'
     },
+     {
+      title: 'Normal Top-ups (Total)',
+      value: stats.normalTopupTotal || 0,
+      icon: <Shield className="text-cyan-600" size={28} />,
+      bg: 'bg-cyan-100',
+      border: 'border-cyan-300'
+    },
+    {
+      title: 'Normal Top-ups (Today)',
+      value: stats.normalTopupToday || 0,
+      icon: <Star className="text-blue-500" size={28} />,
+      bg: 'bg-blue-100',
+      border: 'border-blue-300'
+    },
+    
+    {
+      title: 'Leader Top-ups (Total)',
+      value: stats.leaderTopupTotal || 0,
+      icon: <Crown className="text-yellow-600" size={28} />,
+      bg: 'bg-yellow-100',
+      border: 'border-yellow-300'
+    },
+     {
+      title: 'Leader Top-ups (Today)',
+      value: stats.leaderTopupToday || 0,
+      icon: <Zap className="text-orange-600" size={28} />,
+      bg: 'bg-orange-100',
+      border: 'border-orange-300'
+    },
+   
 
     // --- DEPOSIT STATS (Green/Teal) ---
     {
@@ -110,34 +140,8 @@ function DashboardCards({ stats }) {
 
     // --- 🔥 NEW: LEADER VS NORMAL TOPUP STATS ($30) ---
    // --- 🔥 LEADER VS NORMAL TOPUP COUNTS ---
-    {
-      title: 'Leader Top-ups (Total)',
-      value: stats.leaderTopupTotal || 0,
-      icon: <Crown className="text-yellow-600" size={28} />,
-      bg: 'bg-yellow-100',
-      border: 'border-yellow-300'
-    },
-    {
-      title: 'Leader Top-ups (Today)',
-      value: stats.leaderTopupToday || 0,
-      icon: <Zap className="text-orange-600" size={28} />,
-      bg: 'bg-orange-100',
-      border: 'border-orange-300'
-    },
-    {
-      title: 'Normal Top-ups (Total)',
-      value: stats.normalTopupTotal || 0,
-      icon: <Shield className="text-cyan-600" size={28} />,
-      bg: 'bg-cyan-100',
-      border: 'border-cyan-300'
-    },
-    {
-      title: 'Normal Top-ups (Today)',
-      value: stats.normalTopupToday || 0,
-      icon: <Star className="text-blue-500" size={28} />,
-      bg: 'bg-blue-100',
-      border: 'border-blue-300'
-    },
+   
+   
 
     // --- 🔥 LEADER VS NORMAL TOPUP BUSINESS ($) ---
     {
