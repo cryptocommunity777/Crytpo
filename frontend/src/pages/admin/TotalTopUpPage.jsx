@@ -2,9 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from "../../api/axios";
 import Papa from 'papaparse';
 import { saveAs } from 'file-saver';
-
-// ✅ FIX: Added 10 to the packages array
-const packages = [10, 30, 60, 120, 240, 480, 960];
+import { Crown, User } from 'lucide-react';
 
 const toNumber = (val) => {
   if (val == null) return 0;
@@ -22,20 +20,19 @@ const TotalTopUpPage = () => {
   const [loading, setLoading] = useState(true);
 
   const [searchId, setSearchId] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState('');
+  const [selectedRole, setSelectedRole] = useState(''); // 🔥 Plan ki jagah Role filter
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   
-  // ✅ NEW: Pagination States
+  // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(20); // Default thoda zyada kar diya
 
   // FETCH
   useEffect(() => {
     const fetchTopupUsers = async () => {
       try {
         const token = localStorage.getItem('adminToken');
-
         const res = await api.get('/admin/topup-users', {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -56,63 +53,57 @@ const TotalTopUpPage = () => {
     fetchTopupUsers();
   }, []);
 
-  // FILTER
+  // FILTER LOGIC
   useEffect(() => {
     const filtered = topupUsers.filter((user) => {
-      const matchesId = searchId
-        ? String(user.userId).includes(searchId)
-        : true;
-
-      const matchesPlan = selectedPlan
-        ? toNumber(user.topUpAmount) === Number(selectedPlan)
-        : true;
+      const matchesId = searchId ? String(user.userId).includes(searchId) : true;
+      const matchesRole = selectedRole ? user.initiatorRole === selectedRole : true; // 🔥 Role Filter
 
       const date = user.topUpDate ? new Date(user.topUpDate) : null;
+      const matchesFrom = fromDate ? date && date >= new Date(fromDate) : true;
+      const matchesTo = toDate ? date && date <= new Date(toDate) : true;
 
-      const matchesFrom = fromDate
-        ? date && date >= new Date(fromDate)
-        : true;
-
-      const matchesTo = toDate
-        ? date && date <= new Date(toDate)
-        : true;
-
-      return matchesId && matchesPlan && matchesFrom && matchesTo;
+      return matchesId && matchesRole && matchesFrom && matchesTo;
     });
 
     setFilteredUsers(filtered);
-    setCurrentPage(1); // Reset to page 1 when filters change
-  }, [searchId, selectedPlan, fromDate, toDate, topupUsers]);
+    setCurrentPage(1);
+  }, [searchId, selectedRole, fromDate, toDate, topupUsers]);
 
-  // STATS
+  // 🔥 STATS CALCULATION (Leader vs Normal)
   const today = new Date().toISOString().split('T')[0];
+  
+  let totalBusiness = 0;
+  let todayBusiness = 0;
+  let todayCount = 0;
+  
+  let leaderBusiness = 0;
+  let leaderCount = 0;
+  let normalBusiness = 0;
+  let normalCount = 0;
 
-  const todayTopUps = filteredUsers.filter((user) => {
-    const date = user.topUpDate ? new Date(user.topUpDate) : null;
-    return date && date.toISOString().split('T')[0] === today;
+  filteredUsers.forEach(u => {
+      const amt = u.topUpAmount;
+      const dateStr = u.topUpDate ? new Date(u.topUpDate).toISOString().split('T')[0] : null;
+      const isToday = dateStr === today;
+
+      totalBusiness += amt;
+      if (isToday) {
+          todayBusiness += amt;
+          todayCount++;
+      }
+
+      if (u.initiatorRole === 'leader') {
+          leaderBusiness += amt;
+          leaderCount++;
+      } else {
+          normalBusiness += amt;
+          normalCount++;
+      }
   });
 
-  const todayBusiness = todayTopUps.reduce(
-    (sum, u) => sum + toNumber(u.topUpAmount),
-    0
-  );
-
-  const totalBusiness = filteredUsers.reduce(
-    (sum, u) => sum + toNumber(u.topUpAmount),
-    0
-  );
-
-  const totalIds = filteredUsers.length;
-
-  const planCount = {};
-  packages.forEach((pkg) => {
-    planCount[pkg] = filteredUsers.filter(
-      (u) => toNumber(u.topUpAmount) === pkg
-    ).length;
-  });
-
-  // ✅ UPDATED: Dynamic Pagination Logic
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  // Dynamic Pagination Logic
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
@@ -124,25 +115,23 @@ const TotalTopUpPage = () => {
   // CSV EXPORT
   const exportToCSV = () => {
     const summary = [
+      { Metric: 'Total TopUps', Value: filteredUsers.length },
       { Metric: 'Total Business', Value: totalBusiness },
-      { Metric: 'Total IDs', Value: totalIds },
-      { Metric: 'Today TopUps', Value: todayTopUps.length },
+      { Metric: 'Today TopUps', Value: todayCount },
       { Metric: 'Today Business', Value: todayBusiness },
+      { Metric: 'Leader TopUps (Count)', Value: leaderCount },
+      { Metric: 'Leader Business ($)', Value: leaderBusiness },
+      { Metric: 'Normal TopUps (Count)', Value: normalCount },
+      { Metric: 'Normal Business ($)', Value: normalBusiness },
     ];
 
-    packages.forEach((pkg) => {
-      summary.push({
-        Metric: `Plan ${pkg}`,
-        Value: planCount[pkg],
-      });
-    });
-
     const table = filteredUsers.map((u, i) => ({
-      SNo: i + 1, // Optional: add serial number to CSV
+      SNo: i + 1,
       UserID: u.userId,
       Name: u.name || '',
       Mobile: u.mobile || 'N/A',
-      Amount: toNumber(u.topUpAmount),
+      Amount: u.topUpAmount,
+      Type: u.initiatorRole === 'leader' ? 'Leader' : 'Normal',
       Date: u.topUpDate ? new Date(u.topUpDate).toLocaleString() : '',
     }));
 
@@ -152,8 +141,8 @@ const TotalTopUpPage = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl text-black mx-auto">
-      <h2 className="text-3xl font-bold text-indigo-700 mb-6">💰 Total Top-Up Report</h2>
+    <div className="p-6 max-w-7xl pt-24 text-black mx-auto">
+      <h2 className="text-3xl font-bold text-indigo-700 mb-6">💰 Detailed Top-Up Report</h2>
 
       {/* FILTERS */}
       <div className="flex flex-col md:flex-row gap-4 mb-6 flex-wrap">
@@ -165,15 +154,15 @@ const TotalTopUpPage = () => {
           className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm"
         />
 
+        {/* 🔥 ROLE FILTER ADDED */}
         <select
-          value={selectedPlan}
-          onChange={(e) => setSelectedPlan(e.target.value)}
+          value={selectedRole}
+          onChange={(e) => setSelectedRole(e.target.value)}
           className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm"
         >
-          <option value="">All Plans</option>
-          {packages.map((p) => (
-            <option key={p} value={p}>${p}</option>
-          ))}
+          <option value="">All Types</option>
+          <option value="leader">Leader TopUps</option>
+          <option value="normal">Normal TopUps</option>
         </select>
 
         <input
@@ -190,7 +179,6 @@ const TotalTopUpPage = () => {
           className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm"
         />
 
-        {/* ✅ NEW: Entries Per Page Select */}
         <select 
           className="px-4 py-2 border rounded w-full md:w-32 shadow-sm bg-white"
           value={itemsPerPage}
@@ -203,24 +191,24 @@ const TotalTopUpPage = () => {
         </select>
       </div>
 
-      {/* SUMMARY */}
+      {/* SUMMARY CARDS (Leader vs Normal Logic) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
-        <SummaryCard label="Total Business" value={`$${totalBusiness}`} color="bg-green-100" />
-        <SummaryCard label="Total IDs" value={totalIds} color="bg-blue-100" />
-        <SummaryCard label="Today TopUps" value={todayTopUps.length} color="bg-yellow-100" />
-        <SummaryCard label="Today Business" value={`$${todayBusiness}`} color="bg-orange-100" />
-
-        {packages.map((pkg) => (
-          <SummaryCard key={pkg} label={`$${pkg}`} value={planCount[pkg]} color="bg-purple-100" />
-        ))}
+        <SummaryCard label="Total Business" value={`$${totalBusiness}`} color="bg-green-100 border-green-200" />
+        <SummaryCard label="Today Business" value={`$${todayBusiness}`} color="bg-teal-100 border-teal-200" />
+        
+        <SummaryCard label="Leader Business" value={`$${leaderBusiness}`} color="bg-yellow-100 border-yellow-300" />
+        <SummaryCard label="Leader Count" value={leaderCount} color="bg-orange-100 border-orange-300" />
+        
+        <SummaryCard label="Normal Business" value={`$${normalBusiness}`} color="bg-indigo-100 border-indigo-200" />
+        <SummaryCard label="Normal Count" value={normalCount} color="bg-blue-100 border-blue-200" />
       </div>
 
-      {/* EXPORT */}
+      {/* EXPORT BUTTON */}
       <div className="flex justify-between items-center mb-4">
         <p className="text-sm text-gray-500 font-semibold">Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredUsers.length)} of {filteredUsers.length} entries</p>
         <button
           onClick={exportToCSV}
-          className="bg-green-600 hover:bg-green-700 transition text-slate-900 px-5 py-2 rounded shadow font-semibold"
+          className="bg-green-600 hover:bg-green-700 transition text-white px-5 py-2 rounded shadow font-semibold"
         >
           Export CSV
         </button>
@@ -234,11 +222,11 @@ const TotalTopUpPage = () => {
           <table className="min-w-full text-sm text-left">
             <thead className="bg-gray-200 border-b">
               <tr>
-                {/* ✅ NEW: Row Number Header */}
                 <th className="px-4 py-3 font-semibold text-gray-700">#</th>
                 <th className="px-4 py-3 font-semibold text-gray-700">User ID</th>
                 <th className="px-4 py-3 font-semibold text-gray-700">Name</th>
                 <th className="px-4 py-3 font-semibold text-gray-700">Mobile</th>
+                <th className="px-4 py-3 font-semibold text-gray-700">Type</th> {/* 🔥 NAYA COLUMN */}
                 <th className="px-4 py-3 font-semibold text-gray-700">Amount</th>
                 <th className="px-4 py-3 font-semibold text-gray-700">Date</th>
               </tr>
@@ -246,18 +234,30 @@ const TotalTopUpPage = () => {
             <tbody>
               {paginatedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-6 text-gray-500">No records found</td>
+                  <td colSpan="7" className="text-center py-6 text-gray-500">No records found</td>
                 </tr>
               ) : (
                 paginatedUsers.map((u, i) => (
                   <tr key={u._id || i} className="border-b hover:bg-gray-50 transition">
-                    {/* ✅ NEW: Row Number Cell */}
                     <td className="px-4 py-3 text-gray-600 font-medium">{startIndex + i + 1}</td>
-                    
                     <td className="px-4 py-3 font-bold text-indigo-600">{u.userId}</td>
                     <td className="px-4 py-3 text-gray-800">{u.name}</td>
                     <td className="px-4 py-3 text-gray-600 font-medium">{u.mobile || 'N/A'}</td>
-                    <td className="px-4 py-3 text-green-600 font-bold">${toNumber(u.topUpAmount)}</td>
+                    
+                    {/* 🔥 ROLE BADGE */}
+                    <td className="px-4 py-3">
+                      {u.initiatorRole === 'leader' ? (
+                        <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 border border-yellow-300 px-2 py-0.5 rounded text-xs font-bold uppercase">
+                          <Crown size={12} /> Leader
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 border border-blue-300 px-2 py-0.5 rounded text-xs font-bold uppercase">
+                          <User size={12} /> Normal
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3 text-green-600 font-bold">${u.topUpAmount}</td>
                     <td className="px-4 py-3 text-gray-500">{new Date(u.topUpDate).toLocaleString()}</td>
                   </tr>
                 ))
@@ -273,7 +273,7 @@ const TotalTopUpPage = () => {
           <button 
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className={`px-4 py-2 rounded font-semibold ${currentPage === 1 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-indigo-600 text-slate-900 hover:bg-indigo-700'}`}
+            className={`px-4 py-2 rounded font-semibold ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
           >
             Previous
           </button>
@@ -281,7 +281,7 @@ const TotalTopUpPage = () => {
           <button 
             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
-            className={`px-4 py-2 rounded font-semibold ${currentPage === totalPages ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-indigo-600 text-slate-900 hover:bg-indigo-700'}`}
+            className={`px-4 py-2 rounded font-semibold ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
           >
             Next
           </button>
@@ -292,9 +292,9 @@ const TotalTopUpPage = () => {
 };
 
 const SummaryCard = ({ label, value, color }) => (
-  <div className={`${color} p-4 rounded-lg shadow-sm border border-white`}>
+  <div className={`${color} p-4 rounded-lg shadow-sm border`}>
     <h4 className="text-gray-600 text-xs font-bold uppercase mb-1">{label}</h4>
-    <p className="text-2xl font-bold text-gray-800">{value}</p>
+    <p className="text-2xl font-black text-gray-800">{value}</p>
   </div>
 );
 
