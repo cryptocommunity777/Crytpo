@@ -482,9 +482,13 @@ router.put(
       // =======================================================
       // 🔹 4. BACKGROUND MLM ENGINE (Runs behind the scenes)
       // =======================================================
+    // =======================================================
+      // 🔹 4. BACKGROUND MLM ENGINE (Runs behind the scenes)
+      // =======================================================
       (async () => {
           try {
               if (isFirstTopup) {
+                  // 🌟 GLOBAL TEAM COUNT
                   await User.updateMany(
                       { isToppedUp: true, userId: { $ne: targetUser.userId } }, 
                       { $inc: { globalTeamCount: 1 } }
@@ -492,9 +496,13 @@ router.put(
 
                   if (targetUser.sponsorId) {
                       const sponsor = await User.findOne({ userId: targetUser.sponsorId });
-                      if (sponsor) {
-                          // 🌟 DIRECT INCOME
+                      
+                      // ✅ SPONSOR INCOME (ONLY IF SPONSOR IS ACTIVE/TOPPED-UP)
+                      if (sponsor && sponsor.isToppedUp) {
+                          // DIRECT COUNT
                           sponsor.directCount = (sponsor.directCount || 0) + 1;
+                          
+                          // DIRECT INCOME (10%)
                           const DIRECT_PERCENT = 10; 
                           const directBonusAmount = (amount * DIRECT_PERCENT) / 100; 
 
@@ -518,28 +526,77 @@ router.put(
                                   }).catch(e => console.log("Fast Track Error", e));
                               }
                           }
-                          
-                          // 🚀 INSTANT REWARDS BLOCK REMOVED SUCCESSFULLY 🚀
-                          
-                          // Save the sponsor updates (Direct Count, Direct Income)
                           await sponsor.save();
+                      } else if (sponsor && !sponsor.isToppedUp) {
+                          console.log(`[BLOCKED] Direct Income of $${(amount * 10) / 100} stopped for Sponsor ${sponsor.userId} because ID is Inactive.`);
                       }
                   }
 
-                  // 🌟 20 LEVEL DISTRIBUTION
+                  // 🌟 UNIFIED 100-LEVEL ENGINE (Level Income + Leader Breakaway)
                   const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
                   let currentUplineId = targetUser.sponsorId; 
                   let currentLevel = 1;
+                  
+                  // 🔥 THE MAGIC LOCK: Check karega ki kya immediate leader ko paisa mil chuka hai
+                  let leaderFoundAndPaid = false;
 
-                  while (currentUplineId && currentLevel <= 20) {
-                      const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId');
+                  while (currentUplineId && currentLevel <= 100) {
+                      const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId role');
                       if (!upline) break;
 
-                      if (currentLevel > 1) {
+                      // 🛑 RULE 1: INACTIVE BLOCKER (Agar banda inactive hai, toh seedha skip karo)
+                      if (!upline.isToppedUp) {
+                          console.log(`[BLOCKED] Income stopped for Upline ${upline.userId} at Level ${currentLevel} because ID is Inactive.`);
+                          currentUplineId = upline.sponsorId;
+                          currentLevel++;
+                          continue; 
+                      }
+
+                      const isCurrentUplineLeader = (upline.role === 'leader');
+
+                      // 🛑 RULE 2: 2ND LEADER BLOCKER (Agar ek leader ko paisa mil chuka hai, aur ye doosra leader hai, toh SKIP karo)
+                      if (isCurrentUplineLeader && leaderFoundAndPaid) {
+                          console.log(`[BREAKAWAY] Skipped Leader ${upline.userId} at Level ${currentLevel} because Immediate Leader already paid.`);
+                          currentUplineId = upline.sponsorId;
+                          currentLevel++;
+                          continue; 
+                      }
+
+                      // ============================================
+                      // 1. INSTANT LEADER 10% LOGIC (Level 2 se 100 tak)
+                      // ============================================
+                      // Ye sirf us pehle (Immediate) leader ke liye chalega
+                      if (currentLevel >= 2 && isCurrentUplineLeader && !leaderFoundAndPaid) {
+                          const instantBonusAmount = (amount * 10) / 100;
+                          
+                          await User.updateOne(
+                              { _id: upline._id }, 
+                              { $inc: { walletBalance: instantBonusAmount } }
+                          );
+                          
+                          await createTransaction({
+                              userId: upline.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
+                              fromUserId: targetUser.userId, 
+                              description: `10% Instant Leader Bonus from Downline Activation (Level ${currentLevel})`,
+                              status: "success"
+                          });
+
+                          console.log(`✅ [NORMAL ROUTE -> LEADER BONUS] Paid $${instantBonusAmount} to Leader ${upline.userId}`);
+                          
+                          // 🔥 LOCK ACTIVATED: Iske baad aane wale saare leaders block ho jayenge
+                          // Lekin humne "continue" hata diya hai, taaki is immediate leader ko Niche wali Level Income bhi mil sake!
+                          leaderFoundAndPaid = true; 
+                      }
+
+                      // ============================================
+                      // 2. LEVEL INCOME LOGIC (Level 2 se 20 tak)
+                      // ============================================
+                      // Yahan ya toh Normal Users aayenge, YA FIR wo Pehla (Immediate) Leader aayega
+                      if (currentLevel >= 2 && currentLevel <= 20) {
                           const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
                           const levelAmount = (amount * percentage) / 100;
 
-                          if (levelAmount > 0 && upline.isToppedUp) {
+                          if (levelAmount > 0) {
                               await User.updateOne({ _id: upline._id }, { $inc: { levelIncome: levelAmount, totalLevelIncome: levelAmount } });
                               await createTransaction({
                                   userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
@@ -547,45 +604,15 @@ router.put(
                               });
                           }
                       }
+
                       currentUplineId = upline.sponsorId;
                       currentLevel++;
                   }
-
-                  // 🚀 INSTANT LEADER 10% BONUS ENGINE YAHAN LAGA HAI
-                  let leaderUplineId = targetUser.sponsorId;
-                  let leaderLevel = 1;
-
-                  while (leaderUplineId && leaderLevel <= 100) {
-                      const checkLeader = await User.findOne({ userId: leaderUplineId }).select('userId role sponsorId');
-                      if (!checkLeader) break;
-
-                      // Level 2 ya usse upar ka banda agar "leader" hai
-                      if (leaderLevel >= 2 && checkLeader.role === 'leader') {
-                          const instantBonusAmount = (amount * 10) / 100;
-                          
-                          // Leader ke walletBalance me direct daal do (kyunki Normal Topup me sab asli paisa hi hota hai)
-                          await User.updateOne(
-                              { _id: checkLeader._id }, 
-                              { $inc: { walletBalance: instantBonusAmount } }
-                          );
-                          
-                          await createTransaction({
-                              userId: checkLeader.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
-                              fromUserId: targetUser.userId, description: `10% Instant Bonus from Downline Activation (Level ${leaderLevel})`,
-                              status: "success"
-                          });
-                          
-                          console.log(`✅ [NORMAL ROUTE -> LEADER BONUS] Paid $${instantBonusAmount} to Leader ${checkLeader.userId}`);
-                      }
-                      leaderUplineId = checkLeader.sponsorId;
-                      leaderLevel++;
-                  }
-                  // ================= END INSTANT LEADER BONUS =================
               }
           } catch (bgError) {
               console.error("Background MLM Engine Error:", bgError);
           }
-      })(); 
+      })();
       // Background process bracket closed here
 
     } catch (err) {
@@ -729,11 +756,13 @@ router.put(
       res.json({ success: true, message: successMsg });
 
 
-      // 🔹 5. BACKGROUND MLM ENGINE
+      // =======================================================
+      // 🔹 5. BACKGROUND MLM ENGINE (LEADER BREAKAWAY SYSTEM)
+      // =======================================================
       (async () => {
           try {
               if (isFirstTopup) {
-                  // 🌟 GLOBAL TEAM COUNT (Badhega)
+                  // 🌟 GLOBAL TEAM COUNT
                   await User.updateMany(
                       { isToppedUp: true, userId: { $ne: targetUser.userId } }, 
                       { $inc: { globalTeamCount: 1 } }
@@ -743,10 +772,10 @@ router.put(
                       const sponsor = await User.findOne({ userId: targetUser.sponsorId });
                       if (sponsor) {
                           
-                          // ✅ DIRECT COUNT BADHEGA (Chahe real ho ya dummy)
+                          // ✅ DIRECT COUNT
                           sponsor.directCount = (sponsor.directCount || 0) + 1;
 
-                          // ✅ DIRECT INCOME
+                          // ✅ DIRECT INCOME (10%)
                           const DIRECT_BONUS_PERCENTAGE = 10; 
                           const directBonusAmount = (amount * DIRECT_BONUS_PERCENTAGE) / 100; 
 
@@ -760,7 +789,7 @@ router.put(
                               status: 'success'
                           });
 
-                          // 🔥 FAST TRACK (Only for Real Topups - Dummy par NAHI milega)
+                          // 🔥 FAST TRACK (Only for Real Topups)
                           if (!isDummyTopup && sponsor.createdAt) {
                               const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
                               if ((new Date().getTime() - new Date(sponsor.createdAt).getTime()) <= thirtyDaysInMs) {
@@ -771,69 +800,80 @@ router.put(
                                   }).catch(e => console.log("Fast Track Error", e));
                               }
                           }
-
-                          // 🚀 INSTANT REWARDS BLOCK REMOVED SUCCESSFULLY 🚀
-
                           await sponsor.save();
                       }
                   }
 
-                  // 🌟 20 LEVEL DISTRIBUTION
+                  // 🌟 UNIFIED 100-LEVEL ENGINE (Level Income + Leader Breakaway)
                   const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
                   let currentUplineId = targetUser.sponsorId; 
                   let currentLevel = 1;
+                  
+                  // 🔥 THE MAGIC LOCK: Ye check karega ki immediate leader ko paisa mila ya nahi
+                  let leaderFoundAndPaid = false; 
 
-                  while (currentUplineId && currentLevel <= 20) {
+                  while (currentUplineId && currentLevel <= 100) {
                       const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId role');
                       if (!upline) break; 
 
-                      if (currentLevel > 1) {
-                          const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
-                          const levelAmount = (amount * percentage) / 100;
-                          
-                          if (levelAmount > 0 && upline.isToppedUp) {
-                              let incUpdate = { levelIncome: levelAmount, totalLevelIncome: levelAmount };
+                      const isCurrentUplineLeader = (upline.role === 'leader');
+                      
+                      // Agar ye leader hai, aur niche wale leader ko pehle hi paisa mil chuka hai, toh ise SKIP karo
+                      const shouldSkipLeader = (isCurrentUplineLeader && leaderFoundAndPaid);
+
+                      // ============================================
+                      // 1. LEVEL INCOME LOGIC (Sirf Level 2 se Level 20 tak)
+                      // ============================================
+                      if (currentLevel >= 2 && currentLevel <= 20) {
+                          if (!shouldSkipLeader && upline.isToppedUp) {
+                              const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
+                              const levelAmount = (amount * percentage) / 100;
                               
-                              await User.updateOne({ userId: upline.userId }, { $inc: incUpdate });
-                              
-                              await createTransaction({
-                                  userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
-                                  fromUserId: targetUser.userId, description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation${isDummyTopup ? " (Leader)" : ""}`,
-                                  status: 'success'
-                              });
+                              if (levelAmount > 0) {
+                                  await User.updateOne(
+                                      { _id: upline._id }, 
+                                      { $inc: { levelIncome: levelAmount, totalLevelIncome: levelAmount } }
+                                  );
+                                  await createTransaction({
+                                      userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
+                                      fromUserId: targetUser.userId, 
+                                      description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation${isDummyTopup ? " (Leader)" : ""}`,
+                                      status: 'success'
+                                  });
+                              }
                           }
                       }
+
+                      // ============================================
+                      // 2. INSTANT LEADER 10% LOGIC (Level 2 se 100 tak) - Only Real Topup
+                      // ============================================
+                      if (!isDummyTopup && currentLevel >= 2) {
+                          if (isCurrentUplineLeader && !leaderFoundAndPaid) {
+                              const instantBonusAmount = (amount * 10) / 100;
+                              
+                              await User.updateOne(
+                                  { _id: upline._id }, 
+                                  { $inc: { walletBalance: instantBonusAmount } }
+                              );
+                              
+                              await createTransaction({
+                                  userId: upline.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
+                                  fromUserId: targetUser.userId, 
+                                  description: `10% Instant Bonus from Downline Activation (Level ${currentLevel})`,
+                                  status: "success"
+                              });
+
+                              // 🔥 LOCK ACTIVATED: Iske upar kisi leader ko ab kuch nahi milega
+                              leaderFoundAndPaid = true; 
+                          }
+                      }
+
                       currentUplineId = upline.sponsorId;
                       currentLevel++;
                   }
-
-                  // 🚀 INSTANT LEADER 10% BONUS ENGINE (Real topup only)
-                  if (!isDummyTopup) {
-                      let leaderUplineId = targetUser.sponsorId;
-                      let leaderLevel = 1;
-
-                      while (leaderUplineId && leaderLevel <= 100) {
-                          const checkLeader = await User.findOne({ userId: leaderUplineId });
-                          if (!checkLeader) break;
-
-                          if (leaderLevel >= 2 && checkLeader.role === 'leader') {
-                              const instantBonusAmount = (amount * 10) / 100;
-                              checkLeader.walletBalance = (checkLeader.walletBalance || 0) + instantBonusAmount;
-                              
-                              await checkLeader.save();
-                              await createTransaction({
-                                  userId: checkLeader.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
-                                  fromUserId: targetUser.userId, description: `10% Instant Bonus from Downline Activation (Level ${leaderLevel})`,
-                                  status: "success"
-                              });
-                          }
-                          leaderUplineId = checkLeader.sponsorId;
-                          leaderLevel++;
-                      }
-                  }
               }
           } catch (bgError) {
-              console.error("Background Leader MLM Engine Error:", bgError);
+              console.error("Background MLM Engine Error:", bgError);
           }
       })();
 
@@ -850,6 +890,8 @@ router.put(
 // Backend Route: promo-dummy-topup
 // ✅ PROMO DUMMY TOPUP - FIXED & ROBUST
 // ✅ UPDATED BACKEND ROUTE (Using DummyTransaction Model)
+// 🚀 PROMO USER TOPUP ROUTE (Strictly for Showcase/Screenshot Popup)
+// 🚀 PROMO USER TOPUP ROUTE (Strictly for Today's Fake IDs)
 router.post('/promo-dummy-topup', authMiddleware, async (req, res) => {
   try {
     const { amount, transactionPassword } = req.body;
@@ -860,62 +902,58 @@ router.post('/promo-dummy-topup', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: "Invalid transaction password" });
     }
 
-    // 🔥 RANDOM NAME LOGIC: Yahan humne list bana di hai
-  const firstNames = [
-      "Aarav", "Abhay", "Abhinav", "Aditya", "Adarsh", "Akash", "Akhil", "Alok", "Aman", "Amar", "Amit", "Amol", "Anand", "Aniket", "Anirudh", "Ankit", "Ankur", "Anmol", "Ansh", "Anshul", "Anuj", "Anupam", "Apoorv", "Arjun", "Arnav", "Aryan", "Ashish", "Ashok", "Ashutosh", "Atul", "Ayush",
-      "Balram", "Bharat", "Bhaskar", "Bhavish", "Bhupendra", "Brijesh", "Chaitanya", "Chandan", "Chetan", "Chirag", "Daksh", "Darpan", "Deepak", "Dev", "Devendra", "Dharmendra", "Dheeraj", "Dhruv", "Digvijay", "Dilip", "Dinesh", "Divyansh", "Gajendra", "Ganesh", "Gaurav", "Gautam", "Girish", "Gopal", "Gulshan", "Gunjit",
-      "Harish", "Harsh", "Harshit", "Hemant", "Himanshu", "Hitesh", "Inder", "Ishaan", "Ishwar", "Jagdish", "Jaideep", "Jatin", "Jitendra", "Jugal", "Kabir", "Kailash", "Kamal", "Kapil", "Karan", "Kartik", "Kaushal", "Ketan", "Kiran", "Kishore", "Krishan", "Krunal", "Kuldeep", "Kunal", "Kushagra", "Laksh", "Lalit", "Lokesh",
-      "Madhav", "Mahendra", "Mahesh", "Manas", "Manish", "Manit", "Manoj", "Mayank", "Milind", "Mohit", "Mukesh", "Mukul", "Nakul", "Naman", "Narendra", "Naresh", "Navneet", "Neeraj", "Nikhil", "Nilesh", "Nishant", "Nitin", "Om", "Omprakash", "Pankaj", "Parth", "Pawan", "Pradeep", "Prafull", "Pranjal", "Prateek", "Pratosh", "Praveen", "Prayas", "Puneet", "Pushkar",
-      "Raghav", "Rahul", "Rajat", "Rajeev", "Rajesh", "Rajnish", "Rakesh", "Ram", "Ramesh", "Ranveer", "Ratan", "Ravi", "Ravindra", "Rishi", "Ritesh", "Rohan", "Rohit", "Ronak", "Rupesh", "Sachin", "Sagar", "Sahil", "Sajid", "Sameer", "Sandeep", "Sanjay", "Sanjeev", "Santosh", "Sarthak", "Satish", "Saurabh", "Shakti", "Shantanu", "Sharad", "Shashank", "Shikhar", "Shivam", "Shravan", "Shreyas", "Shubham", "Siddharth", "Somesh", "Subhash", "Sudhanshu", "Sudhir", "Sujit", "Sumit", "Sunil", "Suraj", "Suresh", "Surya", "Sushant", "Swapnil",
-      "Tanmay", "Tarun", "Tejas", "Trilok", "Tushar", "Uday", "Udit", "Ujjwal", "Umang", "Utkarsh", "Vaibhav", "Varun", "Vicky", "Vidit", "Vijay", "Vikram", "Vimal", "Vinay", "Vineet", "Vinod", "Vipin", "Viplav", "Viraaj", "Vishal", "Vishnu", "Vishwa", "Vivek", "Vyom", "Yash", "Yogesh", "Yuvraj"
-    ];
+    // 2. 🔥 Get ANY RANDOM Fake User for TODAY ONLY
+    const FakeUser = require('../models/FakeUser');
+    
+    // Aaj ka start (12:00 AM) aur end (11:59 PM) time set kar rahe hain
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
 
-    // 🚀 MEGA LIST: 100+ Indian Last Names
-    const lastNames = [
-      "Agarwal", "Ahluwalia", "Arora", "Babu", "Bajpai", "Bakshi", "Banerjee", "Bansal", "Bhardwaj", "Bhatia", "Bhatt", "Biswas", "Bose", "Chahal", "Chakraborty", "Chatterjee", "Chauhan", "Chhabra", "Choudhary", "Chopra", "Das", "Dayal", "Deshmukh", "Devi", "Dhillon", "Dixit", "Dubey", "Dutta", "Dwivedi", "Gadhavi", "Gandhi", "Garg", "Gautam", "Gill", "Goel", "Gokhale", "Goswami", "Gowda", "Gupta", "Iyer", "Jadeja", "Jain", "Jha", "Joshi", "Kapoor", "Kashyap", "Kaur", "Khanna", "Khatri", "Kulkarni", "Kumar", "Luthra", "Mahajan", "Malhotra", "Malik", "Maurya", "Mehra", "Mehta", "Menon", "Mishra", "Mittal", "Modi", "Mukherjee", "Nair", "Ojha", "Pandey", "Pant", "Parekh", "Paswan", "Patel", "Patil", "Pillai", "Prasad", "Puri", "Rai", "Rajput", "Rao", "Rastogi", "Rathore", "Rawat", "Reddy", "Sahni", "Saini", "Saksena", "Sarkar", "Saxena", "Sen", "Sethi", "Shah", "Sharma", "Shekhawat", "Shetty", "Shinde", "Shukla", "Singh", "Singhal", "Sinha", "Somani", "Soni", "Srivastava", "Talwar", "Taneja", "Thakur", "Tiwari", "Tripathi", "Trivedi", "Tyagi", "Upadhyay", "Varma", "Vashisht", "Verma", "Vyas", "Yadav"
-    ];
-    // Randomly pick karne ka tarika
-    const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-    const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-    const fullName = `${randomFirstName} ${randomLastName}`;
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
 
-    // 2. Unique ID Generation
-    let dummyId;
-    let isUnique = false;
-    while (!isUnique) {
-      dummyId = Math.floor(1000000 + Math.random() * 9000000);
-      const existsInReal = await User.findOne({ userId: dummyId });
-      const existsInDummy = await DummyUser.findOne({ userId: dummyId });
-      if (!existsInReal && !existsInDummy) isUnique = true;
+    const fakeUsers = await FakeUser.aggregate([
+        { 
+            $match: { 
+                date: { $gte: startOfToday, $lte: endOfToday } // Sirf aaj ki date filter karega
+            } 
+        },
+        { $sample: { size: 1 } } // Aaj ki list me se koi bhi 1 random uthayega
+    ]);
+
+    // Agar aaj ki date ka koi bhi fake user nahi mila table me
+    if (!fakeUsers || fakeUsers.length === 0) {
+        return res.status(400).json({ message: "Aaj ki date ki koi Fake ID database me nahi mili. Please aaj ke liye seed script run karein." });
     }
 
-    // 3. Save in DUMMY USER table
-    const newDummy = new DummyUser({
-      userId: dummyId,
-      name: fullName, // 🔥 Ab yahan dynamic random naam jayega
-      email: `demo_${dummyId}@ cryptocommunity.live`,
-      password: "demo_password_123",
-      country: "India",
-      // 🔥 Mobile bhi random kar diya hai taaki real lage
-      mobile: `9${Math.floor(100000000 + Math.random() * 900000000)}`, 
-      topUpAmount: Number(amount),
-      sponsorId: currentUser.userId
-    });
-    await newDummy.save();
+    const targetFakeUser = fakeUsers[0];
 
-    // 4. Record in Dummy Transaction
-    await DummyTransaction.create({
-      userId: currentUser.userId,
-      generatedId: dummyId,
+    // 3. 🛑 DATE YA DATA UPDATE NAHI KARNA HAI (Taki Global List disturb na ho)
+    // Hum sirf Transaction table me entry marenge admin history ke liye
+    
+    // 4. Record Dummy Transaction
+    const Transaction = require('../models/Transaction'); 
+    await Transaction.create({
+      userId: targetFakeUser.userId,
       amount: Number(amount),
-      type: "promo", // 🔥 BAS YEH LINE ADD KARNI HAI (Aap isko "plan" ya "dummy" bhi rakh sakte ho jo schema me allow ho)
-      description: `Demo top-up generated for ID ${dummyId}`
+      type: "promo", 
+      fromUserId: currentUser.userId,
+      toUserId: targetFakeUser.userId,
+      status: "success",
+      description: `Promo showcase generated for Fake ID ${targetFakeUser.userId}`,
+      date: new Date()
     });
 
-    res.json({ success: true, generatedId: dummyId, name: fullName });
+    // 5. Success Response for Frontend Popup
+    res.json({ 
+        success: true, 
+        generatedId: targetFakeUser.userId, 
+        name: targetFakeUser.name 
+    });
 
   } catch (err) {
-    res.status(500).json({ message: "Error: " + err.message });
+    console.error("Promo Showcase Error:", err);
+    res.status(500).json({ message: "Server error during promo topup: " + err.message });
   }
 });
  // Downline Team Business Details

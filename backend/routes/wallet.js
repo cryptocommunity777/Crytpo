@@ -633,7 +633,7 @@ router.post("/promo-withdraw", authMiddleware, async (req, res) => {
     const isPasswordValid = (transactionPassword.toLowerCase() === currentUser.transactionPassword.toLowerCase());
     if (!isPasswordValid) return res.status(403).json({ message: "Invalid Transaction Password." });
 
-    // 💰 Calculation (Sirf withdraw amount nikalne ke liye)
+    // 💰 Calculation
     let totalAmt = 0;
     if (items && Array.isArray(items)) {
       items.forEach(item => {
@@ -641,70 +641,51 @@ router.post("/promo-withdraw", authMiddleware, async (req, res) => {
       });
     }
 
-    if (totalAmt <= 0) {
-      return res.status(400).json({ message: "Invalid withdrawal amount." });
+    // 🔥 NEW: Multiples of 10 and Minimum 10 Check
+    if (totalAmt < 10) {
+      return res.status(400).json({ message: "Minimum withdrawal amount is $10." });
+    }
+    
+    if (totalAmt % 10 !== 0) {
+      return res.status(400).json({ message: "Withdrawal amount must be in multiples of $10 (e.g., 10, 20, 30...)." });
     }
 
-    // 🔥 RANDOM NAME LOGIC: Jaisa topup mein tha
-    const firstNames = [
-      "Aarav", "Abhay", "Abhinav", "Aditya", "Adarsh", "Akash", "Akhil", "Alok", "Aman", "Amar", "Amit", "Amol", "Anand", "Aniket", "Anirudh", "Ankit", "Ankur", "Anmol", "Ansh", "Anshul", "Anuj", "Anupam", "Apoorv", "Arjun", "Arnav", "Aryan", "Ashish", "Ashok", "Ashutosh", "Atul", "Ayush",
-      "Balram", "Bharat", "Bhaskar", "Bhavish", "Bhupendra", "Brijesh", "Chaitanya", "Chandan", "Chetan", "Chirag", "Daksh", "Darpan", "Deepak", "Dev", "Devendra", "Dharmendra", "Dheeraj", "Dhruv", "Digvijay", "Dilip", "Dinesh", "Divyansh", "Gajendra", "Ganesh", "Gaurav", "Gautam", "Girish", "Gopal", "Gulshan", "Gunjit",
-      "Harish", "Harsh", "Harshit", "Hemant", "Himanshu", "Hitesh", "Inder", "Ishaan", "Ishwar", "Jagdish", "Jaideep", "Jatin", "Jitendra", "Jugal", "Kabir", "Kailash", "Kamal", "Kapil", "Karan", "Kartik", "Kaushal", "Ketan", "Kiran", "Kishore", "Krishan", "Krunal", "Kuldeep", "Kunal", "Kushagra", "Laksh", "Lalit", "Lokesh",
-      "Madhav", "Mahendra", "Mahesh", "Manas", "Manish", "Manit", "Manoj", "Mayank", "Milind", "Mohit", "Mukesh", "Mukul", "Nakul", "Naman", "Narendra", "Naresh", "Navneet", "Neeraj", "Nikhil", "Nilesh", "Nishant", "Nitin", "Om", "Omprakash", "Pankaj", "Parth", "Pawan", "Pradeep", "Prafull", "Pranjal", "Prateek", "Pratosh", "Praveen", "Prayas", "Puneet", "Pushkar",
-      "Raghav", "Rahul", "Rajat", "Rajeev", "Rajesh", "Rajnish", "Rakesh", "Ram", "Ramesh", "Ranveer", "Ratan", "Ravi", "Ravindra", "Rishi", "Ritesh", "Rohan", "Rohit", "Ronak", "Rupesh", "Sachin", "Sagar", "Sahil", "Sajid", "Sameer", "Sandeep", "Sanjay", "Sanjeev", "Santosh", "Sarthak", "Satish", "Saurabh", "Shakti", "Shantanu", "Sharad", "Shashank", "Shikhar", "Shivam", "Shravan", "Shreyas", "Shubham", "Siddharth", "Somesh", "Subhash", "Sudhanshu", "Sudhir", "Sujit", "Sumit", "Sunil", "Suraj", "Suresh", "Surya", "Sushant", "Swapnil",
-      "Tanmay", "Tarun", "Tejas", "Trilok", "Tushar", "Uday", "Udit", "Ujjwal", "Umang", "Utkarsh", "Vaibhav", "Varun", "Vicky", "Vidit", "Vijay", "Vikram", "Vimal", "Vinay", "Vineet", "Vinod", "Vipin", "Viplav", "Viraaj", "Vishal", "Vishnu", "Vishwa", "Vivek", "Vyom", "Yash", "Yogesh", "Yuvraj"
-    ];
+    // 2. 🔥 GET FAKE USER (STRICTLY OLDER THAN 3 DAYS)
+    const FakeUser = require('../models/FakeUser');
+    
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
-    const lastNames = [
-      "Agarwal", "Ahluwalia", "Arora", "Babu", "Bajpai", "Bakshi", "Banerjee", "Bansal", "Bhardwaj", "Bhatia", "Bhatt", "Biswas", "Bose", "Chahal", "Chakraborty", "Chatterjee", "Chauhan", "Chhabra", "Choudhary", "Chopra", "Das", "Dayal", "Deshmukh", "Devi", "Dhillon", "Dixit", "Dubey", "Dutta", "Dwivedi", "Gadhavi", "Gandhi", "Garg", "Gautam", "Gill", "Goel", "Gokhale", "Goswami", "Gowda", "Gupta", "Iyer", "Jadeja", "Jain", "Jha", "Joshi", "Kapoor", "Kashyap", "Kaur", "Khanna", "Khatri", "Kulkarni", "Kumar", "Luthra", "Mahajan", "Malhotra", "Malik", "Maurya", "Mehra", "Mehta", "Menon", "Mishra", "Mittal", "Modi", "Mukherjee", "Nair", "Ojha", "Pandey", "Pant", "Parekh", "Paswan", "Patel", "Patil", "Pillai", "Prasad", "Puri", "Rai", "Rajput", "Rao", "Rastogi", "Rathore", "Rawat", "Reddy", "Sahni", "Saini", "Saksena", "Sarkar", "Saxena", "Sen", "Sethi", "Shah", "Sharma", "Shekhawat", "Shetty", "Shinde", "Shukla", "Singh", "Singhal", "Sinha", "Somani", "Soni", "Srivastava", "Talwar", "Taneja", "Thakur", "Tiwari", "Tripathi", "Trivedi", "Tyagi", "Upadhyay", "Varma", "Vashisht", "Verma", "Vyas", "Yadav"
-    ];
+    const fakeUsers = await FakeUser.aggregate([
+        { 
+            $match: { 
+                date: { $lte: threeDaysAgo } 
+            } 
+        },
+        { $sample: { size: 1 } }
+    ]);
 
-    const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-    const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-    const fullName = `${randomFirstName} ${randomLastName}`;
-
-    // 2. Unique ID Generation for the Dummy Withdrawal User
-    let dummyId;
-    let isUnique = false;
-    while (!isUnique) {
-      dummyId = Math.floor(1000000 + Math.random() * 9000000);
-      const existsInReal = await User.findOne({ userId: dummyId });
-      const existsInDummy = await DummyUser.findOne({ userId: dummyId });
-      if (!existsInReal && !existsInDummy) isUnique = true;
+    if (!fakeUsers || fakeUsers.length === 0) {
+        return res.status(400).json({ message: "Database mein 3 din se purani koi Fake ID nahi mili." });
     }
 
-    // 3. Save in DUMMY USER table (Withdrawal ke liye virtual user create ho raha hai)
-    const newDummy = new DummyUser({
-      userId: dummyId,
-      name: fullName,
-      email: `demo_withdraw_${dummyId}@ cryptocommunity.live`,
-      password: "demo_password_123",
-      country: "India",
-      mobile: `9${Math.floor(100000000 + Math.random() * 900000000)}`, 
-      // Agar aapke schema mein withdraw amount save karne ka field hai, to use yahan add kar sakte hain:
-      // withdrawAmount: totalAmt, 
-      sponsorId: currentUser.userId
-    });
-    await newDummy.save();
+    const targetFakeUser = fakeUsers[0];
 
-    // 4. Record in Dummy Transaction
+    // 3. Record in Dummy Transaction
+    const DummyTransaction = require('../models/DummyTransaction'); 
     await DummyTransaction.create({
       userId: currentUser.userId,
-      generatedId: dummyId,
+      generatedId: targetFakeUser.userId,
       amount: totalAmt,
-      type: "Withdrawal", // Zaroori nahi hai par list mein filter karne ke kaam aayega
-      description: `Demo withdrawal of $${totalAmt} generated for ID ${dummyId}`
+      type: "Withdrawal", 
+      description: `Demo withdrawal of $${totalAmt} generated for old ID ${targetFakeUser.userId}`,
+      date: new Date()
     });
-
-    // =========================================================
-    // 🚫 NO REAL DATABASE CHANGES
-    // Real balance minus nahi hoga aur real record nahi banega.
-    // =========================================================
 
     return res.json({ 
       success: true, 
-      generatedId: dummyId, 
-      name: fullName,
+      generatedId: targetFakeUser.userId, 
+      name: targetFakeUser.name,
       message: `Promo withdrawal of $${totalAmt} processed (Bypassed & No balance deduction).` 
     });
 
@@ -713,7 +694,6 @@ router.post("/promo-withdraw", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server processing error: " + err.message });
   }
 });
-
 
 // C:\Users\HP\Desktop\Cryptocommunity\backend\routes\wallet.js
 

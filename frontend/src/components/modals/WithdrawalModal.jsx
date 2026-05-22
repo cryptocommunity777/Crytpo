@@ -160,7 +160,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
          return showMessage("Top-up Required", "You must activate your Node to withdraw funds.");
       }
 
-      if (!walletAddress.trim() && isAddressMissing) {
+      if (!walletAddress.trim() && isAddressMissing && !isPromo) {
          return showMessage("Address Missing", "Please set your withdrawal address in your Profile first.");
       }
 
@@ -187,7 +187,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
       unlockedLevels.forEach(lvl => {
         const amt = Number(withdrawals[`pool_${lvl.level}`] || 0);
         if (amt > 0) {
-            if (!lvl.isDirectMet) {
+            if (!lvl.isDirectMet && !isPromo) {
                 throw new Error(`Please complete Total ${lvl.reqDirects} Direct${lvl.reqDirects > 1 ? 's' : ''} to withdraw from Community Lvl ${lvl.level}.`);
             }
             if (!isPromo && amt > lvl.available) throw new Error(`Insufficient funds in Level ${lvl.level} Pool.`);
@@ -215,8 +215,10 @@ const WithdrawalModal = ({ userId, onClose }) => {
       }, { headers: { Authorization: `Bearer ${token}` } });
 
       const uniqueSources = [...new Set(successMessages)].join(", ");
+      
+      // 🔥 MAIN FIX HERE: Backend se aaya hua naam lenge promo ke case mein
       const finalUserId = (isPromo && response.data.generatedId) ? response.data.generatedId : userId;
-      const finalUserName = isPromo ? "Demo User" : (loggedInUser?.name || "");
+      const finalUserName = isPromo ? (response.data.name || "Demo User") : (loggedInUser?.name || "");
 
       setSuccessData({ 
         userId: finalUserId, 
@@ -307,7 +309,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
                  </div>
               </div>
 
-              {isAddressMissing ? (
+              {isAddressMissing && !isPromo ? (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center justify-between shadow-sm">
                   <p className="text-[10px] md:text-xs text-red-700 font-bold m-0 w-3/5">
                     No withdrawal address found! You must set it before withdrawing.
@@ -323,12 +325,12 @@ const WithdrawalModal = ({ userId, onClose }) => {
               ) : (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 flex flex-col">
                   <p className="text-[9px] text-emerald-800 font-bold uppercase tracking-widest mb-0.5">Your Saved Address</p>
-                  <p className="text-xs font-mono text-emerald-600 font-black truncate">{walletAddress}</p>
+                  <p className="text-xs font-mono text-emerald-600 font-black truncate">{isPromo ? "Wallet Address (Demo)" : walletAddress}</p>
                 </div>
               )}
 
               {/* MAIN INCOMES */}
-              {hasMainIncome && (
+              {(hasMainIncome || isPromo) && (
                   <div className="flex flex-col gap-3">
                     {/* DIRECT */}
                     <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">

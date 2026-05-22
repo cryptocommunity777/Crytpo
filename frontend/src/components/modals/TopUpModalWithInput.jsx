@@ -44,8 +44,10 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
 
   const isBought = userInfo?.packages?.some(p => p.amount === PACKAGE_AMOUNT) || false;
 
-  // 2. Fetch User
+  // 2. Fetch User (Only for Non-Promo users)
   const fetchUser = async (idToFetch, showManualError = false) => {
+    if (isPromoUser) return; // Promo user ko fetch karne ki zaroorat nahi
+    
     if (!idToFetch || idToFetch.toString().trim() === "") {
       setUserInfo(null);
       return;
@@ -70,12 +72,13 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
   };
 
   useEffect(() => {
+    if (isPromoUser) return;
     const delayDebounceFn = setTimeout(() => {
       if (userId && userId.trim() !== "") fetchUser(userId, false);
       else setUserInfo(null);
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [userId, token]);
+  }, [userId, token, isPromoUser]);
 
   // 3. Handle Top Up
   const handleTopUp = async () => {
@@ -84,12 +87,14 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
 
     try {
       if (isPromoUser) {
+        // PROMO USER HIT
         const res = await api.post(`/user/promo-dummy-topup`, { amount: PACKAGE_AMOUNT, transactionPassword }, { headers: { Authorization: `Bearer ${token}` } });
-        setSuccessData({ userId: res.data.generatedId, name: "Demo User", amount: PACKAGE_AMOUNT });
+        setSuccessData({ userId: res.data.generatedId, name: res.data.name, amount: PACKAGE_AMOUNT });
         setSuccessModalOpen(true);
         if (onTopUpSuccess) onTopUpSuccess();
         setTransactionPassword("");
       } else {
+        // NORMAL OR LEADER HIT
         if (!userInfo) { setLoading(false); return showMessage("Error", "❌ Please fetch user first.", "error"); }
         if (walletBalance < PACKAGE_AMOUNT) { setLoading(false); return showMessage("Error", `❌ Insufficient balance. You have $${walletBalance}`, "error"); }
         if (isBought) { setLoading(false); return showMessage("Active", `✅ ID is already active with $${PACKAGE_AMOUNT}.`, "warning"); }
@@ -124,10 +129,9 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-hidden">
       
-      {/* Modal Container - Height Compact & Scrollable */}
       <div className="bg-white w-full max-w-md flex flex-col rounded-3xl border border-slate-200 shadow-2xl overflow-hidden relative max-h-[90vh] animate-in zoom-in duration-300">
         
-        {/* Header - Padding Reduced */}
+        {/* Header */}
         <div className="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center z-20 shrink-0">
           <div className="flex items-center gap-3">
             <div className="bg-green-100 p-2 rounded-xl border border-green-200">
@@ -142,10 +146,9 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
           </button>
         </div>
 
-        {/* Content Body - Scrollable & Padding Reduced */}
+        {/* Content Body */}
         <div className="flex-1 p-4 md:p-5 space-y-4 z-10 bg-white overflow-y-auto custom-scroll">
           
-          {/* Top Info Bar */}
           <div className="flex justify-between items-center bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
              <div>
                 <span className="text-black text-[9px] uppercase tracking-wider font-bold block mb-0.5">Your Balance</span>
@@ -161,14 +164,13 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
              </div>
           </div>
 
-          {/* User ID Input Section */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-black uppercase tracking-widest ml-1">Target Node ID</label>
             <div className="flex gap-2">
               <div className="relative flex-1">
                 {isPromoUser ? (
-                  <div className="w-full bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-3 py-2.5 font-bold flex items-center gap-2 shadow-sm text-xs md:text-sm">
-                    <ShieldCheck size={16} /> Auto-Generate Demo ID
+                  <div className="w-full bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-3 py-3 font-bold flex items-center justify-center gap-2 shadow-sm text-sm">
+                    <ShieldCheck size={18} /> System will Auto-Pick an Inactive ID
                   </div>
                 ) : (
                   <>
@@ -196,7 +198,7 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
                 </button>
               )}
             </div>
-
+            
             {/* Fetched User Info Area */}
             {!isPromoUser && (
               <div className="mt-1 min-h-[50px]">
@@ -222,7 +224,7 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
           </div>
         </div>
 
-        {/* Footer (Payment Action) - Padding Reduced & Cancel Added */}
+        {/* Footer (Payment Action) */}
         <div className="bg-slate-50 border-t border-slate-200 p-4 shrink-0 z-20">
           <div className="space-y-3">
              <div className="relative">
@@ -252,7 +254,6 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
                )}
              </button>
 
-             {/* 🔥 NEW: Cancel Button added */}
              <button 
                onClick={onClose} 
                className="w-full py-2.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shadow-sm"
@@ -268,7 +269,7 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
         onClose={() => { setSuccessModalOpen(false); onClose(); }}
         type="topup"
         userId={successData.userId}
-        userName={successData.name} // ✅ Yahan `name` se map kar diya
+        userName={successData.name} 
         amount={successData.amount}
         reward={0}
       />
