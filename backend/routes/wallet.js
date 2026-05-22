@@ -830,17 +830,15 @@ router.post(
       }
 
       // =========================================================
-      // ✨ IMPROVED ERROR CHECKS (Order Sahi Kar Diya Hai)
+      // ✨ IMPROVED ERROR CHECKS
       // =========================================================
       
-      // 1. Pehle check karo ki total $10 se kam toh nahi hai
       if (totalAmt < 10) {
         return res.status(400).json({ 
             message: `Minimum required amount is $10. You only entered $${totalAmt}. Please increase the amount.` 
         });
       }
 
-      // 2. Fir check karo ki total $10 ke multiples me hai ya nahi (e.g., 10, 20, 50)
       if (totalAmt % 10 !== 0) {
           return res.status(400).json({ 
               message: `Amount must be in multiples of $10 (e.g., $10, $20, $30). You entered $${totalAmt}.` 
@@ -848,26 +846,14 @@ router.post(
       }
 
       // =========================================================
-      // 🔥 REAL DEDUCTION LOGIC
+      // 🔥 STEP 1: PRE-CHECK LOGIC (Check if user has enough balance)
       // =========================================================
       
-      // Withdraw API ki tarah hi pehle Pool ka total check karenge
-      let unlockedPoolIncome = 0;
-      let cumulativeGlobalTeam = 0;
-      // Note: GLOBAL_POOLS array aapki is file me define honi chahiye
-      GLOBAL_POOLS.forEach((lvl) => {
-        cumulativeGlobalTeam += lvl.globalTeam;
-        if ((user.globalTeamCount || 0) >= cumulativeGlobalTeam && (user.directCount || 0) >= lvl.reqDirects) {
-          unlockedPoolIncome += lvl.earning;
-        }
-      });
-      let simPendingPool = user.pendingWithdrawals || 0;
-      let availablePoolBalance = Math.max(0, unlockedPoolIncome - simPendingPool);
-
-      // Pre-check balances
+      // 🔥 FIX: Withdraw API ki tarah direct wallet fields check kar rahe hain
       let simDirect = user.directIncome || 0;
       let simLevel = user.levelIncome || 0;
       let simReward = user.rewardIncome || 0;
+      let simPool = user.poolIncome || 0; 
 
       for (let item of items) {
         const amt = Math.floor(parseFloat(item.amount));
@@ -875,27 +861,37 @@ router.post(
         if (item.source === "direct") {
           if (simDirect < amt) return res.status(400).json({ message: "Insufficient Direct Income balance." });
           simDirect -= amt;
-        } else if (item.source === "level") {
+        } 
+        else if (item.source === "level") {
           if (simLevel < amt) return res.status(400).json({ message: "Insufficient Level Income balance." });
           simLevel -= amt;
-        } else if (item.source === "reward") {
+        } 
+        else if (item.source === "reward") {
           if (simReward < amt) return res.status(400).json({ message: "Insufficient Team Reward Income balance." });
           simReward -= amt;
-        } else if (item.source === "pool") {
-          if (availablePoolBalance < amt) return res.status(400).json({ message: "Insufficient Single Leg Community Income balance." });
-          availablePoolBalance -= amt;
-        } else {
+        } 
+        // 🔥 FIX: Pool prefix handle kiya
+        else if (item.source === "pool" || item.source.startsWith("pool")) {
+          if (simPool < amt) return res.status(400).json({ message: "Insufficient Single Leg Community Income balance." });
+          simPool -= amt;
+        } 
+        else {
           return res.status(400).json({ message: `Invalid source detected: ${item.source}` });
         }
       }
 
-      // Final Deductions
+      // =========================================================
+      // 🔥 STEP 2: REAL DEDUCTION LOGIC
+      // =========================================================
+      
       for (let item of items) {
         const amt = Math.floor(parseFloat(item.amount));
+        
         if (item.source === "direct") user.directIncome -= amt;
         else if (item.source === "level") user.levelIncome -= amt;
         else if (item.source === "reward") user.rewardIncome -= amt;
-        else if (item.source === "pool") user.pendingWithdrawals = (user.pendingWithdrawals || 0) + amt;
+        // 🔥 FIX: Ab Pool income properly Minus hogi!
+        else if (item.source === "pool" || item.source.startsWith("pool")) user.poolIncome -= amt; 
       }
 
       // =========================================================
@@ -914,16 +910,19 @@ router.post(
         const itemFee = grossItemAmt * 0.10;
         const netItemAmt = grossItemAmt - itemFee;
 
+        // Clean name for DB log
+        const cleanSourceName = item.source.startsWith("pool") ? "pool" : item.source;
+
         await Transaction.create({
           userId: user.userId,
           type: "credit_to_wallet",
-          source: item.source, 
+          source: cleanSourceName, 
           amount: netItemAmt,         
           grossAmount: grossItemAmt,  
           netAmount: netItemAmt,      
           fee: itemFee,                  
           walletBalance: user.walletBalance,
-          description: `Credited $${netItemAmt} after 10% fee (${item.source.toUpperCase()})`,
+          description: `Credited $${netItemAmt} after 10% fee (${cleanSourceName.toUpperCase()})`,
           status: "success",
           date: new Date(),
         });
