@@ -71,9 +71,11 @@ router.post('/impersonate', adminAuth, async (req, res) => {
 // Dashboard summary
 // Dashboard summary (UPDATED FOR ALL CARDS)
 // Dashboard summary (UPDATED FOR ALL CARDS - WITH FIX FOR STRINGS & GROSSAMOUNT)
+// Dashboard summary (UPDATED WITH 100% BULLETPROOF JS COUNT FOR TOPUPS)
+// Dashboard summary
 router.get('/dashboard', verifyAdmin, async (req, res) => {
   try {
-    // 🔥 INDIA TIMEZONE FIX
+    // 🔥 INDIA TIMEZONE FIX FOR "TODAY"
     const now = new Date();
     const formatter = new Intl.DateTimeFormat('en-US', { 
         timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' 
@@ -89,15 +91,18 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
     
     // Exactly raat 12:00 AM IST
     const startOfTodayIST = new Date(`${year}-${month}-${day}T00:00:00+05:30`);
+    const startOfTodayTime = startOfTodayIST.getTime();
 
+    // SAARE ASYNC KAAM EK SATH KARENGE SPEED KE LIYE
     const [
       totalUsers,
       todayUsers,
       paidUsers,
       depositStats,
       withdrawalStats,
-      businessStats, // ✅ NAYA: Business total ke liye
-      planStats      // ✅ NAYA: Array ke andar se count ke liye
+      // 🔥 NAYA: "amount" ko .select() mein add kar diya hai
+      allTopups,
+      allUsersForRole
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ createdAt: { $gte: startOfTodayIST } }),
@@ -145,42 +150,87 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
         }
       ]),
 
-      // 🔥 TOP-UP BUSINESS TOTAL
-      User.aggregate([
-        {
-          $facet: {
-            totalBusiness: [
-              { $group: { _id: null, sum: { $sum: { $convert: { input: "$topUpAmount", to: "double", onError: 0, onNull: 0 } } } } }
-            ],
-            todayBusiness: [
-              { $match: { topUpDate: { $gte: startOfTodayIST } } },
-              { $group: { _id: null, sum: { $sum: { $convert: { input: "$topUpAmount", to: "double", onError: 0, onNull: 0 } } } } }
-            ]
-          }
-        }
-      ]),
-
-      // 🔥 PRECISE PLAN COUNT (Array ko Unwind karke)
-      User.aggregate([
-        { $unwind: { path: "$packages", preserveNullAndEmptyArrays: false } },
-        { 
-          $group: { 
-            _id: { $convert: { input: "$packages.amount", to: "double", onError: 0, onNull: 0 } }, 
-            count: { $sum: 1 } 
-          } 
-        }
-      ])
+      // 🔥 JS COUNTING KE LIYE RAW DATA FETCH KARNA
+      Transaction.find({ type: "topup" }).select("fromUserId userId date createdAt status amount").lean(),
+      User.find({}, { userId: 1, role: 1 }).lean()
     ]);
+
+    // ==============================================================
+    // 🚀 LEADER VS NORMAL TOPUP COUNTING ENGINE (100% ACCURATE)
+    // ==============================================================
+    
+    // 1. Saare users ke role ka ek fast Map (Dictionary) bana liya
+    const roleMap = {};
+    allUsersForRole.forEach(u => {
+      roleMap[Number(u.userId)] = u.role || 'user';
+    });
+
+    // 2. Counters aur Business ($) variables set kiye
+   // 2. Counters aur Business ($) variables set kiye
+    let leaderTopupTotal = 0;
+    let leaderTopupToday = 0;
+    let normalTopupTotal = 0;
+    let normalTopupToday = 0;
+
+    let leaderBusinessTotal = 0;
+    let leaderBusinessToday = 0;
+    let normalBusinessTotal = 0;
+    let normalBusinessToday = 0;
+
+    // 3. Har ek topup transaction ko check karenge
+    allTopups.forEach(tx => {
+      const stat = (tx.status || "").toLowerCase();
+      if (stat !== 'success' && stat !== 'completed') return;
+
+      const initiatorId = tx.fromUserId ? Number(tx.fromUserId) : Number(tx.userId); 
+      const role = roleMap[initiatorId] || 'user';
+      
+      const txDate = tx.date || tx.createdAt || new Date(0);
+      const isToday = new Date(txDate).getTime() >= startOfTodayTime;
+      
+      // ==========================================
+      // 🔥 AMOUNT EXTRACTION & FALLBACK FIX
+      // ==========================================
+      let amountStr = "0";
+      if (tx.amount !== undefined && tx.amount !== null) {
+          if (tx.amount.$numberDecimal) {
+              amountStr = tx.amount.$numberDecimal;
+          } else {
+              amountStr = tx.amount.toString();
+          }
+      }
+      
+      let amount = Number(amountStr) || 0;
+      
+      // 🔥 AGAR PURANE DATA ME AMOUNT MISSING HAI TOH DEFAULT 30 LELO (Kyunki 30 ka hi package hai)
+      if (amount === 0) {
+          amount = 30; 
+      }
+
+      // Role ke hisaab se Count aur Amount dono badhao
+      if (role === 'leader') {
+        leaderTopupTotal++;
+        leaderBusinessTotal += amount;
+        if (isToday) {
+          leaderTopupToday++;
+          leaderBusinessToday += amount;
+        }
+      } else {
+        normalTopupTotal++;
+        normalBusinessTotal += amount;
+        if (isToday) {
+          normalTopupToday++;
+          normalBusinessToday += amount;
+        }
+      }
+    });
+
+    // 🔥 GRAND TOTALS (Dono ko milakar exact sum yahan nikalega)
+    const totalTopupBusiness = leaderBusinessTotal + normalBusinessTotal;
+    const todayTopupBusiness = leaderBusinessToday + normalBusinessToday;
 
     const dep = depositStats[0];
     const withD = withdrawalStats[0];
-    const biz = businessStats[0];
-
-    // Helper function to get exact count
-    const getPlanCount = (amount) => {
-      const plan = planStats.find(p => p._id === amount);
-      return plan ? plan.count : 0;
-    };
 
     res.json({
       totalUsers,
@@ -189,7 +239,7 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
       
       totalDeposit: dep.total[0]?.sum || 0,
       todayDeposit: dep.today[0]?.sum || 0,
-      pendingDepositToday: dep.pendingToday[0]?.sum || 0,
+      pendingDepositToday: dep.pendingDepositToday?.[0]?.sum || dep.pendingToday?.[0]?.sum || 0,
       
       totalWithdrawal: withD.totalAll[0]?.sum || 0,
       approvedWithdrawalTotal: withD.approvedTotal[0]?.sum || 0,
@@ -197,17 +247,23 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
       pendingWithdrawalTotal: withD.pendingTotal[0]?.sum || 0,
       pendingWithdrawalToday: withD.pendingToday[0]?.sum || 0,
 
-      // ✅ FRONTEND KE LIYE NAYE VARIABLES 
-      totalTopupBusiness: biz.totalBusiness[0]?.sum || 0,
-      todayTopupBusiness: biz.todayBusiness[0]?.sum || 0,
-      totalPlan10: getPlanCount(10),
-      totalPlan30: getPlanCount(30),
-      totalPlan60: getPlanCount(60),
-      totalPlan120: getPlanCount(120),
-      totalPlan240: getPlanCount(240),
-      totalPlan480: getPlanCount(480),
-      totalPlan960: getPlanCount(960),
+      // ✅ FRONTEND KO EXACT DONO KA MILAKAR TOTAL BHEJ RAHE HAIN
+      totalTopupBusiness,
+      todayTopupBusiness,
+
+      // ✅ COUNTS
+      leaderTopupTotal,
+      leaderTopupToday,
+      normalTopupTotal,
+      normalTopupToday,
+
+      // ✅ BUSINESS AMOUNTS ($)
+      leaderBusinessTotal,
+      leaderBusinessToday,
+      normalBusinessTotal,
+      normalBusinessToday
     });
+
   } catch (error) {
     console.error('Dashboard error:', error);
     res.status(500).json({ message: 'Dashboard data fetch failed' });
@@ -285,13 +341,17 @@ router.get("/stats", verifyAdmin, async (req, res) => {
 
 
 
-
+ 
+// =======================================================
+// 1. GET ALL USERS (SERVER-SIDE SEARCH & LEADER DEFAULT)
+// =======================================================
 router.get('/all-users', verifyAdmin, async (req, res) => {
   try {
     const { search = "", page = 1, limit = 50 } = req.query;
     let query = {};
 
-    if (search) {
+    if (search.trim()) {
+      // 🔍 Agar search kiya hai, toh sabme dhoondo (ID, Name, Email)
       query = {
         $or: [
           { userId: isNaN(search) ? undefined : Number(search) },
@@ -299,10 +359,12 @@ router.get('/all-users', verifyAdmin, async (req, res) => {
           { email: { $regex: search, $options: "i" } }
         ].filter(Boolean)
       };
+    } else {
+      // 👑 🔥 NAYA FIX: Agar search khali hai, toh sirf "Leader" dikhao
+      query = { role: "leader" };
     }
 
     // 🔥 FIX: .lean() add kiya hai! 
-    // Ye Mongoose document ko plain JSON me badal dega taaki 'role' field chhupe na.
     const users = await User.find(query)
       .select('-password -transactionPassword') 
       .sort({ createdAt: -1 })
@@ -324,15 +386,9 @@ router.get('/all-users', verifyAdmin, async (req, res) => {
   }
 });
 
+
 // =======================================================
-// 2. UPDATE ROLE & HANDLE $30 LOGIC (FIXED)
-// =======================================================
-// =======================================================
-// 2. UPDATE ROLE & HANDLE $30 LOGIC (100% FAIL-PROOF)
-// =======================================================
-// =======================================================
-// 2. UPDATE ROLE & HANDLE $30 LOGIC (LOGOUT ISSUE FIXED)
-// =======================================================
+// 2. UPDATE ROLE & HANDLE $30 LOGIC (TRANSACTION FIX ADDED)
 // =======================================================
 router.put('/update-role/:userId', verifyAdmin, async (req, res) => {
   try {
@@ -343,7 +399,7 @@ router.put('/update-role/:userId', verifyAdmin, async (req, res) => {
       return res.status(400).json({ success: false, message: "Admin password is required." });
     }
 
-    // 🔍 1. Token se Admin ID nikalo (Jaisa manual-transaction me hota hai)
+    // 🔍 1. Token se Admin ID nikalo
     const tokenData = req.admin || req.user;
     const adminDbId = tokenData.adminId || tokenData.id || tokenData._id;
 
@@ -352,10 +408,8 @@ router.put('/update-role/:userId', verifyAdmin, async (req, res) => {
     let isAdminPasswordValid = false;
 
     if (adminRecord) {
-        // 🔥 FIX: Bcrypt compare lagaya, jaise manual-transaction me hai
         isAdminPasswordValid = await bcrypt.compare(adminPassword, adminRecord.password);
     } else {
-        // Agar Admin collection me nahi mila, toh User collection me check karo (role: 'admin')
         const adminUser = await User.findById(adminDbId);
         if (adminUser && adminUser.role === 'admin') {
             isAdminPasswordValid = await bcrypt.compare(adminPassword, adminUser.password);
@@ -363,11 +417,8 @@ router.put('/update-role/:userId', verifyAdmin, async (req, res) => {
     }
 
     if (!isAdminPasswordValid) {
-      console.log("❌ Update Role: Password Mismatch");
       return res.status(400).json({ success: false, message: "Incorrect Admin Password!" }); 
     }
-
-    console.log("✅ Update Role: Password Matched!");
 
     // 3. Target user update logic
     const targetUser = await User.findOne({ userId: targetUserId });
@@ -377,12 +428,35 @@ router.put('/update-role/:userId', verifyAdmin, async (req, res) => {
 
     const oldRole = targetUser.role;
 
-    // LEADER $30 LOGIC
+    // 🔥 LEADER $30 LOGIC WITH TRANSACTION HISTORY 🔥
     if (oldRole !== 'leader' && newRole === 'leader') {
       targetUser.walletBalance = (targetUser.walletBalance || 0) + 30;
+      
+      // ✅ Passbook entry (Taki user ko pata chale $30 kahan se aaya)
+      await Transaction.create({
+        userId: targetUser.userId,
+        type: "credit_to_wallet",
+        amount: 30,
+        source: "admin_bonus",
+        description: "Promoted to Leader: $30 Showcase Balance Added",
+        status: "success",
+        date: new Date()
+      });
+
     } 
     else if (oldRole === 'leader' && newRole !== 'leader') {
       targetUser.walletBalance = Math.max(0, (targetUser.walletBalance || 0) - 30);
+      
+      // ✅ Passbook entry (Taki deduction ka record rahe)
+      await Transaction.create({
+        userId: targetUser.userId,
+        type: "debit",
+        amount: 30,
+        source: "admin_deduction",
+        description: "Demoted from Leader: $30 Balance Deducted",
+        status: "success",
+        date: new Date()
+      });
     }
 
     targetUser.role = newRole;
@@ -394,7 +468,6 @@ router.put('/update-role/:userId', verifyAdmin, async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error updating role" });
   }
 });
-
 // =======================================================
 // 3. DIRECT LOGIN (Impersonation)
 // =======================================================

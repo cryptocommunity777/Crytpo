@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   FaHome, FaUsers, FaMoneyBill, FaWallet, FaListAlt, FaCog, FaSignOutAlt,
-  FaSitemap, FaProjectDiagram, FaExchangeAlt, FaFileAlt, FaUserPlus,FaGift,
+  FaSitemap, FaProjectDiagram, FaExchangeAlt, FaFileAlt, FaUserPlus, FaGift,
   FaArrowCircleUp, FaArrowCircleDown, FaBell, FaClipboardList, FaCoins,
   FaUserSlash, FaBars, FaTimes, FaHistory, FaShieldAlt, FaBan,
-  FaUserCog, FaYoutube // 🔥 NAYA ICON 'FaYoutube' ADD KIYA
+  FaUserCog, FaYoutube
 } from 'react-icons/fa';
 
 const Sidebar = () => {
@@ -27,6 +27,21 @@ const Sidebar = () => {
   };
 
   const toggleSidebar = () => setIsOpen(!isOpen);
+
+  // 🚀 NAYA FUNCTION: Hard Reload Logic Taaki Hamesha Fresh Data Aaye
+  const handleNavClick = (e, path) => {
+    e.preventDefault(); // React Router ka default SPA behavior rokna
+    
+    if (isOpen) setIsOpen(false); // Mobile sidebar close karna
+
+    if (window.location.pathname === path) {
+      // Agar current page par hi dobara click kiya hai, toh usi page ko refresh karo
+      window.location.reload();
+    } else {
+      // Agar dusre page par click kiya hai, toh URL change karke page ko hard-reload karo
+      window.location.href = path;
+    }
+  };
 
   return (
     <>
@@ -77,19 +92,20 @@ const Sidebar = () => {
 
           <nav className="space-y-2">
             
-            <NavLink to={`${BASE_PATH}`} end className={linkClass} onClick={toggleSidebar}>
+            {/* 🔥 HAR LINK ME 'handleNavClick' ADD KIYA GAYA HAI 🔥 */}
+            <NavLink to={`${BASE_PATH}`} end className={linkClass} onClick={(e) => handleNavClick(e, BASE_PATH)}>
               <FaHome className="inline-block mr-2" /> Dashboard
             </NavLink>
 
-            <NavLink to={`${BASE_PATH}/users`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/users`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/users`)}>
               <FaUsers className="inline-block mr-2" /> All Users
             </NavLink>
 
-            <NavLink to={`${BASE_PATH}/manage-users`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/manage-users`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/manage-users`)}>
               <FaUserCog className="inline-block mr-2 text-blue-500" /> Manage Roles & Leaders
             </NavLink>
 
-            <NavLink to={`${BASE_PATH}/blocked-users`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/blocked-users`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/blocked-users`)}>
               <FaUserSlash className="inline-block mr-2" /> Blocked Users
             </NavLink>
 
@@ -98,12 +114,11 @@ const Sidebar = () => {
                 <p className="text-xs font-bold text-black uppercase tracking-wider ml-2">Security</p>
             </div>
             
-            <NavLink to={`${BASE_PATH}/security`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/security`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/security`)}>
               <FaShieldAlt className="inline-block mr-2 text-green-500" /> IP Security
             </NavLink>
 
-            {/* 🚀 NAYA LINK: DEVICE MANAGER 🚀 */}
-            <NavLink to={`${BASE_PATH}/device-manager`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/device-manager`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/device-manager`)}>
               <FaBan className="inline-block mr-2 text-red-600" /> Device Blocks
             </NavLink>
 
@@ -111,11 +126,11 @@ const Sidebar = () => {
                 <p className="text-xs font-bold text-black uppercase tracking-wider ml-2">Analytics & Logs</p>
             </div>
 
-            <NavLink to={`${BASE_PATH}/login-stats`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/login-stats`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/login-stats`)}>
               <FaHistory className="inline-block mr-2" /> Login Analytics
             </NavLink>
 
-            <NavLink to={`${BASE_PATH}/notifications`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/notifications`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/notifications`)}>
               <FaBell className="inline-block mr-2" /> Notifications
             </NavLink>
 
@@ -123,36 +138,36 @@ const Sidebar = () => {
                 <p className="text-xs font-bold text-black uppercase tracking-wider ml-2">Finance</p>
             </div>
 
-            <NavLink to={`${BASE_PATH}/topups`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/topups`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/topups`)}>
               <FaArrowCircleUp className="inline-block mr-2" /> Top-Ups
             </NavLink>
-            <NavLink to={`${BASE_PATH}/deposits`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/deposits`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/deposits`)}>
               <FaMoneyBill className="inline-block mr-2" /> Deposit Log
             </NavLink>
-            <NavLink to={`${BASE_PATH}/booster-offer`} className={linkClass} onClick={toggleSidebar}>
-  <FaGift className="inline-block mr-2 text-green-500" /> Booster Offer
-</NavLink>
-            <NavLink to={`${BASE_PATH}/withdrawals/request`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/booster-offer`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/booster-offer`)}>
+              <FaGift className="inline-block mr-2 text-green-500" /> Booster Offer
+            </NavLink>
+            <NavLink to={`${BASE_PATH}/withdrawals/request`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/withdrawals/request`)}>
               <FaArrowCircleDown className="inline-block mr-2" /> Pending Withdrawals
             </NavLink>
-            <NavLink to={`${BASE_PATH}/withdrawals/all`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/withdrawals/all`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/withdrawals/all`)}>
               <FaClipboardList className="inline-block mr-2" /> All Withdrawals
             </NavLink>
 
-            <NavLink to={`${BASE_PATH}/manual-deposit`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/manual-deposit`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/manual-deposit`)}>
               <FaCoins className="inline-block mr-2" /> Manual Deposit
             </NavLink>
 
-            <NavLink to={`${BASE_PATH}/wallet-summary`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/wallet-summary`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/wallet-summary`)}>
               <FaWallet className="inline-block mr-2" /> Wallet Summary
             </NavLink>
-            <NavLink to={`${BASE_PATH}/credit-to-wallet`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/credit-to-wallet`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/credit-to-wallet`)}>
               <FaCoins className="inline-block mr-2" /> Create Wallet
             </NavLink>
-            <NavLink to={`${BASE_PATH}/transactions`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/transactions`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/transactions`)}>
               <FaListAlt className="inline-block mr-2" /> Transactions
             </NavLink>
-            <NavLink to={`${BASE_PATH}/transactions/reverse`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/transactions/reverse`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/transactions/reverse`)}>
               <FaExchangeAlt className="inline-block mr-2" /> Reverse Txn
             </NavLink>
 
@@ -160,20 +175,19 @@ const Sidebar = () => {
                 <p className="text-xs font-bold text-black uppercase tracking-wider ml-2">System</p>
             </div>
 
-            <NavLink to={`${BASE_PATH}/add-user`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/add-user`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/add-user`)}>
               <FaUserPlus className="inline-block mr-2" /> Add User
             </NavLink>
             
-            <NavLink to={`${BASE_PATH}/support`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/support`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/support`)}>
               <FaFileAlt className="inline-block mr-2" /> Support
             </NavLink>
 
-            {/* 🎥 NAYA: PROMO VIDEO LINK YAHAN ADD KIYA HAI */}
-            <NavLink to={`${BASE_PATH}/promo-video`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/promo-video`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/promo-video`)}>
               <FaYoutube className="inline-block mr-2 text-red-500" /> Promo Video
             </NavLink>
 
-            <NavLink to={`${BASE_PATH}/settings`} className={linkClass} onClick={toggleSidebar}>
+            <NavLink to={`${BASE_PATH}/settings`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/settings`)}>
               <FaCog className="inline-block mr-2" /> Settings
             </NavLink>
           </nav>

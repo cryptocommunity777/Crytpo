@@ -3,7 +3,7 @@ import {
   Users, UserPlus, UserCheck, 
   Wallet, ArrowDownToLine, Clock, 
   DollarSign, CheckCircle, AlertCircle,
-  Briefcase, TrendingUp, Star, Award, Zap, Layers, Package, Activity, Crown
+  Briefcase, TrendingUp, Crown, Zap, Shield, Star
 } from 'lucide-react';
 
 function DashboardCards({ stats }) {
@@ -92,7 +92,7 @@ function DashboardCards({ stats }) {
       border: 'border-pink-200'
     },
 
-    // --- TOP-UP & BUSINESS STATS (Purple/Mix) ---
+    // --- OVERALL BUSINESS STATS (Purple) ---
     {
       title: 'Total Top-Up Business',
       value: `$${stats.totalTopupBusiness?.toLocaleString() || 0}`,
@@ -107,54 +107,66 @@ function DashboardCards({ stats }) {
       bg: 'bg-violet-100',
       border: 'border-violet-200'
     },
+
+    // --- 🔥 NEW: LEADER VS NORMAL TOPUP STATS ($30) ---
+   // --- 🔥 LEADER VS NORMAL TOPUP COUNTS ---
     {
-      title: 'Total $10 Packages',
-      value: stats.totalPlan10?.toLocaleString() || 0,
-      icon: <Star className="text-fuchsia-600" size={28} />,
-      bg: 'bg-fuchsia-100',
-      border: 'border-fuchsia-200'
-    },
-    {
-      title: 'Total $30 Packages',
-      value: stats.totalPlan30?.toLocaleString() || 0,
-      icon: <Award className="text-yellow-600" size={28} />,
+      title: 'Leader Top-ups (Total)',
+      value: stats.leaderTopupTotal || 0,
+      icon: <Crown className="text-yellow-600" size={28} />,
       bg: 'bg-yellow-100',
-      border: 'border-yellow-200'
+      border: 'border-yellow-300'
     },
     {
-      title: 'Total $60 Packages',
-      value: stats.totalPlan60?.toLocaleString() || 0,
-      icon: <Zap className="text-cyan-600" size={28} />,
+      title: 'Leader Top-ups (Today)',
+      value: stats.leaderTopupToday || 0,
+      icon: <Zap className="text-orange-600" size={28} />,
+      bg: 'bg-orange-100',
+      border: 'border-orange-300'
+    },
+    {
+      title: 'Normal Top-ups (Total)',
+      value: stats.normalTopupTotal || 0,
+      icon: <Shield className="text-cyan-600" size={28} />,
       bg: 'bg-cyan-100',
-      border: 'border-cyan-200'
+      border: 'border-cyan-300'
     },
     {
-      title: 'Total $120 Packages',
-      value: stats.totalPlan120?.toLocaleString() || 0,
-      icon: <Layers className="text-indigo-600" size={28} />,
-      bg: 'bg-indigo-100',
-      border: 'border-indigo-200'
-    },
-    {
-      title: 'Total $240 Packages',
-      value: stats.totalPlan240?.toLocaleString() || 0,
-      icon: <Package className="text-blue-600" size={28} />,
+      title: 'Normal Top-ups (Today)',
+      value: stats.normalTopupToday || 0,
+      icon: <Star className="text-blue-500" size={28} />,
       bg: 'bg-blue-100',
-      border: 'border-blue-200'
+      border: 'border-blue-300'
+    },
+
+    // --- 🔥 LEADER VS NORMAL TOPUP BUSINESS ($) ---
+    {
+      title: 'Leader Business (Total)',
+      value: `$${stats.leaderBusinessTotal?.toLocaleString() || 0}`,
+      icon: <Briefcase className="text-purple-600" size={28} />,
+      bg: 'bg-purple-100',
+      border: 'border-purple-300'
     },
     {
-      title: 'Total $480 Packages',
-      value: stats.totalPlan480?.toLocaleString() || 0,
-      icon: <Activity className="text-emerald-600" size={28} />,
-      bg: 'bg-emerald-100',
-      border: 'border-emerald-200'
+      title: 'Leader Business (Today)',
+      value: `$${stats.leaderBusinessToday?.toLocaleString() || 0}`,
+      icon: <TrendingUp className="text-fuchsia-600" size={28} />,
+      bg: 'bg-fuchsia-100',
+      border: 'border-fuchsia-300'
     },
     {
-      title: 'Total $960 Packages',
-      value: stats.totalPlan960?.toLocaleString() || 0,
-      icon: <Crown className="text-amber-600" size={28} />,
-      bg: 'bg-amber-100',
-      border: 'border-amber-200'
+      title: 'Normal Business (Total)',
+      value: `$${stats.normalBusinessTotal?.toLocaleString() || 0}`,
+      icon: <Briefcase className="text-indigo-600" size={28} />,
+      bg: 'bg-indigo-100',
+      border: 'border-indigo-300'
+    },
+    {
+      title: 'Normal Business (Today)',
+      value: `$${stats.normalBusinessToday?.toLocaleString() || 0}`,
+      icon: <TrendingUp className="text-violet-600" size={28} />,
+      bg: 'bg-violet-100',
+      border: 'border-violet-300'
     }
   ];
 
@@ -175,7 +187,7 @@ function DashboardCards({ stats }) {
         </div>
       ))}
     </div>
-  );
+  ); 
 }
 
 export default DashboardCards;

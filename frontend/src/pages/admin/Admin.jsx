@@ -6,7 +6,7 @@ import ReferralTree from '../../components/ReferralTree';
 import AdminWithdrawalTable from './AdminWithdrawalTable';
 
 const AdminDashboard = () => {
-  // ✅ UPDATE 1: Yahan naye variables ko add kar diya gaya hai
+  // ✅ UPDATE 1: Purane packages hata kar Naye Leader/Normal variables lagaye
   const [stats, setStats] = useState({
     totalUsers: 0,
     todayUsers: 0,
@@ -22,16 +22,14 @@ const AdminDashboard = () => {
     pendingWithdrawalTotal: 0,
     pendingWithdrawalToday: 0,
 
-    // Naye Top-up aur Packages variables
     totalTopupBusiness: 0,
     todayTopupBusiness: 0,
-    totalPlan10: 0,
-    totalPlan30: 0,
-    totalPlan60: 0,
-    totalPlan120: 0,
-    totalPlan240: 0,
-    totalPlan480: 0,
-    totalPlan960: 0,
+    
+    // 🔥 NAYE VARIABLES 
+    leaderTopupTotal: 0,
+    leaderTopupToday: 0,
+    normalTopupTotal: 0,
+    normalTopupToday: 0,
   });
 
   const [withdrawals, setWithdrawals] = useState([]);
@@ -48,7 +46,7 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // ✅ UPDATE 2: Backend se aane wale naye data ko state mein save kar rahe hain
+      // ✅ UPDATE 2: Backend se aane wale naye data ko state mein receive karna
       setStats({
         totalUsers: statsRes.data.totalUsers || 0,
         todayUsers: statsRes.data.todayUsers || 0,
@@ -64,16 +62,19 @@ const AdminDashboard = () => {
         pendingWithdrawalTotal: statsRes.data.pendingWithdrawalTotal || 0,
         pendingWithdrawalToday: statsRes.data.pendingWithdrawalToday || 0,
 
-        // Naye Top-up aur Packages ko receive karna
+        // 🔥 COUNTS
+        leaderTopupTotal: statsRes.data.leaderTopupTotal || 0,
+        leaderTopupToday: statsRes.data.leaderTopupToday || 0,
+        normalTopupTotal: statsRes.data.normalTopupTotal || 0,
+        normalTopupToday: statsRes.data.normalTopupToday || 0,
+
+        // 🔥 BUSINESS ($)
         totalTopupBusiness: statsRes.data.totalTopupBusiness || 0,
         todayTopupBusiness: statsRes.data.todayTopupBusiness || 0,
-        totalPlan10: statsRes.data.totalPlan10 || 0,
-        totalPlan30: statsRes.data.totalPlan30 || 0,
-        totalPlan60: statsRes.data.totalPlan60 || 0,
-        totalPlan120: statsRes.data.totalPlan120 || 0,
-        totalPlan240: statsRes.data.totalPlan240 || 0,
-        totalPlan480: statsRes.data.totalPlan480 || 0,
-        totalPlan960: statsRes.data.totalPlan960 || 0,
+        leaderBusinessTotal: statsRes.data.leaderBusinessTotal || 0,
+        leaderBusinessToday: statsRes.data.leaderBusinessToday || 0,
+        normalBusinessTotal: statsRes.data.normalBusinessTotal || 0,
+        normalBusinessToday: statsRes.data.normalBusinessToday || 0,
       });
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -92,7 +93,7 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="w-full  text-black min-h-screen bg-gray-50 p-4 md:p-6 pt-20">
+    <div className="w-full text-black min-h-screen bg-gray-50 p-4 md:p-6 pt-20">
       
       {/* Header */}
       <div className="mb-6">
