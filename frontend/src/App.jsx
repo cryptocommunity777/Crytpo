@@ -55,6 +55,8 @@ import AllWithdrawalsPage from './pages/admin/AllWithdrawalsPage.jsx';
 import DirectIncomePage from './pages/admin/DirectIncomePage.jsx';
 import LevelIncomePage from './pages/admin/LevelIncomePage.jsx';
 import WalletSummaryPage from './pages/admin/WalletSummaryPage.jsx';
+import FastTrackReport from './pages/admin/FastTrackReport.jsx';
+import UserFundOverview from './pages/admin/UserFundOverview.jsx';
 import CreditToWalletPage from './pages/admin/CreditToWallet.jsx';
 import BlockedUsers from "./pages/admin/BlockedUsers.jsx";
 import ReverseTransaction from './pages/admin/ReverseTransaction.jsx';
@@ -144,6 +146,8 @@ function AppContent() {
               <Route path="notifications" element={<AdminNotifications />} />
               <Route path="level-income" element={<LevelIncomePage />} />
               <Route path="wallet-summary" element={<WalletSummaryPage />} />
+              <Route path="fast-track-report" element={<FastTrackReport />} />
+              <Route path="user-fund-overview" element={<UserFundOverview />} />
               <Route path="credit-to-wallet" element={<CreditToWalletPage />} />
               <Route path="blocked-users" element={<BlockedUsers />} />
               <Route path="transactions" element={<AdminTransactions />} />

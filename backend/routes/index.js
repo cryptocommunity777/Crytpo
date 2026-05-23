@@ -19,6 +19,8 @@ router.use('/admin', require('./adminManualTransaction'));
 // 🎥 NAYA: Admin Promo Video Route (Admin Panel ke liye)
 router.use('/admin/video', require('./adminPromoVideo')); // 👈 YE LINE ADD KI HAI
 
+router.use('/admin', require('./adminReports')); // 👈 YAHAN ADD KARNA HAI
+
 // 👇 Generic admin routes (hamesha LAST me)
 router.use('/admin', require('./admin'));
 

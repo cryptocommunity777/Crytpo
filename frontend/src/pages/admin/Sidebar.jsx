@@ -5,7 +5,7 @@ import {
   FaSitemap, FaProjectDiagram, FaExchangeAlt, FaFileAlt, FaUserPlus, FaGift,
   FaArrowCircleUp, FaArrowCircleDown, FaBell, FaClipboardList, FaCoins,
   FaUserSlash, FaBars, FaTimes, FaHistory, FaShieldAlt, FaBan,
-  FaUserCog, FaYoutube
+  FaUserCog, FaYoutube, FaRocket, FaPiggyBank // 🔥 Ye do naye icons import kiye
 } from 'react-icons/fa';
 
 const Sidebar = () => {
@@ -144,9 +144,15 @@ const Sidebar = () => {
             <NavLink to={`${BASE_PATH}/deposits`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/deposits`)}>
               <FaMoneyBill className="inline-block mr-2" /> Deposit Log
             </NavLink>
-            <NavLink to={`${BASE_PATH}/booster-offer`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/booster-offer`)}>
-              <FaGift className="inline-block mr-2 text-green-500" /> Booster Offer
+
+            {/* 🔥 DO NAYE LINKS ADD KIYE HAIN 🔥 */}
+            <NavLink to={`${BASE_PATH}/fast-track-report`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/fast-track-report`)}>
+              <FaRocket className="inline-block mr-2 text-orange-500" /> Fast Track Report
             </NavLink>
+            <NavLink to={`${BASE_PATH}/user-fund-overview`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/user-fund-overview`)}>
+              <FaPiggyBank className="inline-block mr-2 text-pink-500" /> Fund Overview
+            </NavLink>
+
             <NavLink to={`${BASE_PATH}/withdrawals/request`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/withdrawals/request`)}>
               <FaArrowCircleDown className="inline-block mr-2" /> Pending Withdrawals
             </NavLink>
