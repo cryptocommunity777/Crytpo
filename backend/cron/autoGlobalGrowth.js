@@ -30,25 +30,29 @@ const startGlobalGrowthCron = () => {
     cron.schedule('* * * * *', async () => {
         try {
             // 🔥 1. FAKE/SYSTEM GROWTH LOGIC 
-            const shouldAddFakeUser = Math.random() < (100 / 1440);  
+            const shouldAddFakeUser = true; 
+         //   const shouldAddFakeUser = Math.random() < (100 / 1440);  
               if (shouldAddFakeUser) {
                 
                 // =======================================================
                 // 🚀 A. NAYA SMART DISTRIBUTION LOGIC ("Beech me mat rokna" Rule)
                 // =======================================================
                 
-                // // YAHAN FIX KIYA HAI: Saare caps (Milestones) cumulative (judte hue) define kiye hain.
-                // // L4=360, L5=760, L6=2360, L7=4360, L8=7360, L9=11360, L10=16360, L11=23860, L12=33860
                 const allMilestones = [360, 760, 2360, 4360, 7360, 11360, 16360, 23860, 33860];
 
-                // // YAHAN FIX KIYA HAI: Stop conditions lagayi hain. 
-                // // Agar user in limits ke EXACT number par hai, tabhi rukega, beech raaste me bilkul nahi rukega.
+                // 🔥 YAHAN FIX KIYA HAI: Har limit ke andar aage ke saare milestones daal diye.
+                // Agar koi pehla gate tod chuka hai, toh wo aage aane wale gate par pakka pakda jayega aur ruk jayega.
                 const stopConditions = [
-                    // 1. Inactive (Red ID) kisi bhi aane wale milestone par aakar ruk jayegi
+                    // 1. Inactive (Red ID) kisi bhi milestone par aakar ruk jayegi
                     { isToppedUp: false, globalTeamCount: { $in: allMilestones } },
                     
-                    // 2. Active (Green ID) apne directs ke hisaab se exact milestones par rukenge
+                    // 2. Active (Green ID) with 0 Directs: 360 par rukega (Agar aage hai toh 760 par)
+                    { isToppedUp: true, directCount: { $lt: 1 }, globalTeamCount: { $in: [360, 760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
+                    
+                    // 3. Active (Green ID) with 1 to 4 Directs: 760 par rukega
                     { isToppedUp: true, directCount: { $lt: 5 }, globalTeamCount: { $in: [760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
+                    
+                    // Baaki sab apne-apne level aur direct ke hisaab se rukenge
                     { isToppedUp: true, directCount: { $lt: 6 }, globalTeamCount: { $in: [2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
                     { isToppedUp: true, directCount: { $lt: 8 }, globalTeamCount: { $in: [4360, 7360, 11360, 16360, 23860, 33860] } },
                     { isToppedUp: true, directCount: { $lt: 10 }, globalTeamCount: { $in: [7360, 11360, 16360, 23860, 33860] } },
@@ -58,8 +62,7 @@ const startGlobalGrowthCron = () => {
                     { isToppedUp: true, directCount: { $lt: 18 }, globalTeamCount: { $in: [33860] } }
                 ];
 
-                // // YAHAN FIX KIYA HAI: Ek single super-fast command jo un sabhi ko +1 karegi jo 'stopConditions' mein NAHI aate.
-                // // Agar koi 800 par hai (0 direct ke sath), toh wo condition me match nahi hoga, aur 2360 tak safely badhta rahega.
+                // Ye command un sabko +1 karegi jo upar wale stopConditions me nahi aate
                 await User.updateMany(
                     { $nor: stopConditions },
                     { $inc: { globalTeamCount: 1 } }
@@ -141,7 +144,7 @@ const startGlobalGrowthCron = () => {
                                 type: 'credit',
                                 source: 'pool',
                                 amount: lvl.daily,
-                                description: `Singel leg Level ${lvl.level} Unlocked - Day 1 Income`,
+                                description: `Single leg Level ${lvl.level} Unlocked - Day 1 Income`,
                                 status: 'success'
                             });
 

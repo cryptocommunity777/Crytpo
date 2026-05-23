@@ -30,7 +30,7 @@ const CreditToWalletHistory = () => {
         const creditTxs = rawData
           .filter(
             (tx) =>
-              tx.type === "credit_to_wallet" || tx.type === "binary_income" || tx.type === "credit"
+              tx.type === "credit_to_wallet" || tx.type === "binary_income" || tx.type === "credit" 
           )
           // 🔥 YAHAN FIX KIYA HAI: Single Leg / Pool / Unlocked wali saari entries HIDE kar di hain
           .filter(tx => {
