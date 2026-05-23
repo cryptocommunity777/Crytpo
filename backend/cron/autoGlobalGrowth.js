@@ -1,4 +1,3 @@
-// C:\Users\HP\Desktop\Cryptocommunity\backend\cron\autoGlobalGrowth.js
 const cron = require('node-cron');
 const User = require('../models/User'); 
 const SystemStat = require('../models/SystemStat'); 
@@ -24,42 +23,44 @@ const GLOBAL_POOLS = [
 
 const startGlobalGrowthCron = () => {
 
+    // 🔥 YAHAN EK NAYI FUNCTION BANAYI HAI JO CRON MEIN USE HOGI
+    const getStopConditions = () => {
+        const allMilestones = [360, 760, 2360, 4360, 7360, 11360, 16360, 23860, 33860];
+        return [
+            // 1. Inactive (Red ID) kisi bhi milestone par aakar ruk jayegi
+            { isToppedUp: false, globalTeamCount: { $in: allMilestones } },
+            
+            // 2. Active (Green ID) with 0 Directs: 360 par rukega (Agar aage nikal gaya hai toh 760 par takrayega)
+            { isToppedUp: true, directCount: { $lt: 1 }, globalTeamCount: { $in: [360, 760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
+            
+            // 3. Active (Green ID) with 1 to 4 Directs: 760 par rukega
+            { isToppedUp: true, directCount: { $lt: 5 }, globalTeamCount: { $in: [760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
+            
+            // Baaki sab apne-apne level aur direct ke hisaab se rukenge
+            { isToppedUp: true, directCount: { $lt: 6 }, globalTeamCount: { $in: [2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
+            { isToppedUp: true, directCount: { $lt: 8 }, globalTeamCount: { $in: [4360, 7360, 11360, 16360, 23860, 33860] } },
+            { isToppedUp: true, directCount: { $lt: 10 }, globalTeamCount: { $in: [7360, 11360, 16360, 23860, 33860] } },
+            { isToppedUp: true, directCount: { $lt: 12 }, globalTeamCount: { $in: [11360, 16360, 23860, 33860] } },
+            { isToppedUp: true, directCount: { $lt: 14 }, globalTeamCount: { $in: [16360, 23860, 33860] } },
+            { isToppedUp: true, directCount: { $lt: 16 }, globalTeamCount: { $in: [23860, 33860] } },
+            { isToppedUp: true, directCount: { $lt: 18 }, globalTeamCount: { $in: [33860] } }
+        ];
+    };
+
     // =========================================================================
     // 1. HAR 1 MINUTE WALI CRON (Growth + Pool Unlock Logic)
     // =========================================================================
     cron.schedule('* * * * *', async () => {
         try {
             // 🔥 1. FAKE/SYSTEM GROWTH LOGIC 
-           const shouldAddFakeUser = Math.random() < (100 / 1440);  
-              if (shouldAddFakeUser) {
+            const shouldAddFakeUser = Math.random() < (100 / 1440);  
+            if (shouldAddFakeUser) {
                 
                 // =======================================================
-                // 🚀 A. NAYA SMART DISTRIBUTION LOGIC ("Beech me mat rokna" Rule)
+                // 🚀 A. NAYA SMART DISTRIBUTION LOGIC
                 // =======================================================
                 
-                const allMilestones = [360, 760, 2360, 4360, 7360, 11360, 16360, 23860, 33860];
-
-                // 🔥 YAHAN FIX KIYA HAI: Har limit ke andar aage ke saare milestones daal diye.
-                // Agar koi pehla gate tod chuka hai, toh wo aage aane wale gate par pakka pakda jayega aur ruk jayega.
-                const stopConditions = [
-                    // 1. Inactive (Red ID) kisi bhi milestone par aakar ruk jayegi
-                    { isToppedUp: false, globalTeamCount: { $in: allMilestones } },
-                    
-                    // 2. Active (Green ID) with 0 Directs: 360 par rukega (Agar aage hai toh 760 par)
-                    { isToppedUp: true, directCount: { $lt: 1 }, globalTeamCount: { $in: [360, 760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
-                    
-                    // 3. Active (Green ID) with 1 to 4 Directs: 760 par rukega
-                    { isToppedUp: true, directCount: { $lt: 5 }, globalTeamCount: { $in: [760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
-                    
-                    // Baaki sab apne-apne level aur direct ke hisaab se rukenge
-                    { isToppedUp: true, directCount: { $lt: 6 }, globalTeamCount: { $in: [2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
-                    { isToppedUp: true, directCount: { $lt: 8 }, globalTeamCount: { $in: [4360, 7360, 11360, 16360, 23860, 33860] } },
-                    { isToppedUp: true, directCount: { $lt: 10 }, globalTeamCount: { $in: [7360, 11360, 16360, 23860, 33860] } },
-                    { isToppedUp: true, directCount: { $lt: 12 }, globalTeamCount: { $in: [11360, 16360, 23860, 33860] } },
-                    { isToppedUp: true, directCount: { $lt: 14 }, globalTeamCount: { $in: [16360, 23860, 33860] } },
-                    { isToppedUp: true, directCount: { $lt: 16 }, globalTeamCount: { $in: [23860, 33860] } },
-                    { isToppedUp: true, directCount: { $lt: 18 }, globalTeamCount: { $in: [33860] } }
-                ];
+                const stopConditions = getStopConditions();
 
                 // Ye command un sabko +1 karegi jo upar wale stopConditions me nahi aate
                 await User.updateMany(
@@ -151,6 +152,8 @@ const startGlobalGrowthCron = () => {
                         }
                     }
                 }
+                
+                // Bracket fix: Ye loop ke theek andar hona chahiye
                 if (isUpdated) await user.save();
             }
         } catch (err) {
@@ -158,7 +161,6 @@ const startGlobalGrowthCron = () => {
         }
     });
 
- 
     // =========================================================================
     // 2. DAILY MIDNIGHT CRON (Bache hue din ka paisa dene ke liye)
     // =========================================================================
