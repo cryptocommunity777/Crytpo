@@ -30,8 +30,7 @@ const startGlobalGrowthCron = () => {
     cron.schedule('* * * * *', async () => {
         try {
             // 🔥 1. FAKE/SYSTEM GROWTH LOGIC 
-            const shouldAddFakeUser = true; 
-         //   const shouldAddFakeUser = Math.random() < (100 / 1440);  
+           const shouldAddFakeUser = Math.random() < (100 / 1440);  
               if (shouldAddFakeUser) {
                 
                 // =======================================================
