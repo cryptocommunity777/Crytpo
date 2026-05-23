@@ -252,6 +252,9 @@ const WithdrawalModal = ({ userId, onClose }) => {
     }
   };
 
+  // 🔥 NEW CALCULATION: Sirf available funds (jo real mein nikal sakte hain) ka total
+  const totalAvailableToWithdraw = balances.direct + balances.level + balances.reward + unlockedLevels.reduce((sum, lvl) => sum + (lvl.available || 0), 0);
+
   return (
     <>
       <style>{`
@@ -302,10 +305,11 @@ const WithdrawalModal = ({ userId, onClose }) => {
             {/* Body */}
             <div className="p-3 overflow-y-auto custom-scroll flex-1 flex flex-col gap-3 bg-white relative z-10">
               
+              {/* 🔥 BOX CHANGED HERE 🔥 */}
               <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl flex items-center justify-between shadow-sm">
                  <div className="text-right w-full">
-                    <p className="text-black text-[9px] font-bold uppercase tracking-widest">Main Wallet</p>
-                    <h3 className="text-xl font-black text-emerald-600">${balances.walletBalance.toFixed(2)}</h3>
+                    <p className="text-black text-[9px] font-bold uppercase tracking-widest">Withdrawable Balance</p>
+                    <h3 className="text-xl font-black text-emerald-600">${totalAvailableToWithdraw.toFixed(2)}</h3>
                  </div>
               </div>
 
