@@ -25,27 +25,27 @@ const startGlobalGrowthCron = () => {
 
     // 🔥 YAHAN EK NAYI FUNCTION BANAYI HAI JO CRON MEIN USE HOGI
     const getStopConditions = () => {
-        const allMilestones = [360, 760, 2360, 4360, 7360, 11360, 16360, 23860, 33860];
-        return [
-            // 1. Inactive (Red ID) kisi bhi milestone par aakar ruk jayegi
-            { isToppedUp: false, globalTeamCount: { $in: allMilestones } },
-            
-            // 2. Active (Green ID) with 0 Directs: 360 par rukega (Agar aage nikal gaya hai toh 760 par takrayega)
-            { isToppedUp: true, directCount: { $lt: 1 }, globalTeamCount: { $in: [360, 760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
-            
-            // 3. Active (Green ID) with 1 to 4 Directs: 760 par rukega
-            { isToppedUp: true, directCount: { $lt: 5 }, globalTeamCount: { $in: [760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
-            
-            // Baaki sab apne-apne level aur direct ke hisaab se rukenge
-            { isToppedUp: true, directCount: { $lt: 6 }, globalTeamCount: { $in: [2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
-            { isToppedUp: true, directCount: { $lt: 8 }, globalTeamCount: { $in: [4360, 7360, 11360, 16360, 23860, 33860] } },
-            { isToppedUp: true, directCount: { $lt: 10 }, globalTeamCount: { $in: [7360, 11360, 16360, 23860, 33860] } },
-            { isToppedUp: true, directCount: { $lt: 12 }, globalTeamCount: { $in: [11360, 16360, 23860, 33860] } },
-            { isToppedUp: true, directCount: { $lt: 14 }, globalTeamCount: { $in: [16360, 23860, 33860] } },
-            { isToppedUp: true, directCount: { $lt: 16 }, globalTeamCount: { $in: [23860, 33860] } },
-            { isToppedUp: true, directCount: { $lt: 18 }, globalTeamCount: { $in: [33860] } }
-        ];
-    };
+    const allMilestones = [360, 760, 2360, 4360, 7360, 11360, 16360, 23860, 33860];
+    return [
+        // 1. Inactive (Red ID) - Inke liye 360 se hi lock rakho
+        { isToppedUp: false, globalTeamCount: { $in: allMilestones } },
+        
+        // 2. 🔥 CHANGE KIYA: Active (Green ID) with 0 Directs - Ab 360 par nahi rukega, seedha 760 par rukega
+        { isToppedUp: true, directCount: { $lt: 1 }, globalTeamCount: { $in: [760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
+        
+        // 3. Active (Green ID) with 1 to 4 Directs: Ye pehle se hi 760 par ruk rahe the
+        { isToppedUp: true, directCount: { $lt: 5 }, globalTeamCount: { $in: [760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
+        
+        // Baaki sab limits same rahengi
+        { isToppedUp: true, directCount: { $lt: 6 }, globalTeamCount: { $in: [2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
+        { isToppedUp: true, directCount: { $lt: 8 }, globalTeamCount: { $in: [4360, 7360, 11360, 16360, 23860, 33860] } },
+        { isToppedUp: true, directCount: { $lt: 10 }, globalTeamCount: { $in: [7360, 11360, 16360, 23860, 33860] } },
+        { isToppedUp: true, directCount: { $lt: 12 }, globalTeamCount: { $in: [11360, 16360, 23860, 33860] } },
+        { isToppedUp: true, directCount: { $lt: 14 }, globalTeamCount: { $in: [16360, 23860, 33860] } },
+        { isToppedUp: true, directCount: { $lt: 16 }, globalTeamCount: { $in: [23860, 33860] } },
+        { isToppedUp: true, directCount: { $lt: 18 }, globalTeamCount: { $in: [33860] } }
+    ];
+};
 
     // =========================================================================
     // 1. HAR 1 MINUTE WALI CRON (Growth + Pool Unlock Logic)
@@ -54,6 +54,8 @@ const startGlobalGrowthCron = () => {
         try {
             // 🔥 1. FAKE/SYSTEM GROWTH LOGIC 
             const shouldAddFakeUser = Math.random() < (100 / 1440);  
+            
+        // const shouldAddFakeUser = true; 
             if (shouldAddFakeUser) {
                 
                 // =======================================================

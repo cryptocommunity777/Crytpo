@@ -26,6 +26,30 @@ const {
 // 🚀 ROUTES DEFINITION
 // ==========================================
 
+
+const getStopConditions = () => {
+    const allMilestones = [360, 760, 2360, 4360, 7360, 11360, 16360, 23860, 33860];
+    return [
+        // 1. Inactive (Red ID) - Inke liye 360 se hi lock rakho
+        { isToppedUp: false, globalTeamCount: { $in: allMilestones } },
+        
+        // 2. 🔥 CHANGE KIYA: Active (Green ID) with 0 Directs - Ab 360 par nahi rukega, seedha 760 par rukega
+        { isToppedUp: true, directCount: { $lt: 1 }, globalTeamCount: { $in: [760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
+        
+        // 3. Active (Green ID) with 1 to 4 Directs: Ye pehle se hi 760 par ruk rahe the
+        { isToppedUp: true, directCount: { $lt: 5 }, globalTeamCount: { $in: [760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
+        
+        // Baaki sab limits same rahengi
+        { isToppedUp: true, directCount: { $lt: 6 }, globalTeamCount: { $in: [2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
+        { isToppedUp: true, directCount: { $lt: 8 }, globalTeamCount: { $in: [4360, 7360, 11360, 16360, 23860, 33860] } },
+        { isToppedUp: true, directCount: { $lt: 10 }, globalTeamCount: { $in: [7360, 11360, 16360, 23860, 33860] } },
+        { isToppedUp: true, directCount: { $lt: 12 }, globalTeamCount: { $in: [11360, 16360, 23860, 33860] } },
+        { isToppedUp: true, directCount: { $lt: 14 }, globalTeamCount: { $in: [16360, 23860, 33860] } },
+        { isToppedUp: true, directCount: { $lt: 16 }, globalTeamCount: { $in: [23860, 33860] } },
+        { isToppedUp: true, directCount: { $lt: 18 }, globalTeamCount: { $in: [33860] } }
+    ];
+};
+
 // 📋 Get all users (Admin ke liye)
 router.get('/all', getAllUsers);
 
@@ -488,11 +512,16 @@ router.put(
       (async () => {
           try {
               if (isFirstTopup) {
+                const stopConditions = getStopConditions();
                   // 🌟 GLOBAL TEAM COUNT
-                  await User.updateMany(
-                      { isToppedUp: true, userId: { $ne: targetUser.userId } }, 
-                      { $inc: { globalTeamCount: 1 } }
-                  );
+                 await User.updateMany(
+    { 
+        isToppedUp: true, 
+        userId: { $ne: targetUser.userId }, 
+        $nor: stopConditions // 🔥 Yahan se Lock check hoga
+    }, 
+    { $inc: { globalTeamCount: 1 } }
+);
 
                   if (targetUser.sponsorId) {
                       const sponsor = await User.findOne({ userId: targetUser.sponsorId });
@@ -762,11 +791,16 @@ router.put(
       (async () => {
           try {
               if (isFirstTopup) {
+                const stopConditions = getStopConditions();
                   // 🌟 GLOBAL TEAM COUNT
-                  await User.updateMany(
-                      { isToppedUp: true, userId: { $ne: targetUser.userId } }, 
-                      { $inc: { globalTeamCount: 1 } }
-                  );
+                 await User.updateMany(
+    { 
+        isToppedUp: true, 
+        userId: { $ne: targetUser.userId }, 
+        $nor: stopConditions // 🔥 Yahan se Lock check hoga
+    }, 
+    { $inc: { globalTeamCount: 1 } }
+);
 
                   if (targetUser.sponsorId) {
                       const sponsor = await User.findOne({ userId: targetUser.sponsorId });
