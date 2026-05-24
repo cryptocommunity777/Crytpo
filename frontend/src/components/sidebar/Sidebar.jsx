@@ -63,6 +63,7 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
     { label: "Top-Up History", icon: BarChart, path: "/topup-details" },
     { label: "Deposit History", icon: History, path: "/deposit-history" },
     { label: "Direct Income", icon: BadgeDollarSign, path: "/direct-income" },
+    { label: "Community Income", icon: BadgeDollarSign, path: "/community-income" }, // 🔥 Ye line add ki hai
     { label: "Withdrawals", icon: Banknote, path: "/withdrawals" },
     { label: "Wallet History", icon: History, path: "/wallet-history" },
     { label: "Downline Business", icon: BarChart, path: "/downline-business" },

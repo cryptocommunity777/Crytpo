@@ -332,7 +332,33 @@ router.get('/wallet-history/:userId', async (req, res) => {
   // ---------------------------
 // All Users
  
+// GET USER POOL STATUS
+// GET USER POOL STATUS (Formatted for Frontend)
+// GET USER POOL STATUS
+router.get('/pool-status/:userId', async (req, res) => {
+  try {
+    const user = await User.findOne({ userId: req.params.userId }).select('activePools').lean();
+    if (!user) return res.status(404).json({ message: "User not found" });
+    
+    // 🔥 Sirf wahi pools dikhayenge jo sach me ACTIVE hain aur jinka paisa milna chalu ho gaya hai
+    const formattedPools = (user.activePools || [])
+      .filter(pool => pool.status === 'ACTIVE' || Number(pool.daysPaid) > 0) 
+      .map((pool, index) => {
+        return {
+          level: pool.level || (index + 1),
+          status: (pool.status || 'ACTIVE').toUpperCase(),
+          daysPaid: Number(pool.daysPaid) || 0,
+          totalDays: Number(pool.totalDays) || 100,
+          dailyAmount: Number(pool.dailyAmount) || 0
+        };
+      });
 
+    res.json({ success: true, activePools: formattedPools });
+  } catch (error) {
+    console.error("Pool Status Error:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
 
 // ✅ PROMO USER DEDICATED ROUTE
 
