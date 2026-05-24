@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckCircle2, Zap, Landmark, ArrowRightLeft, Gift, ShieldCheck, ArrowDownLeft, User } from "lucide-react";
+import { CheckCircle2, Zap, Landmark, ArrowRightLeft, Gift, ShieldCheck, ArrowDownLeft, User, CalendarDays } from "lucide-react";
 
 const SuccessModal = ({
   isOpen,
@@ -16,6 +16,11 @@ const SuccessModal = ({
   zIndex = 2000,
 }) => {
   if (!isOpen) return null;
+
+  // Get current date without time
+  const currentDate = new Date().toLocaleDateString("en-GB", {
+    day: '2-digit', month: 'short', year: 'numeric'
+  });
 
   /* ================= MODERN GREEN THEME LAYOUT ================= */
   const SuccessLayout = ({ title, icon: Icon, children }) => (
@@ -34,8 +39,11 @@ const SuccessModal = ({
         {children}
       </div>
 
-      {/* ✅ Time Hatakar Sirf Secured Badge Rakha Hai */}
-      <div className="mt-5 flex flex-col items-center justify-center">
+      {/* ✅ Date and Secured Badge */}
+      <div className="mt-5 flex flex-col items-center justify-center gap-2">
+        <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+           <CalendarDays size={12} /> {currentDate}
+        </span>
         <span className="text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm">
            <ShieldCheck size={14} /> Secured Transaction
         </span>

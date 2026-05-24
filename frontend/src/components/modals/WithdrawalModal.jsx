@@ -446,10 +446,16 @@ const WithdrawalModal = ({ userId, onClose }) => {
                  ))}
               </div>
 
-              {/* SECURITY */}
-              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mt-1">
+              {/* SECURITY - CHHUPA HUA AUTOFILL TRAP */}
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mt-1 relative">
                   <label className="text-[9px] text-black block mb-1 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
-                  <input type="text" name="fakeusernameremembered" style={{display: 'none'}} />
+                  
+                  {/* 🔥 YAHAN CHHUPA HUAA BOX BANA DIYA HAI 🔥 */}
+                  <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', opacity: 0 }}>
+                      <input type="text" name="hidden_username" tabIndex="-1" autoComplete="username" />
+                      <input type="password" name="hidden_password" tabIndex="-1" autoComplete="current-password" />
+                  </div>
+
                   <input 
                     type="password" 
                     autoComplete="new-password"
