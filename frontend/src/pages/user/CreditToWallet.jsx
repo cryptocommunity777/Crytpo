@@ -34,17 +34,15 @@ const CreditToWalletHistory = () => {
           )
           // 🔥 YAHAN FIX KIYA HAI: Single Leg / Pool / Unlocked wali saari entries HIDE kar di hain
           .filter(tx => {
-             const desc = (tx.description || "").toLowerCase();
-             const source = (tx.source || "").toLowerCase();
-             return !(
-                 source === "pool" ||
-                 desc.includes("single leg") ||
-                 desc.includes("singel leg") ||
-                 desc.includes("community income") ||
-                 desc.includes("auto-pool") ||
-                 desc.includes("unlocked")
-             );
-          })
+   const desc = (tx.description || "").toLowerCase();
+
+   return !(
+       desc.includes("single leg") ||
+       desc.includes("singel leg") ||
+       desc.includes("auto-pool") ||
+       desc.includes("unlocked")
+   );
+})
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         setTransactions(creditTxs);
@@ -207,11 +205,11 @@ const CreditToWalletHistory = () => {
                           {isBinary ? "Binary Income" : "Credit"}
                         </span>
                       </td>
-
-                      <td className="p-4 font-bold text-black capitalize">
-                        {txn.source || "-"}
-                      </td>
-
+                   <td className="p-4 font-bold text-black capitalize">
+  {txn.source?.toLowerCase() === "pool"
+    ? "Community Income"
+    : txn.source || "-"}
+</td>
                       <td className="p-4 font-black text-center">
                         <span className="text-green-500 text-base">
                           + ${validAmount.toFixed(2)}
