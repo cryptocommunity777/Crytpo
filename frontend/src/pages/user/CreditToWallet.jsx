@@ -34,17 +34,28 @@ const CreditToWalletHistory = () => {
           )
           // 🔥 YAHAN FIX KIYA HAI: Single Leg / Pool / Unlocked wali saari entries HIDE kar di hain
           .filter(tx => {
-             const desc = (tx.description || "").toLowerCase();
-             const source = (tx.source || "").toLowerCase();
-             return !(
-                 source === "pool" ||
-                 desc.includes("single leg") ||
-                 desc.includes("singel leg") ||
-                 desc.includes("community income") ||
-                 desc.includes("auto-pool") ||
-                 desc.includes("unlocked")
-             );
-          })
+   const desc = (tx.description || "").toLowerCase();
+   const source = (tx.source || "").toLowerCase();
+
+   // ❌ Unwanted entries hide
+   return !(
+       source === "system" ||   // ✅ SYSTEM HIDE
+       desc.includes("single leg") ||
+       desc.includes("singel leg") ||
+       desc.includes("auto-pool") ||
+       desc.includes("unlocked")
+   );
+})
+
+.map(tx => ({
+   ...tx,
+
+   // ✅ Pool → Community Income
+   source:
+      tx.source?.toLowerCase() === "pool"
+         ? "Community Income"
+         : tx.source
+}))
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         setTransactions(creditTxs);
