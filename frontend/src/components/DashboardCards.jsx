@@ -45,7 +45,7 @@ function DashboardCards({ stats }) {
       bg: 'bg-blue-100',
       border: 'border-blue-300'
     },
-    
+  
     {
       title: 'Leader Top-ups (Total)',
       value: stats.leaderTopupTotal || 0,

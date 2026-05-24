@@ -73,6 +73,7 @@ router.post('/impersonate', adminAuth, async (req, res) => {
 // Dashboard summary (UPDATED FOR ALL CARDS - WITH FIX FOR STRINGS & GROSSAMOUNT)
 // Dashboard summary (UPDATED WITH 100% BULLETPROOF JS COUNT FOR TOPUPS)
 // Dashboard summary
+// Dashboard summary
 router.get('/dashboard', verifyAdmin, async (req, res) => {
   try {
     // 🔥 INDIA TIMEZONE FIX FOR "TODAY"
@@ -100,9 +101,8 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
       paidUsers,
       depositStats,
       withdrawalStats,
-      // 🔥 NAYA: "amount" ko .select() mein add kar diya hai
-      allTopups,
-      allUsersForRole
+      // 🔥 TRANSACTION KI JHANJHAT KHATAM! SIRF USERS KO DIRECT FETCH KARENGE
+      allUsers
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ createdAt: { $gte: startOfTodayIST } }),
@@ -150,23 +150,20 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
         }
       ]),
 
-      // 🔥 JS COUNTING KE LIYE RAW DATA FETCH KARNA
-      Transaction.find({ type: "topup" }).select("fromUserId userId date createdAt status amount").lean(),
-      User.find({}, { userId: 1, role: 1 }).lean()
+      // 🔥 SIRF USERS FETCH KARO (Isse 1 user ki 1 hi ginti hogi)
+      User.find({}, { userId: 1, role: 1, sponsorId: 1, isToppedUp: 1, topUpAmount: 1, createdAt: 1, topUpDate: 1 }).lean()
     ]);
 
     // ==============================================================
-    // 🚀 LEADER VS NORMAL TOPUP COUNTING ENGINE (100% ACCURATE)
+    // 🚀 DIRECT COUNTING ENGINE (SIMPLE, NO DOUBLE COUNTING)
     // ==============================================================
     
-    // 1. Saare users ke role ka ek fast Map (Dictionary) bana liya
-    const roleMap = {};
-    allUsersForRole.forEach(u => {
-      roleMap[Number(u.userId)] = u.role || 'user';
+    // 1. Saare users ka map banayenge Sponsor check karne ke liye
+    const userMap = {};
+    allUsers.forEach(u => {
+      userMap[Number(u.userId)] = u;
     });
 
-    // 2. Counters aur Business ($) variables set kiye
-   // 2. Counters aur Business ($) variables set kiye
     let leaderTopupTotal = 0;
     let leaderTopupToday = 0;
     let normalTopupTotal = 0;
@@ -177,38 +174,33 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
     let normalBusinessTotal = 0;
     let normalBusinessToday = 0;
 
-    // 3. Har ek topup transaction ko check karenge
-    allTopups.forEach(tx => {
-      const stat = (tx.status || "").toLowerCase();
-      if (stat !== 'success' && stat !== 'completed') return;
+    // 🌟 VIP LIST: Un normal users ki ID jinke directs Leader me count honge
+    const specialNormalUsers = [1054948]; // 🔥 Yahan aapki special ID hai
 
-      const initiatorId = tx.fromUserId ? Number(tx.fromUserId) : Number(tx.userId); 
-      const role = roleMap[initiatorId] || 'user';
+    // 2. SEEDHA USERS KO GINO
+    allUsers.forEach(user => {
+      // Agar ID active nahi hai, toh count mat karo
+      if (!user.isToppedUp) return;
+
+      const dateToCheck = user.topUpDate || user.createdAt || new Date(0);
+      const isToday = new Date(dateToCheck).getTime() >= startOfTodayTime;
       
-      const txDate = tx.date || tx.createdAt || new Date(0);
-      const isToday = new Date(txDate).getTime() >= startOfTodayTime;
-      
-      // ==========================================
-      // 🔥 AMOUNT EXTRACTION & FALLBACK FIX
-      // ==========================================
-      let amountStr = "0";
-      if (tx.amount !== undefined && tx.amount !== null) {
-          if (tx.amount.$numberDecimal) {
-              amountStr = tx.amount.$numberDecimal;
-          } else {
-              amountStr = tx.amount.toString();
+      let amount = Number(user.topUpAmount) || 30;
+
+      // 🔥 THE LOGIC: KYA IS ID KA UPLINE LEADER YA SPECIAL HAI?
+      let isLeaderTopup = false;
+      const sponsorId = user.sponsorId ? Number(user.sponsorId) : null; 
+      const sponsorUser = userMap[sponsorId];
+
+      if (sponsorId && sponsorUser) {
+          // Agar Upline Leader hai YA Upline specialNormalUsers me hai -> Ye ID Leader count hogi
+          if (sponsorUser.role === 'leader' || specialNormalUsers.includes(sponsorId)) {
+              isLeaderTopup = true;
           }
       }
-      
-      let amount = Number(amountStr) || 0;
-      
-      // 🔥 AGAR PURANE DATA ME AMOUNT MISSING HAI TOH DEFAULT 30 LELO (Kyunki 30 ka hi package hai)
-      if (amount === 0) {
-          amount = 30; 
-      }
 
-      // Role ke hisaab se Count aur Amount dono badhao
-      if (role === 'leader') {
+      // Role ke hisaab se Count aur Amount badhao
+      if (isLeaderTopup) {
         leaderTopupTotal++;
         leaderBusinessTotal += amount;
         if (isToday) {
@@ -225,39 +217,37 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
       }
     });
 
-    // 🔥 GRAND TOTALS (Dono ko milakar exact sum yahan nikalega)
+    // 🔥 GRAND TOTALS
     const totalTopupBusiness = leaderBusinessTotal + normalBusinessTotal;
     const todayTopupBusiness = leaderBusinessToday + normalBusinessToday;
 
-    const dep = depositStats[0];
-    const withD = withdrawalStats[0];
+    const dep = depositStats[0] || {};
+    const withD = withdrawalStats[0] || {};
 
     res.json({
       totalUsers,
       todayUsers,
       paidUsers,
       
-      totalDeposit: dep.total[0]?.sum || 0,
-      todayDeposit: dep.today[0]?.sum || 0,
+      totalDeposit: dep.total?.[0]?.sum || 0,
+      todayDeposit: dep.today?.[0]?.sum || 0,
       pendingDepositToday: dep.pendingDepositToday?.[0]?.sum || dep.pendingToday?.[0]?.sum || 0,
       
-      totalWithdrawal: withD.totalAll[0]?.sum || 0,
-      approvedWithdrawalTotal: withD.approvedTotal[0]?.sum || 0,
-      approvedWithdrawalToday: withD.approvedToday[0]?.sum || 0,
-      pendingWithdrawalTotal: withD.pendingTotal[0]?.sum || 0,
-      pendingWithdrawalToday: withD.pendingToday[0]?.sum || 0,
+      totalWithdrawal: withD.totalAll?.[0]?.sum || 0,
+      approvedWithdrawalTotal: withD.approvedTotal?.[0]?.sum || 0,
+      approvedWithdrawalToday: withD.approvedToday?.[0]?.sum || 0,
+      pendingWithdrawalTotal: withD.pendingTotal?.[0]?.sum || 0,
+      pendingWithdrawalToday: withD.pendingToday?.[0]?.sum || 0,
 
-      // ✅ FRONTEND KO EXACT DONO KA MILAKAR TOTAL BHEJ RAHE HAIN
+      // ✅ FRONTEND KO EXACT TOTAL BHEJ RAHE HAIN
       totalTopupBusiness,
       todayTopupBusiness,
 
-      // ✅ COUNTS
       leaderTopupTotal,
       leaderTopupToday,
       normalTopupTotal,
       normalTopupToday,
 
-      // ✅ BUSINESS AMOUNTS ($)
       leaderBusinessTotal,
       leaderBusinessToday,
       normalBusinessTotal,
