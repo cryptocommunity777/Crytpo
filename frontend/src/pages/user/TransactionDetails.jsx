@@ -4,7 +4,7 @@ import { getUserId } from "../../utils/authUtils";
 import { Search, ChevronLeft, ChevronRight, FileText, ArrowDownLeft, ArrowUpRight, ArrowRightLeft, ListFilter } from "lucide-react";
 
 const TransactionDetails = () => {
-  const userId = getUserId();
+  const userId = String(getUserId()); 
   const [transactions, setTransactions] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [search, setSearch] = useState("");
@@ -17,13 +17,39 @@ const TransactionDetails = () => {
     if (!userId) return;
     
     setLoading(true);
-    // 🔥 CACHE FIX: URL ke end mein ?t= add kar diya hai
     api.get(`/transaction/transactions/${userId}?t=${new Date().getTime()}`)
       .then((res) => {
         let sorted = (res.data || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-        // 🔹 Ignore TOPUP (PROMOTION)
-        sorted = sorted.filter(txn => !(txn.type === "topup" && txn.description?.toUpperCase().includes("PROMOTION")));
+        // 🔥 SUPER STRICT LEDGER FILTER 🔥
+        sorted = sorted.filter(txn => {
+            const tType = (txn.type || "").toLowerCase();
+            const tUserId = String(txn.userId);
+            const tFrom = String(txn.fromUserId);
+            const tTo = String(txn.toUserId);
+            const me = userId;
+
+            // 1. Promo waale topup ignore karo
+            if (tType === "topup" && txn.description?.toUpperCase().includes("PROMOTION")) {
+                return false;
+            }
+
+            // 2. Agar ye transaction explicitly mere ledger (wallet) ka hai, toh dikhao
+            if (tUserId === me) {
+                return true;
+            }
+
+            // 3. Agar ye Transfer ya Topup hai (jahan funds do logon ke beech move hue hain)
+            // aur main Sender (from) ya Receiver (to) hoon, toh dikhao
+            if (tType === "transfer" || tType === "topup") {
+                if (tFrom === me || tTo === me) return true;
+            }
+
+            // 4. BAAKI SAB IGNORE KAR DO! 
+            // (Agar aapki wajah se kisi Upline ko Level/Direct income gayi hai, 
+            // toh wo uske ledger mein dikhegi, aapke table mein nahi aayegi)
+            return false;
+        });
 
         setTransactions(sorted);
         setFiltered(sorted);
@@ -38,11 +64,10 @@ const TransactionDetails = () => {
       });
   }, [userId]);
 
-  // ✅ "reward_income" ko credit types mein daal diya hai
   const isCreditType = (type = "") => [
     "deposit", "credit_to_wallet", "roi_income", "referral_income", "topup_income", 
     "binary", "spin_income", "level_income", "direct_income", "plan_income", "transfer", 
-    "reward_income" 
+    "reward_income", "fast_track" 
   ].includes(type.toLowerCase());
   
   const isDebitType = (type = "") => ["withdrawal","buy_spin","topup","transfer"].includes(type.toLowerCase());
@@ -61,12 +86,16 @@ const TransactionDetails = () => {
       );
     }
 
-    if (filterType === "credit") result = result.filter(txn => isCreditType(txn.type));
-    else if (filterType === "debit") result = result.filter(txn => isDebitType(txn.type));
+    if (filterType === "credit") {
+        result = result.filter(txn => isCreditType(txn.type) && String(txn.fromUserId) !== userId);
+    } 
+    else if (filterType === "debit") {
+        result = result.filter(txn => isDebitType(txn.type) && String(txn.toUserId) !== userId);
+    }
 
     setFiltered(result);
     setCurrentPage(1);
-  }, [search, filterType, transactions]);
+  }, [search, filterType, transactions, userId]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
   const indexOfLast = currentPage * itemsPerPage;
@@ -80,12 +109,25 @@ const TransactionDetails = () => {
     let display = `$${amt.toFixed(2)}`;
     let icon = null;
 
-    if (type === "transfer") {
-      if (String(txn.toUserId) === String(userId)) { 
-        display = `+$${amt.toFixed(2)}`; 
-        colorClass = "text-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.3)]"; 
-        icon = <ArrowDownLeft size={14} className="text-green-400" />;
-      } else if (String(txn.fromUserId) === String(userId)) { 
+    if (type === "transfer" || type === "topup") {
+      if (String(txn.toUserId) === userId || String(txn.userId) === userId) { 
+        // Agar mujhe transfer aaya hai ya mera topup kisi aur ne kiya
+        if(type === "topup" && String(txn.userId) === userId && String(txn.fromUserId) !== userId) {
+            display = `+$${amt.toFixed(2)}`; 
+            colorClass = "text-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.3)]"; 
+            icon = <ArrowDownLeft size={14} className="text-green-400" />;
+        }
+        else if(type === "transfer" && String(txn.toUserId) === userId) {
+            display = `+$${amt.toFixed(2)}`; 
+            colorClass = "text-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.3)]"; 
+            icon = <ArrowDownLeft size={14} className="text-green-400" />;
+        }
+        else {
+            display = `-$${amt.toFixed(2)}`; 
+            colorClass = "text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.3)]"; 
+            icon = <ArrowUpRight size={14} className="text-red-400" />;
+        }
+      } else if (String(txn.fromUserId) === userId) { 
         display = `-$${amt.toFixed(2)}`; 
         colorClass = "text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.3)]"; 
         icon = <ArrowUpRight size={14} className="text-red-400" />;
@@ -111,7 +153,6 @@ const TransactionDetails = () => {
   return (
     <div className="w-full max-w-7xl mx-auto pb-10 relative z-10 animate-in fade-in duration-500">
       
-      {/* Scrollbar CSS */}
       <style>{`
         .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
         .custom-scroll::-webkit-scrollbar-track { background: #050505; }
@@ -129,7 +170,6 @@ const TransactionDetails = () => {
           </p>
         </div>
         
-        {/* Total Records Badge */}
         <div className="bg-white shadow-sm border border-slate-200 px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg">
            <ListFilter size={16} className="text-green-500" />
            <span className="text-black text-xs font-bold uppercase tracking-widest">Total Records:</span>
@@ -137,10 +177,9 @@ const TransactionDetails = () => {
         </div>
       </div>
 
-      {/* Filters (Search, Type & Entries) */}
+      {/* Filters */}
       <div className="flex flex-col lg:flex-row gap-4 mb-6 justify-between items-center bg-white shadow-sm p-4 rounded-2xl border border-slate-200">
         
-        {/* Search */}
         <div className="relative w-full lg:w-80 group">
            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
              <Search size={16} className="text-gray-500 group-focus-within:text-green-500 transition-colors" />
@@ -155,7 +194,6 @@ const TransactionDetails = () => {
         </div>
 
         <div className="flex items-center gap-3 w-full lg:w-auto flex-wrap sm:flex-nowrap">
-           {/* Credit/Debit Filter */}
            <select
              value={filterType}
              onChange={(e) => setFilterType(e.target.value)}
@@ -166,7 +204,6 @@ const TransactionDetails = () => {
              <option value="debit">Debits Only</option>
            </select>
 
-           {/* Rows Selector */}
            <select
              value={itemsPerPage}
              onChange={(e) => {
@@ -192,8 +229,7 @@ const TransactionDetails = () => {
             <thead className="bg-slate-50 text-green-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center w-16">Sr.</th>
-                                <th className="p-4 font-black text-right">Date & Time</th>
-
+                <th className="p-4 font-black text-right">Date & Time</th>
                 <th className="p-4 font-black">Type</th>
                 <th className="p-4 font-black text-center">Amount</th>
                 <th className="p-4 font-black">From User</th>
@@ -244,18 +280,17 @@ const TransactionDetails = () => {
                       </td>
 
                       <td className="p-4 font-mono text-black text-[10px] sm:text-xs">
-                         {txn.fromUserId ? <span className="bg-white/5 px-2 py-1 border border-slate-200 rounded">{String(txn.fromUserId) === String(userId) ? "Self" : txn.fromUserId}</span> : "-"}
+                         {txn.fromUserId ? <span className="bg-white/5 px-2 py-1 border border-slate-200 rounded">{String(txn.fromUserId) === userId ? "Self" : txn.fromUserId}</span> : "-"}
                       </td>
 
                       <td className="p-4 font-mono text-black text-[10px] sm:text-xs">
-                         {txn.toUserId ? <span className="bg-white/5 px-2 py-1 border border-slate-200 rounded">{String(txn.toUserId) === String(userId) ? "Self" : txn.toUserId}</span> : "-"}
+                         {txn.toUserId ? <span className="bg-white/5 px-2 py-1 border border-slate-200 rounded">{String(txn.toUserId) === userId ? "Self" : txn.toUserId}</span> : "-"}
                       </td>
 
                       <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={txn.description || "-"}>
                         {txn.description || "-"}
                       </td>
 
-                     
                     </tr>
                   );
                 })

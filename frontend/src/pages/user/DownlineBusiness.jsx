@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
-import { Search, TrendingUp, ChevronLeft, ChevronRight, Calendar, Zap } from "lucide-react";
+import { Search, TrendingUp, ChevronLeft, ChevronRight, Calendar, Zap, Users } from "lucide-react";
 
 const DownlineBusiness = () => {
   const { user } = useAuth();
@@ -9,7 +9,7 @@ const DownlineBusiness = () => {
   const [filtered, setFiltered] = useState([]);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; // Fixed to 10 entries
+  const itemsPerPage = 10;
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(true);
@@ -18,24 +18,39 @@ const DownlineBusiness = () => {
     const fetchDownline = async () => {
       try {
         setLoading(true);
+        // Poori downline team ka data fetch kar rahe hain
         const res = await api.get(`/user/downline-business/${user.userId}?t=${new Date().getTime()}`);
         const team = res.data.team || [];
 
-        // ✅ SIRF TOPUPS FETCH KAR RAHE HAIN
-        const allTx = team.flatMap(d =>
-          (d.transactions || [])
-            .filter(t => t.type === "topup" || t.type === "debit_topup") 
-            .map(t => ({
-              ...t,
-              userId: d.userId,
-              name: d.name,
-              level: d.level,
-            }))
-        );
+        const dateMap = {};
 
-        allTx.sort((a, b) => new Date(b.date) - new Date(a.date));
-        setTransactions(allTx);
-        setFiltered(allTx);
+        // 🔥 DATE-WISE COMBINE (AGGREGATE) - POORA DOWNLINE KA BUSINESS 🔥
+        team.forEach(d => {
+          (d.transactions || []).forEach(t => {
+            if (t.type === "topup" || t.type === "debit_topup") {
+              const dateObj = new Date(t.date);
+              const yyyy = dateObj.getFullYear();
+              const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+              const dd = String(dateObj.getDate()).padStart(2, '0');
+              const dateKey = `${yyyy}-${mm}-${dd}`; 
+
+              if (!dateMap[dateKey]) {
+                dateMap[dateKey] = {
+                  dateKey,
+                  rawDate: dateObj,
+                  totalAmount: 0,
+                  count: 0
+                };
+              }
+              dateMap[dateKey].totalAmount += Number(t.amount || 0);
+              dateMap[dateKey].count += 1;
+            }
+          });
+        });
+
+        const aggregatedTx = Object.values(dateMap).sort((a, b) => b.rawDate - a.rawDate);
+        setTransactions(aggregatedTx);
+        setFiltered(aggregatedTx);
       } catch (err) {
         console.error("Error fetching downline business:", err);
       } finally {
@@ -46,28 +61,21 @@ const DownlineBusiness = () => {
     if (user?.userId) fetchDownline();
   }, [user?.userId]);
 
-  // Filters Logic (Search & Date)
+  // Filters Logic
   useEffect(() => {
     let data = [...transactions];
-
     if (search) {
-      data = data.filter(
-        t =>
-          String(t.userId).includes(search) ||
-          (t.name && t.name.toLowerCase().includes(search.toLowerCase()))
-      );
+      data = data.filter(t => t.dateKey.includes(search));
     }
-
     if (fromDate) {
       const from = new Date(fromDate);
       from.setHours(0, 0, 0, 0);
-      data = data.filter(t => new Date(t.date) >= from);
+      data = data.filter(t => t.rawDate >= from);
     }
-
     if (toDate) {
       const to = new Date(toDate);
       to.setHours(23, 59, 59, 999);
-      data = data.filter(t => new Date(t.date) <= to);
+      data = data.filter(t => t.rawDate <= to);
     }
 
     setFiltered(data);
@@ -80,7 +88,7 @@ const DownlineBusiness = () => {
   const indexOfFirst = indexOfLast - itemsPerPage;
   const paginated = filtered.slice(indexOfFirst, indexOfLast);
 
-  const filteredTotal = filtered.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  const filteredTotal = filtered.reduce((sum, t) => sum + t.totalAmount, 0);
 
   return (
     <div className="w-full max-w-7xl mx-auto pb-10 relative z-10 animate-in fade-in duration-500">
@@ -91,148 +99,91 @@ const DownlineBusiness = () => {
         .custom-scroll::-webkit-scrollbar-thumb { background: #22c55e; border-radius: 10px; }
       `}</style>
 
-      {/* Header Only */}
-      <div className="mb-8">
-        <h2 className="text-2xl md:text-3xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
-           <TrendingUp className="text-green-500" size={28} /> Downline Business
-        </h2>
-        <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
-          Node top-up performance from <span className="text-green-600">{fromDate || 'Start'}</span> to <span className="text-green-600">{toDate || 'Today'}</span>
-        </p>
+      {/* Header */}
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+           <h2 className="text-2xl md:text-3xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
+              <Users className="text-green-500" size={28} /> Downline Business
+           </h2>
+           <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
+             Complete date-wise aggregated top-up business
+           </p>
+        </div>
+        
+        {/* Total Business Badge */}
+        <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-3 rounded-2xl flex items-center gap-4 shadow-lg shadow-green-200">
+           <div className="bg-white/20 p-2 rounded-xl">
+             <TrendingUp size={24} className="text-white" />
+           </div>
+           <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-90">Total Business</span>
+              <span className="text-2xl font-black">${Number(filteredTotal).toFixed(2)}</span>
+           </div>
+        </div>
       </div>
 
-      {/* Filters Row (Search & Date Range) */}
+      {/* Filters Row */}
       <div className="flex flex-col lg:flex-row gap-4 mb-6 justify-between items-center bg-white shadow-sm p-4 rounded-2xl border border-slate-200">
-        
-        {/* Search */}
         <div className="relative w-full lg:w-80 group">
            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
              <Search size={16} className="text-slate-400 group-focus-within:text-green-500 transition-colors" />
            </div>
            <input
              type="text"
-             placeholder="Search User ID or Name..."
+             placeholder="Search by Date (e.g. 2026-05)..."
              value={search}
              onChange={(e) => setSearch(e.target.value)}
              className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-bold rounded-xl px-4 py-3 pl-10 focus:border-green-500 focus:bg-white focus:outline-none transition-all"
            />
         </div>
 
-        <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full lg:w-auto">
-           {/* Date Range */}
-          
-
-           {/* Business Total Badge */}
-           <div className="bg-green-600 text-white px-4 py-2.5 rounded-xl flex flex-col items-end shadow-md shadow-green-200">
-              <span className="text-[9px] font-black uppercase tracking-tighter opacity-80">Filtered Total</span>
-              <span className="text-sm font-black">${Number(filteredTotal).toFixed(2)}</span>
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full lg:w-auto">
+           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 w-full sm:w-auto focus-within:border-green-500 transition-colors">
+              <Calendar size={16} className="text-slate-400" />
+              <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="bg-transparent text-slate-700 text-xs font-bold outline-none py-3 px-2 w-full cursor-pointer" />
+           </div>
+           <span className="text-slate-400 font-bold text-xs uppercase">TO</span>
+           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 w-full sm:w-auto focus-within:border-green-500 transition-colors">
+              <Calendar size={16} className="text-slate-400" />
+              <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="bg-transparent text-slate-700 text-xs font-bold outline-none py-3 px-2 w-full cursor-pointer" />
            </div>
         </div>
       </div>
 
       {/* Table Box */}
-      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xl relative">
+      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xl">
         <div className="overflow-x-auto custom-scroll w-full relative z-10">
-          <table className="w-full text-xs sm:text-sm text-left whitespace-nowrap">
+          <table className="w-full text-xs sm:text-sm text-left whitespace-nowrap min-w-[600px]">
             <thead className="bg-slate-50 text-slate-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
-                <th className="p-4 font-black text-center w-16">Sr.</th>
-                                <th className="p-4 font-black text-right">Date & Time</th>
-                <th className="p-4 font-black">User ID</th>
-                <th className="p-4 font-black">Name</th>
-                <th className="p-4 font-black text-center">Level</th>
-                <th className="p-4 font-black text-center">Status</th>
-                <th className="p-4 font-black text-right">Topup Amount</th>
+                <th className="p-4 font-black text-center w-20">Sr.</th>
+                <th className="p-4 font-black">Date</th>
+                <th className="p-4 font-black text-center">Total Activations</th>
+                <th className="p-4 font-black text-right pr-6">Business Amount</th>
               </tr>
             </thead>
-
             <tbody className="text-slate-600">
               {loading ? (
-                <tr>
-                  <td colSpan="7" className="text-center py-20">
-                    <div className="animate-spin h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Fetching team business...</span>
-                  </td>
-                </tr>
+                <tr><td colSpan="4" className="text-center py-20 text-slate-400 font-bold">Fetching business...</td></tr>
               ) : paginated.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="text-center py-20">
-                    <span className="text-slate-400 font-bold text-sm uppercase tracking-widest">No matching transactions</span>
-                  </td>
-                </tr>
+                <tr><td colSpan="4" className="text-center py-20 text-slate-400 font-bold">No records found</td></tr>
               ) : (
                 paginated.map((t, idx) => (
                   <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors bg-white">
-                    <td className="p-4 font-bold text-slate-400 text-center">
-                      {indexOfFirst + idx + 1}
-                    </td>
-                      <td className="p-4 text-slate-500 font-mono text-[10px] sm:text-xs text-right">
-                      <div className="flex flex-col items-end">
-                         <span className="text-slate-700 font-bold">{new Date(t.date).toLocaleDateString("en-GB")}</span>
-                         <span>{new Date(t.date).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                      </div>
-                    </td>
-                    <td className="p-4 font-black text-slate-900">
-                      #{t.userId}
-                    </td>
-                    <td className="p-4 font-bold text-slate-600">
-                      {t.name || "Unknown User"}
+                    <td className="p-4 font-bold text-slate-400 text-center">{indexOfFirst + idx + 1}</td>
+                    <td className="p-4 text-slate-800 font-bold text-sm">
+                      <div className="flex items-center gap-2"><Calendar size={14} className="text-slate-400" /> {t.rawDate.toLocaleDateString("en-GB")}</div>
                     </td>
                     <td className="p-4 text-center">
-                      <span className="bg-blue-50 text-blue-600 border border-blue-100 py-1 px-2.5 rounded-lg text-[10px] font-black">
-                        LVL {t.level}
-                      </span>
+                      <span className="bg-blue-50 text-blue-600 border border-blue-100 py-1.5 px-3 rounded-lg text-xs font-black inline-flex items-center gap-1.5"><Zap size={12} fill="currentColor"/> {t.count} Top-ups</span>
                     </td>
-                    <td className="p-4 text-center">
-                      <span className="bg-green-50 text-green-600 border border-green-100 py-1 px-2.5 rounded-lg text-[10px] font-black uppercase inline-flex items-center gap-1">
-                        <Zap size={10} fill="currentColor"/> Top-up
-                      </span>
-                    </td>
-                    <td className="p-4 font-black text-slate-900 text-right text-base">
-                      ${Number(t.amount ?? 0).toFixed(2)}
-                    </td>
-                  
+                    <td className="p-4 font-black text-green-600 text-right text-lg pr-6">${t.totalAmount.toFixed(2)}</td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
-
-        {/* Pagination Footer - Fixed at 10 items per page */}
-        {!loading && filtered.length > 0 && (
-           <div className="p-5 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4">
-              <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest">
-                Showing {indexOfFirst + 1} to {Math.min(indexOfLast, filtered.length)} of {filtered.length} entries
-              </span>
-              
-              <div className="flex items-center gap-3">
-                 <button
-                   onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-                   disabled={currentPage === 1}
-                   className={`p-2 rounded-xl transition-all ${currentPage === 1 ? 'text-slate-300 cursor-not-allowed' : 'bg-white text-slate-700 hover:text-green-600 shadow-sm border border-slate-200'}`}
-                 >
-                   <ChevronLeft size={20} />
-                 </button>
-                 
-                 <div className="flex items-center gap-1">
-                    <span className="bg-green-600 text-white text-xs font-black px-3 py-1.5 rounded-lg shadow-md shadow-green-100">
-                       {currentPage}
-                    </span>
-                    <span className="text-slate-400 text-xs font-bold px-1">/</span>
-                    <span className="text-slate-600 text-xs font-bold">{totalPages}</span>
-                 </div>
-                 
-                 <button
-                   onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-                   disabled={currentPage === totalPages}
-                   className={`p-2 rounded-xl transition-all ${currentPage === totalPages ? 'text-slate-300 cursor-not-allowed' : 'bg-white text-slate-700 hover:text-green-600 shadow-sm border border-slate-200'}`}
-                 >
-                   <ChevronRight size={20} />
-                 </button>
-              </div>
-           </div>
-        )}
       </div>
     </div>
   );

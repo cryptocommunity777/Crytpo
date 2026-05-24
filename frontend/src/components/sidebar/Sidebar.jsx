@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { useNavigate, useLocation, Link } from "react-router-dom"; 
-import { Home, Wallet, Banknote, History, Users, UserCircle2, HelpCircle, BadgeDollarSign, BarChart, Globe } from "lucide-react";
+import { Home, Wallet, Banknote, History, Users, UserCircle2, HelpCircle, BadgeDollarSign, BarChart, Globe, Zap } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const SidebarItem = ({ label, icon: Icon, active, onClick, badge, path }) => {
@@ -62,8 +62,10 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
     { label: "Downline Team", icon: Users, path: "/all-team" },
     { label: "Top-Up History", icon: BarChart, path: "/topup-details" },
     { label: "Deposit History", icon: History, path: "/deposit-history" },
+    { label: "Fast Track Income", icon: Zap, path: "/fast-track-income" }, // 🔥 Naya Menu Add Kiya
     { label: "Direct Income", icon: BadgeDollarSign, path: "/direct-income" },
-    { label: "Community Income", icon: BadgeDollarSign, path: "/community-income" }, // 🔥 Ye line add ki hai
+    { label: "Level Income", icon: Users, path: "/level-income" }, // 🔥 Naya Menu Add Kiya
+    { label: "Community Income", icon: BadgeDollarSign, path: "/community-income" },
     { label: "Withdrawals", icon: Banknote, path: "/withdrawals" },
     { label: "Wallet History", icon: History, path: "/wallet-history" },
     { label: "Downline Business", icon: BarChart, path: "/downline-business" },
@@ -76,12 +78,10 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
 
   return (
     <>
-      {/* MOBILE BACKDROP */}
       {isOpen && (
         <div onClick={() => setIsOpen(false)} className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[55] lg:hidden" />
       )}
 
-      {/* 🔥 SIDEBAR CONTAINER (Scrollbar added here) */}
       <aside className={`fixed top-16 md:top-20 left-0 h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)] z-[60] bg-white border-r border-slate-200 overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? "w-64 translate-x-0" : "w-0 -translate-x-full"}`}>
         
         <div className="w-64 h-full overflow-y-auto custom-scroll pb-24">
