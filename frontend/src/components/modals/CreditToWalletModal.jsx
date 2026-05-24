@@ -38,6 +38,8 @@ const MainIncomeBox = React.memo(({ title, icon: Icon, iconColor, source, balanc
                 <input 
                     type="number" 
                     placeholder="0.00" 
+                    autoComplete="off"
+                    data-lpignore="true"
                     className="flex-1 bg-transparent border-none text-slate-800 text-[12px] font-black outline-none w-full placeholder-slate-300 py-1 px-1"
                     value={val} 
                     onChange={e => onChange(e, source)} 
@@ -334,6 +336,8 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
                                 <span className="text-emerald-500 font-bold text-sm pl-2">$</span>
                                 <input 
                                     type="number" 
+                                    autoComplete="off"
+                                    data-lpignore="true"
                                     placeholder="0.00" 
                                     className="flex-1 bg-transparent border-none text-slate-800 text-[12px] font-black outline-none w-full placeholder-slate-300 py-1 px-1"
                                     value={credits[`pool_${lvl.level}`] || ""} 
@@ -346,13 +350,21 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
                  ))}
               </div>
 
-              {/* SECURITY */}
-              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mt-1">
+              {/* SECURITY - CHHUPA HUA AUTOFILL TRAP 🔥 */}
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mt-1 relative">
                   <label className="text-[9px] text-black block mb-1 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
-                  <input type="text" name="fakeusernameremembered" style={{display: 'none'}} />
+                  
+                  {/* 🔥 CHHUPA HUAA BOX YAHAN HAI 🔥 */}
+                  <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', opacity: 0 }}>
+                      <input type="text" name="dummy_username_trap" tabIndex="-1" autoComplete="username" />
+                      <input type="password" name="dummy_password_trap" tabIndex="-1" autoComplete="current-password" />
+                  </div>
+
                   <input 
-                    type="password" 
+                    type="text" 
+                    onFocus={(e) => e.target.type = 'password'}
                     autoComplete="new-password"
+                    data-lpignore="true"
                     placeholder="Enter Transaction Password" 
                     className="w-full bg-white border border-slate-200 text-slate-800 p-2.5 rounded-lg outline-none font-mono text-xs transition-all shadow-inner focus:border-green-400 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
                     value={transactionPassword} 
