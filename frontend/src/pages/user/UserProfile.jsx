@@ -51,9 +51,9 @@ function UserProfile() {
     if (user.role === 'admin') return null;
 
     // Rule 1: Pending withdrawal lock
-    if (user.pendingWithdrawals && Object.values(user.pendingWithdrawals).some(v => v > 0)) {
-      return 'Wallet address cannot be changed because a withdrawal process has already started.';
-    }
+   if (user.walletAddressLocked) {
+  return 'Wallet address cannot be changed after first withdrawal.';
+}
 
     // Rule 2: 24-hour Limit Lock
     if (
@@ -83,9 +83,13 @@ function UserProfile() {
     // Pehle yahan checkWalletAddress() tha jo same wallet hone par rok deta tha.
     // Ab usko hata diya hai taaki ek hi address 10 IDs me bhi lag sake!
 
-    if (user.pendingWithdrawals && Object.values(user.pendingWithdrawals).some(v => v > 0)) {
-      return showMessage('Wallet Address Locked', '🔒 Wallet address cannot be changed because a withdrawal process has already started.', 'error');
-    }
+if (user.walletAddressLocked) {
+  return showMessage(
+    'Wallet Address Locked',
+    '🔒 Wallet address cannot be changed after first withdrawal.',
+    'error'
+  );
+}      
 
     const now = Date.now();
     if (

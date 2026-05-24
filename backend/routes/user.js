@@ -1425,58 +1425,79 @@ const sanitizeUser = require('../utils/sanitizeUser'); // Isko top par check kar
 router.put('/:userId', authMiddleware, async (req, res) => {
   try {
     const { walletAddress, oldTxnPassword, name, email, mobile } = req.body;
-    
+
     // 1. Find User
     const user = await User.findOne({ userId: Number(req.params.userId) });
-    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // 2. 🔥 SECURITY CHECK: Transaction Password verify karna zaroori hai
-    if (!oldTxnPassword || oldTxnPassword !== user.transactionPassword) {
-      return res.status(403).json({ message: 'Invalid Transaction Password.' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
 
-    // 3. LOCK LOGIC: Check if any withdrawal is pending
-    const Withdrawal = require('../models/Withdrawal'); 
-    const pendingRequest = await Withdrawal.findOne({ userId: user.userId, status: 'pending' });
+    // 2. Transaction Password Verify
+    if (
+      !oldTxnPassword ||
+      oldTxnPassword !== user.transactionPassword
+    ) {
+      return res.status(403).json({
+        message: 'Invalid Transaction Password.'
+      });
+    }
+
+    // 3. 🔒 PERMANENT WALLET LOCK AFTER FIRST WITHDRAWAL
+    const Withdrawal = require('../models/Withdrawal');
+
+    const anyWithdrawal = await Withdrawal.findOne({
+      userId: user.userId
+    });
 
     // 4. Wallet Address Update Logic
-    if (walletAddress && walletAddress !== user.walletAddress) {
-      if (pendingRequest) {
-        return res.status(403).json({ 
-          message: 'Wallet Locked: You cannot change address while a withdrawal is pending.' 
+    if (
+      walletAddress &&
+      walletAddress !== user.walletAddress
+    ) {
+
+      // 🔥 EK BAAR WITHDRAWAL LAG GAYA TO ADDRESS CHANGE NAHI HOGA
+      if (anyWithdrawal) {
+        return res.status(403).json({
+          message:
+            'Wallet Locked: Wallet address cannot be changed after first withdrawal.'
         });
       }
 
-     // 🔥 IS UNIQUE WALE CHECK KO COMMENT YA DELETE KAR DO
-      // const exists = await User.findOne({ walletAddress, userId: { $ne: user.userId } });
-      // if (exists) return res.status(403).json({ message: 'Address already in use by another user.' });
+      // ✅ SAME WALLET MULTIPLE IDS ME ALLOW
+      // UNIQUE CHECK HATA DIYA
 
-      // 👇 BAS ITNA CODE RAKHNA HAI 👇
       user.walletAddress = walletAddress;
-      
-      // Address change tracking (Important - Ise mat chhedna)
-      user.walletAddressChangeCount = (user.walletAddressChangeCount || 0) + 1;
-      user.walletAddressChangeWindowStart = new Date();
+
+      // Address change tracking
+      user.walletAddressChangeCount =
+        (user.walletAddressChangeCount || 0) + 1;
+
+      user.walletAddressChangeWindowStart =
+        new Date();
     }
-    
-    // 5. UPDATE OTHER FIELDS (Optional: agar user name/email change karna chahe)
+
+    // 5. Other Fields
     if (name) user.name = name;
     if (email) user.email = email;
     if (mobile) user.mobile = mobile;
 
-    // 6. 🔥 SAVE TO DATABASE
+    // 6. Save
     await user.save();
 
-    // 7. 🔥 RESPONSE: Sanitize karke bhejo taaki Frontend/LocalStorage update ho jaye
-    res.json({ 
+    // 7. Response
+    res.json({
       success: true,
-      message: "Profile updated successfully",
-      user: sanitizeUser(user) 
+      message: 'Profile updated successfully',
+      user: sanitizeUser(user)
     });
 
   } catch (err) {
-    console.error("Profile Update Error:", err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Profile Update Error:', err);
+
+    res.status(500).json({
+      message: 'Server error'
+    });
   }
 });
 
