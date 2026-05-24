@@ -119,7 +119,7 @@ if (desc.includes('withdrawal') || desc.includes('credit') || desc.includes('fee
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
         {loading ? (
            <div className="col-span-full text-center py-5 text-purple-500 font-bold tracking-widest uppercase text-sm">
-             Loading Active Pools...
+             Loading Active Single Leg Community ...
            </div>
         ) : pools.length === 0 ? (
            <div className="col-span-full bg-white p-6 md:p-8 rounded-2xl border border-slate-200 text-center shadow-sm">
