@@ -103,7 +103,7 @@ const CreditToWalletHistory = () => {
              <Wallet className="text-green-500" size={28} /> Credit To Wallet
           </h2>
           <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
-            Track your internal fund credits and binary income
+            Track your internal fund credits  
           </p>
         </div>
       </div>
