@@ -272,19 +272,17 @@ function UserWithdrawalHistory() {
               <tr>
                 <th className="p-4 font-black text-center">Sr.</th>
                 <th className="p-4 font-black">Date</th>
-                <th className="p-4 font-black">Gross</th>
+                <th className="p-4 font-black">Total</th>
                 <th className="p-4 font-black">Fee</th>
                 <th className="p-4 font-black">
                   <div className="flex items-center gap-1">
-                    <Bitcoin size={11} />
-                    USDT Net
+                     USDT 
                   </div>
                 </th>
 
                 <th className="p-4 font-black">
                   <div className="flex items-center gap-1">
-                    <Wallet size={11} />
-                    TopUp Net
+                     TopUp Wallet
                   </div>
                 </th>
 
