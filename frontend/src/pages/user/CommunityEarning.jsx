@@ -218,7 +218,7 @@ if (desc.includes('withdrawal') || desc.includes('credit') || desc.includes('fee
                   if (cleanDesc.toLowerCase().includes('unlocked - day 1')) {
                       const match = cleanDesc.match(/Level\s(\d+)/i);
                       const levelNo = match ? match[1] : '';
-                      cleanDesc = `Daily Single Leg Community Income Level ${levelNo} (Day 1)`;
+                      cleanDesc = `Daily Community Income Level ${levelNo} (Day 1)`;
                   }
 
                   return (

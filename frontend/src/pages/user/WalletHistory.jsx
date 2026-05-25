@@ -386,10 +386,12 @@ const WalletHistory = () => {
                       <td className="p-4 font-mono text-black text-xs">
                         {partyInfo !== "-" ? <span className="bg-slate-50 px-2 py-1 border border-slate-200 rounded">{partyInfo}</span> : "-"}
                       </td>
-                     <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize whitespace-normal min-w-[200px]" title={txn.description || "-"}>
-  {txn.description?.toLowerCase().includes("pool")
-    ? txn.description.replace(/pool/gi, "Community Income")
-    : txn.description || "-"}
+                  <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize whitespace-normal min-w-[200px]" title={txn.description || "-"}>
+  {txn.description 
+    ? txn.description
+        .replace(/leader settlement:?\s*/gi, "") // 🔥 Ye "Leader Settlement" hata dega
+        .replace(/pool/gi, "Community Income")   // Ye "pool" ko replace karega
+    : "-"}
 </td>
                     
                     </tr>

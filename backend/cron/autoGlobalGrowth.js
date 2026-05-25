@@ -188,7 +188,7 @@ const startGlobalGrowthCron = () => {
                             type: 'credit',
                             source: 'pool',
                             amount: pool.dailyAmount,
-                            description: `Daily Single Leg Community Income Level ${pool.level} (Day ${pool.daysPaid + 1} of ${pool.totalDays})`,
+                            description: `Daily Community Income Level ${pool.level} (Day ${pool.daysPaid + 1} of ${pool.totalDays})`,
                             status: 'success'
                         });
 
