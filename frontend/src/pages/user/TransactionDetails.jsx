@@ -287,9 +287,19 @@ const TransactionDetails = () => {
                          {txn.toUserId ? <span className="bg-white/5 px-2 py-1 border border-slate-200 rounded">{String(txn.toUserId) === userId ? "Self" : txn.toUserId}</span> : "-"}
                       </td>
 
-                      <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={txn.description || "-"}>
-                        {txn.description || "-"}
-                      </td>
+                   <td 
+  className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" 
+  title={txn.description || "-"}
+>
+  {txn.description 
+    ? txn.description
+        .replace(/leader settlement:?\s*/gi, "")                // Leader Settlement hataya
+        .replace(/(singel|single)\s?leg/gi, "Community Income") // Singel/Single leg ko Community Income kiya
+        .replace(/pool/gi, "Community Income")                  // Pool ko Community Income kiya
+        .replace(/unlocked/gi, "")                              // "Unlocked" text hataya
+        .trim()                                                 // Extra spaces saaf kiye
+    : "-"}
+</td>
 
                     </tr>
                   );
