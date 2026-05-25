@@ -6,7 +6,6 @@ import ReferralTree from '../../components/ReferralTree';
 import AdminWithdrawalTable from './AdminWithdrawalTable';
 
 const AdminDashboard = () => {
-  // ✅ UPDATE 1: Purane packages hata kar Naye Leader/Normal variables lagaye
   const [stats, setStats] = useState({
     totalUsers: 0,
     todayUsers: 0,
@@ -22,10 +21,13 @@ const AdminDashboard = () => {
     pendingWithdrawalTotal: 0,
     pendingWithdrawalToday: 0,
 
+    // ✅ NAYE STATE VARIABLES FOR LEADER AUTO WITHDRAWAL
+    leaderAutoWithdrawTotal: 0,
+    leaderAutoWithdrawToday: 0,
+
     totalTopupBusiness: 0,
     todayTopupBusiness: 0,
     
-    // 🔥 NAYE VARIABLES 
     leaderTopupTotal: 0,
     leaderTopupToday: 0,
     normalTopupTotal: 0,
@@ -46,7 +48,6 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // ✅ UPDATE 2: Backend se aane wale naye data ko state mein receive karna
       setStats({
         totalUsers: statsRes.data.totalUsers || 0,
         todayUsers: statsRes.data.todayUsers || 0,
@@ -56,19 +57,22 @@ const AdminDashboard = () => {
         todayDeposit: statsRes.data.todayDeposit || 0,
         pendingDepositToday: statsRes.data.pendingDepositToday || 0,
         
+        // Excludes Leader Withdrawals
         totalWithdrawal: statsRes.data.totalWithdrawal || 0,
         approvedWithdrawalTotal: statsRes.data.approvedWithdrawalTotal || 0,
         approvedWithdrawalToday: statsRes.data.approvedWithdrawalToday || 0,
         pendingWithdrawalTotal: statsRes.data.pendingWithdrawalTotal || 0,
         pendingWithdrawalToday: statsRes.data.pendingWithdrawalToday || 0,
 
-        // 🔥 COUNTS
+        // ✅ SET LEADER WITHDRAWAL DATA (Only visible in Pink boxes)
+        leaderAutoWithdrawTotal: statsRes.data.leaderAutoWithdrawTotal || 0,
+        leaderAutoWithdrawToday: statsRes.data.leaderAutoWithdrawToday || 0,
+
         leaderTopupTotal: statsRes.data.leaderTopupTotal || 0,
         leaderTopupToday: statsRes.data.leaderTopupToday || 0,
         normalTopupTotal: statsRes.data.normalTopupTotal || 0,
         normalTopupToday: statsRes.data.normalTopupToday || 0,
 
-        // 🔥 BUSINESS ($)
         totalTopupBusiness: statsRes.data.totalTopupBusiness || 0,
         todayTopupBusiness: statsRes.data.todayTopupBusiness || 0,
         leaderBusinessTotal: statsRes.data.leaderBusinessTotal || 0,

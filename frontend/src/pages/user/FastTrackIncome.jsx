@@ -27,7 +27,7 @@ const FastTrackIncome = () => {
         txns.forEach((txn) => {
           const fromUser = txn.fromUserId ? String(txn.fromUserId) : "System";
           
-          // 🔥 FIX: Agar transaction source aap khud ho, toh usse ignore karo (Self income mat gino)
+          // 🔥 Apni khud ki ID ignore karenge taaki "Self" na dikhe
           if (fromUser === userId) return;
 
           const amount = Number(txn.amount) || 0;
@@ -90,24 +90,25 @@ const FastTrackIncome = () => {
       
       <style>{`
         .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #050505; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #f59e0b; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f8fafc; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #22c55e; border-radius: 10px; }
       `}</style>
 
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500 uppercase tracking-wide flex items-center gap-3">
-             <Zap className="text-amber-500" size={28} /> Fast Track Income
+          <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-green-600 uppercase tracking-wide flex items-center gap-3">
+             <Zap className="text-emerald-500" size={28} /> Fast Track Income
           </h2>
-          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
-            Track your daily fast track earnings
+          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
+            Track your daily fast track earnings per user
           </p>
         </div>
         
-        <div className="bg-amber-500/10 border border-amber-500/30 px-5 py-3 rounded-2xl flex flex-col items-end shadow-md">
-           <span className="text-[10px] text-amber-700 font-black uppercase tracking-widest opacity-80">Total Earned</span>
-           <span className="text-2xl font-black text-amber-600">${totalIncome.toFixed(2)}</span>
+        {/* Total Earned Badge */}
+        <div className="bg-green-50 border border-green-200 px-5 py-3 rounded-2xl flex flex-col items-end shadow-sm">
+           <span className="text-[10px] text-green-700 font-black uppercase tracking-widest opacity-80">Total Earned</span>
+           <span className="text-2xl font-black text-green-600">${totalIncome.toFixed(2)}</span>
         </div>
       </div>
 
@@ -115,64 +116,95 @@ const FastTrackIncome = () => {
       <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between items-center bg-white shadow-sm p-4 rounded-2xl border border-slate-200">
         <div className="relative w-full sm:w-80 group">
            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-             <Search size={16} className="text-gray-500 group-focus-within:text-amber-500 transition-colors" />
+             <Search size={16} className="text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
            </div>
            <input
              type="text"
              placeholder="Search by User ID..."
              value={search}
              onChange={handleSearch}
-             className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-bold tracking-wide rounded-xl px-4 py-3 pl-10 focus:border-amber-500 focus:outline-none transition-all placeholder-slate-400"
+             className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-bold tracking-wide rounded-xl px-4 py-3 pl-10 focus:bg-white focus:border-emerald-500 focus:outline-none transition-all placeholder-slate-400"
            />
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white shadow-sm backdrop-blur-xl rounded-2xl border border-slate-200 overflow-hidden shadow-2xl relative">
+      <div className="bg-white shadow-sm rounded-3xl border border-slate-200 overflow-hidden relative">
         <div className="overflow-x-auto custom-scroll w-full relative z-10">
           <table className="w-full text-xs sm:text-sm text-left whitespace-nowrap min-w-[600px]">
-            <thead className="bg-slate-50 text-amber-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
+            <thead className="bg-slate-50 text-emerald-600 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center w-20">Sr.</th>
                 <th className="p-4 font-black">From User ID</th>
-                <th className="p-4 font-black text-center">Progress (Days)</th>
+                <th className="p-4 font-black text-center w-48">Progress (10 Days)</th>
                 <th className="p-4 font-black text-right">Latest Payment</th>
                 <th className="p-4 font-black text-right pr-6">Total Income</th>
               </tr>
             </thead>
             <tbody className="text-slate-600">
               {loading ? (
-                <tr><td colSpan="5" className="text-center py-10 text-slate-400 font-bold">Calculating Records...</td></tr>
+                <tr><td colSpan="5" className="text-center py-10 text-emerald-500 font-bold tracking-widest uppercase text-xs">Calculating Records...</td></tr>
               ) : paginated.length === 0 ? (
-                <tr><td colSpan="5" className="text-center py-10 text-slate-400 font-bold">No Fast Track Records Found</td></tr>
+                <tr><td colSpan="5" className="text-center py-10 text-slate-400 font-bold tracking-widest uppercase text-xs">No Fast Track Records Found</td></tr>
               ) : (
-                paginated.map((group, idx) => (
-                  <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors bg-white">
-                    <td className="p-4 font-bold text-slate-400 text-center">{indexOfFirst + idx + 1}</td>
-                    <td className="p-4 font-black text-slate-900 flex items-center gap-2">
-                        <UserCircle className="text-slate-400" size={16} /> {group.fromUserId}
-                    </td>
-                    <td className="p-4 text-center">
-                        <span className="bg-amber-50 text-amber-600 border border-amber-200 py-1.5 px-3 rounded-lg text-xs font-black inline-flex items-center gap-1.5 shadow-sm">
-                           Day {group.daysPaid} / 10
-                        </span>
-                    </td>
-                    <td className="p-4 text-slate-500 font-mono text-[10px] sm:text-xs text-right">
-                        <div className="flex flex-col items-end">
-                           <span className="text-slate-600 font-bold flex items-center gap-1">
-                              <Calendar size={12}/> {group.latestDate.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}
-                           </span>
-                        </div>
-                    </td>
-                    <td className="p-4 font-black text-green-600 text-right text-lg pr-6">
-                        + ${Number(group.totalAmount).toFixed(2)}
-                    </td>
-                  </tr>
-                ))
+                paginated.map((group, idx) => {
+                  // 🔥 Calculate progress percentage
+                  const progressPercent = Math.min(Math.round((group.daysPaid / 10) * 100), 100);
+
+                  return (
+                    <tr key={idx} className="border-b border-slate-50 hover:bg-emerald-50/30 transition-colors bg-white">
+                      <td className="p-4 font-bold text-slate-400 text-center">{indexOfFirst + idx + 1}</td>
+                      <td className="p-4 font-black text-slate-900 flex items-center gap-2">
+                          <UserCircle className="text-slate-400" size={16} /> {group.fromUserId}
+                      </td>
+                      
+                      {/* 🔥 GREEN PROGRESS BAR UI 🔥 */}
+                      <td className="p-4 text-center">
+                          <div className="flex flex-col gap-1.5 items-center w-full max-w-[150px] mx-auto">
+                             <div className="flex justify-between w-full text-[10px] font-black uppercase text-slate-500">
+                                <span>Day {group.daysPaid}</span>
+                                <span className="text-emerald-600">{progressPercent}%</span>
+                             </div>
+                             <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden shadow-inner">
+                                <div 
+                                  className="bg-gradient-to-r from-emerald-400 to-green-500 h-full rounded-full transition-all duration-1000 ease-out" 
+                                  style={{ width: `${progressPercent}%` }}
+                                ></div>
+                             </div>
+                          </div>
+                      </td>
+
+                      <td className="p-4 text-slate-500 font-mono text-[10px] sm:text-xs text-right">
+                          <div className="flex flex-col items-end">
+                             <span className="text-slate-700 font-bold flex items-center gap-1">
+                                <Calendar size={12} className="text-slate-400"/> {group.latestDate.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}
+                             </span>
+                          </div>
+                      </td>
+                      <td className="p-4 font-black text-green-600 text-right text-lg pr-6">
+                          + ${Number(group.totalAmount).toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        {!loading && filtered.length > 0 && (
+           <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+              <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                Showing {indexOfFirst + 1} to {Math.min(indexOfLast, filtered.length)} of {filtered.length} Users
+              </span>
+              <div className="flex items-center gap-2">
+                 <button onClick={handlePrev} disabled={currentPage === 1} className="p-2 bg-white border rounded-lg hover:bg-slate-50 text-slate-600 disabled:opacity-50"><ChevronLeft size={18} /></button>
+                 <span className="bg-white border text-slate-900 text-xs font-bold px-4 py-2 rounded-lg">{currentPage} / {totalPages}</span>
+                 <button onClick={handleNext} disabled={currentPage === totalPages} className="p-2 bg-white border rounded-lg hover:bg-slate-50 text-slate-600 disabled:opacity-50"><ChevronRight size={18} /></button>
+              </div>
+           </div>
+        )}
       </div>
     </div>
   );

@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 
 function DashboardCards({ stats }) {
-  // Organized into categories for a better UI experience
   const cardData = [
     // --- USER STATS (Blue/Indigo) ---
     {
@@ -45,7 +44,6 @@ function DashboardCards({ stats }) {
       bg: 'bg-blue-100',
       border: 'border-blue-300'
     },
-  
     {
       title: 'Leader Top-ups (Total)',
       value: stats.leaderTopupTotal || 0,
@@ -60,7 +58,6 @@ function DashboardCards({ stats }) {
       bg: 'bg-orange-100',
       border: 'border-orange-300'
     },
-   
 
     // --- DEPOSIT STATS (Green/Teal) ---
     {
@@ -122,6 +119,22 @@ function DashboardCards({ stats }) {
       border: 'border-pink-200'
     },
 
+    // 🔥 NEW: LEADER AUTO SETTLEMENT STATS (Pink/Rose)
+    {
+      title: 'Leader Auto-Settlement (Total)',
+      value: `$${stats.leaderAutoWithdrawTotal?.toLocaleString() || 0}`,
+      icon: <DollarSign className="text-fuchsia-600" size={28} />,
+      bg: 'bg-fuchsia-100',
+      border: 'border-fuchsia-300'
+    },
+    {
+      title: 'Leader Auto-Settlement (Today)',
+      value: `$${stats.leaderAutoWithdrawToday?.toLocaleString() || 0}`,
+      icon: <CheckCircle className="text-rose-600" size={28} />,
+      bg: 'bg-rose-100',
+      border: 'border-rose-300'
+    },
+
     // --- OVERALL BUSINESS STATS (Purple) ---
     {
       title: 'Total Top-Up Business',
@@ -138,12 +151,7 @@ function DashboardCards({ stats }) {
       border: 'border-violet-200'
     },
 
-    // --- 🔥 NEW: LEADER VS NORMAL TOPUP STATS ($30) ---
-   // --- 🔥 LEADER VS NORMAL TOPUP COUNTS ---
-   
-   
-
-    // --- 🔥 LEADER VS NORMAL TOPUP BUSINESS ($) ---
+    // --- LEADER VS NORMAL TOPUP BUSINESS ($) ---
     {
       title: 'Leader Business (Total)',
       value: `$${stats.leaderBusinessTotal?.toLocaleString() || 0}`,

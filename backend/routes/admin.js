@@ -125,40 +125,52 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
         }
       ]),
 
-      // WITHDRAWAL STATS
+      // WITHDRAWAL STATS (🔥 LEADER AUTO WITHDRAW EXCLUDED FROM NORMAL STATS)
       Withdrawal.aggregate([
         {
           $facet: {
-            totalAll: [{ $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }],
+            // ✅ NORMAL TOTALS (Excluding Leader Settlements via address checks or remarks)
+            totalAll: [
+              { $match: { walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
+              { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+            ],
             approvedTotal: [
-              { $match: { status: "approved" } },
+              { $match: { status: "approved", walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
               { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
             ],
             approvedToday: [
-              { $match: { createdAt: { $gte: startOfTodayIST }, status: "approved" } },
+              { $match: { createdAt: { $gte: startOfTodayIST }, status: "approved", walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
               { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
             ],
             pendingTotal: [
-              { $match: { status: "pending" } },
+              { $match: { status: "pending", walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
               { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
             ],
             pendingToday: [
-              { $match: { createdAt: { $gte: startOfTodayIST }, status: "pending" } },
+              { $match: { createdAt: { $gte: startOfTodayIST }, status: "pending", walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
+              { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+            ],
+
+            // ✅ LEADER AUTO-WITHDRAW BOX CALCULATION (Isme sirf wahi count honge)
+            leaderAutoWithdrawTotal: [
+              { $match: { $or: [{ remarks: "Leader Auto Settlement" }, { walletAddress: "-" }] } },
+              { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+            ],
+            leaderAutoWithdrawToday: [
+              { $match: { createdAt: { $gte: startOfTodayIST }, $or: [{ remarks: "Leader Auto Settlement" }, { walletAddress: "-" }] } },
               { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
             ]
           }
         }
       ]),
 
-      // 🔥 SIRF USERS FETCH KARO (Isse 1 user ki 1 hi ginti hogi)
+      // 🔥 SIRF USERS FETCH KARO
       User.find({}, { userId: 1, role: 1, sponsorId: 1, isToppedUp: 1, topUpAmount: 1, createdAt: 1, topUpDate: 1 }).lean()
     ]);
 
     // ==============================================================
-    // 🚀 DIRECT COUNTING ENGINE (SIMPLE, NO DOUBLE COUNTING)
+    // 🚀 DIRECT COUNTING ENGINE 
     // ==============================================================
-    
-    // 1. Saare users ka map banayenge Sponsor check karne ke liye
     const userMap = {};
     allUsers.forEach(u => {
       userMap[Number(u.userId)] = u;
@@ -174,32 +186,25 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
     let normalBusinessTotal = 0;
     let normalBusinessToday = 0;
 
-    // 🌟 VIP LIST: Un normal users ki ID jinke directs Leader me count honge
-    const specialNormalUsers = [1054948]; // 🔥 Yahan aapki special ID hai
+    const specialNormalUsers = [1054948]; 
 
-    // 2. SEEDHA USERS KO GINO
     allUsers.forEach(user => {
-      // Agar ID active nahi hai, toh count mat karo
       if (!user.isToppedUp) return;
 
       const dateToCheck = user.topUpDate || user.createdAt || new Date(0);
       const isToday = new Date(dateToCheck).getTime() >= startOfTodayTime;
       
       let amount = Number(user.topUpAmount) || 30;
-
-      // 🔥 THE LOGIC: KYA IS ID KA UPLINE LEADER YA SPECIAL HAI?
       let isLeaderTopup = false;
       const sponsorId = user.sponsorId ? Number(user.sponsorId) : null; 
       const sponsorUser = userMap[sponsorId];
 
       if (sponsorId && sponsorUser) {
-          // Agar Upline Leader hai YA Upline specialNormalUsers me hai -> Ye ID Leader count hogi
           if (sponsorUser.role === 'leader' || specialNormalUsers.includes(sponsorId)) {
               isLeaderTopup = true;
           }
       }
 
-      // Role ke hisaab se Count aur Amount badhao
       if (isLeaderTopup) {
         leaderTopupTotal++;
         leaderBusinessTotal += amount;
@@ -217,7 +222,6 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
       }
     });
 
-    // 🔥 GRAND TOTALS
     const totalTopupBusiness = leaderBusinessTotal + normalBusinessTotal;
     const todayTopupBusiness = leaderBusinessToday + normalBusinessToday;
 
@@ -239,7 +243,10 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
       pendingWithdrawalTotal: withD.pendingTotal?.[0]?.sum || 0,
       pendingWithdrawalToday: withD.pendingToday?.[0]?.sum || 0,
 
-      // ✅ FRONTEND KO EXACT TOTAL BHEJ RAHE HAIN
+      // ✅ LEADER AUTO-WITHDRAWAL SENT TO FRONTEND
+      leaderAutoWithdrawTotal: withD.leaderAutoWithdrawTotal?.[0]?.sum || 0,
+      leaderAutoWithdrawToday: withD.leaderAutoWithdrawToday?.[0]?.sum || 0,
+
       totalTopupBusiness,
       todayTopupBusiness,
 

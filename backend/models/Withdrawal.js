@@ -41,6 +41,8 @@ const withdrawalSchema = new mongoose.Schema({
     enum: ["pending", "approved", "rejected", "processing"],
     default: "pending" 
   },
+
+  remarks: { type: String, default: "" },
   
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
