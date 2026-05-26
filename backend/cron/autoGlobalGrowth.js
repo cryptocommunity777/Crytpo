@@ -146,7 +146,7 @@ const startGlobalGrowthCron = () => {
                     
                     console.log(`✅ Cron Success: Fake User [${randomName} - ${randomCountry} - #${randomId}] Created!`);
                 } else {
-                    console.log(`⚠️ ID Clash (${randomId}). Skipping fake user creation this minute.`);
+                    console.log(`⚠️ ID Clash (${randomId}). Skipping fake user creation this is minute.`);
                 } 
             }
             
