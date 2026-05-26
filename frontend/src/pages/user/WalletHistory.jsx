@@ -9,6 +9,9 @@ const WalletHistory = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [userId, setUserId] = useState(null);
+  
+  // 🔥 NAYA STATE: User ka role check karne ke liye
+  const [userRole, setUserRole] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -35,6 +38,10 @@ const WalletHistory = () => {
       const parsedUser = JSON.parse(userStr);
       if (!parsedUser?.userId) throw new Error("Invalid user");
       setUserId(String(parsedUser.userId));
+      
+      // 🔥 ROLE SAVE KIYA: Taaki aage check kar sakein
+      setUserRole(parsedUser.role ? parsedUser.role.toLowerCase() : "");
+
       fetchWalletHistory(String(parsedUser.userId));
     } catch { setError("Invalid user."); setLoading(false); }
   }, []);
@@ -184,8 +191,15 @@ const WalletHistory = () => {
             mathImpact = 0;
             colorStyle = "text-yellow-500";
             operator = "";
-          } else {
-            mathImpact = -amt;
+          } 
+          // 🔥 NAYA LOGIC: Agar user ka role "leader" hai, toh balance nahi katega
+          else if (userRole === "leader" || finalDescription.toLowerCase().includes("leader")) {
+            mathImpact = 0; // Balance change zero!
+            colorStyle = "text-slate-500"; // Neutral color
+            operator = ""; // Minus hata diya
+          } 
+          else {
+            mathImpact = -amt; // Normal user ke liye minus chalega
             colorStyle = "text-red-500";
             operator = "-";
           }

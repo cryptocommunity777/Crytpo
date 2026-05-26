@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Zap } from "lucide-react"; // 🔥 Zap import add kar diya
 
 // 🔥 Naya Component: Jo direct Backend se sync hai
 const TotalSystemUsers = ({ user, totalRealUsersFromDB = 0, globalFakeCount = 0 }) => {
@@ -44,6 +45,16 @@ const TotalSystemUsers = ({ user, totalRealUsersFromDB = 0, globalFakeCount = 0 
         <h2 className="text-[28px] sm:text-3xl md:text-[40px] font-black text-emerald-600 tracking-tight leading-none">
           {displayGlobalTeam.toLocaleString()}
         </h2>
+      </div>
+
+      {/* 🔥 GREEN THEME BANNER (Added) */}
+      <div className="col-span-2 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-[20px] p-4 flex items-center justify-center shadow-lg border border-emerald-400">
+          <div className="flex items-center gap-3">
+              <Zap className="text-white shrink-0" size={20} />
+              <span className="text-white font-black text-[11px] md:text-sm uppercase tracking-wider text-center">
+                Fast Track Bonus Ends 10th June 2026
+              </span>
+          </div>
       </div>
 
     </div>

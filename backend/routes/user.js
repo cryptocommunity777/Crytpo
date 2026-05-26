@@ -1434,62 +1434,46 @@ router.put('/:userId', authMiddleware, async (req, res) => {
     }
 
     // 2. Transaction Password Verify
-    if (
-      !oldTxnPassword ||
-      oldTxnPassword !== user.transactionPassword
-    ) {
+    if (!oldTxnPassword || oldTxnPassword !== user.transactionPassword) {
       return res.status(403).json({
         message: 'Invalid Transaction Password.'
       });
     }
 
-    // 3. 🔒 PERMANENT WALLET LOCK AFTER FIRST WITHDRAWAL
-    const Withdrawal = require('../models/Withdrawal');
-
-    const anyWithdrawal = await Withdrawal.findOne({
-      userId: user.userId
-    });
-
-    // 4. Wallet Address Update Logic
-    if (
-      walletAddress &&
-      walletAddress !== user.walletAddress
-    ) {
-
-      // 🔥 EK BAAR WITHDRAWAL LAG GAYA TO ADDRESS CHANGE NAHI HOGA
-      if (anyWithdrawal) {
+    // 3. 🔒 PERMANENT WALLET LOCK LOGIC
+    if (walletAddress && walletAddress.trim() !== '') {
+      
+      // Agar user ke paas already ek address hai, aur wo change karna chah raha hai
+      if (user.walletAddress && user.walletAddress.trim() !== '' && walletAddress !== user.walletAddress) {
         return res.status(403).json({
-          message:
-            'Wallet Locked: Wallet address cannot be changed after first withdrawal.'
+          message: 'Wallet Locked: Wallet address cannot be changed once it is set.'
         });
       }
 
-      // ✅ SAME WALLET MULTIPLE IDS ME ALLOW
-      // UNIQUE CHECK HATA DIYA
+      // Agar address khali tha, toh set karne do
+      if (walletAddress !== user.walletAddress) {
+        user.walletAddress = walletAddress;
 
-      user.walletAddress = walletAddress;
-
-      // Address change tracking
-      user.walletAddressChangeCount =
-        (user.walletAddressChangeCount || 0) + 1;
-
-      user.walletAddressChangeWindowStart =
-        new Date();
+        // Note: Change count & window start ab zaroori nahi hain (kyunki change allow hi nahi hai), 
+        // par DB records ke liye aap rakh sakte ho.
+        user.walletAddressChangeCount = (user.walletAddressChangeCount || 0) + 1;
+        user.walletAddressChangeWindowStart = new Date();
+      }
     }
 
-    // 5. Other Fields
+    // 4. Other Fields
     if (name) user.name = name;
     if (email) user.email = email;
     if (mobile) user.mobile = mobile;
 
-    // 6. Save
+    // 5. Save
     await user.save();
 
-    // 7. Response
+    // 6. Response
     res.json({
       success: true,
       message: 'Profile updated successfully',
-      user: sanitizeUser(user)
+      user: sanitizeUser(user) // Ensure sanitizeUser function available ho
     });
 
   } catch (err) {

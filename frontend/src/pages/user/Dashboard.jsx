@@ -9,13 +9,14 @@ import TotalSystemUsers from "../../components/dashboard/TotalSystemUsers";
 import IncomeSummary from "../../components/dashboard/IncomeSummary";
 import ReferralLink from "../../components/dashboard/ReferralLink";
 import WalletBalance from "../../components/dashboard/WalletBalance";
-// 🔥 FIX: QuickActions ka import yahan se hata diya kyunki wo ab UserLayout me hai
 import DailyROIPlan from "../../components/dashboard/DailyROI";
 import SpinnerOverlay from "../../components/common/SpinnerOverlay";
 import SuccessModal from "../../components/modals/SuccessModal";
 import TelegramPopup from "../../components/TelegramPopup";
-// 🔥 NAYA IMPORT
 import PromoVideoBox from "../../components/dashboard/PromoVideoBox"; 
+
+// 🔥 WALLET POPUP IMPORT
+import WalletPopup from "../../components/WalletPopup";
 
 const Dashboard = ({ setModalState }) => {
   const { user, token, setUser, logout } = useAuth();
@@ -42,6 +43,9 @@ const Dashboard = ({ setModalState }) => {
     userId: "",
     amount: 0,
   });
+
+  // 🔥 WALLET POPUP STATE
+  const [showWallet, setShowWallet] = useState(false);
 
   const hasFetched = useRef(false);
 
@@ -103,6 +107,26 @@ const Dashboard = ({ setModalState }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.userId, token]); 
 
+  // 🔥 DIRECT WALLET POPUP LOGIC (Har login / refresh par check karega)
+  useEffect(() => {
+    if (user && user.userId) {
+      const hasWallet = user.walletAddress && user.walletAddress.trim() !== "";
+      
+      // Agar wallet address NAHI hai, toh 800ms baad popup dikhao
+      if (!hasWallet) {
+        const timer = setTimeout(() => {
+          setShowWallet(true);
+        }, 800); 
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user?.userId, user?.walletAddress]); // Jab bhi user load hoga ya wallet update hoga, ye chalega
+
+  const handleCloseWallet = () => {
+    setShowWallet(false);
+  };
+
   const handleTopUpSuccess = async (amount = 0, userId = "") => {
     await fetchUserData();
     setWalletRefreshKey((prev) => prev + 1);
@@ -136,6 +160,9 @@ const Dashboard = ({ setModalState }) => {
       
       {loading && <SpinnerOverlay />}
 
+      {/* 🔥 WALLET POPUP RENDER HOGA YAHAN */}
+      {showWallet && <WalletPopup onClose={handleCloseWallet} />}
+
       <div className="space-y-6 md:space-y-8 relative z-10">
         
         <section>
@@ -150,7 +177,6 @@ const Dashboard = ({ setModalState }) => {
            />
         </section>
 
-        {/* 🔥 NAYA BOX YAHAN ADD KIYA GAYA HAI REFERRAL LINK KE THIK UPAR */}
         <div>
             <PromoVideoBox />
         </div>
@@ -229,8 +255,6 @@ const Dashboard = ({ setModalState }) => {
         )}
         
       </div>
-
-      {/* 🔥 FIX: Desktop QuickActions yahan se remove kar diya gaya hai */}
 
       <SuccessModal
         isOpen={successModal.isOpen}

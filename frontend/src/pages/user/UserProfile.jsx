@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from "../../api/axios";
 import { 
   ArrowLeft, Save, Lock, User, Mail, Smartphone, 
-  Wallet, Key, ShieldCheck, AlertTriangle, BadgeInfo,
-  Settings
+  Wallet, Key, ShieldCheck, BadgeInfo, Settings
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import MessageModal from '../../components/modals/MessageModal';
@@ -23,9 +22,6 @@ function UserProfile() {
     mobile: user?.mobile || '',
     walletAddress: user?.walletAddress || '',
   });
-
-  // 🔥 Is function ki ab zaroorat nahi kyunki hum same wallet allow kar rahe hain
-  // const checkWalletAddress = async (address) => { ... }
 
   const [profileTxnPassword, setProfileTxnPassword] = useState('');
 
@@ -48,24 +44,14 @@ function UserProfile() {
   /* ================= WALLET LOCK LOGIC ================= */
   const walletLockReason = useMemo(() => {
     if (!user) return null;
-    if (user.role === 'admin') return null;
-
-    // Rule 1: Pending withdrawal lock
-   if (user.walletAddressLocked) {
-  return 'Wallet address cannot be changed after first withdrawal.';
-}
-
-    // Rule 2: 24-hour Limit Lock
-    if (
-      user.walletAddressChangeCount >= 2 &&
-      user.walletAddressChangeWindowStart &&
-      Date.now() - new Date(user.walletAddressChangeWindowStart).getTime() < 24 * 60 * 60 * 1000
-    ) {
-      return 'You can change your wallet address only 2 times within 24 hours.';
+    
+    // 🔥 NEW RULE: Agar wallet address ek baar set ho gaya, toh permanently lock!
+    if (user.walletAddress && user.walletAddress.trim() !== '') {
+      return 'Wallet address is permanently locked once set. For changes, contact support.';
     }
 
     return null;
-  }, [user, formData.walletAddress]);
+  }, [user]);
 
   const isWalletLocked = Boolean(walletLockReason);
 
@@ -75,29 +61,16 @@ function UserProfile() {
   };
 
   const handleSaveProfile = async () => {
+    if (isWalletLocked) {
+      return showMessage(
+        'Wallet Address Locked',
+        '🔒 Wallet address cannot be changed once it is set.',
+        'error'
+      );
+    }      
+
     if (!profileTxnPassword) {
       return showMessage('Transaction Password Required', 'Please enter your transaction password to update profile.', 'warning');
-    }
-
-    // 🔥 YAHAN SE CHANGE KIYA HAI:
-    // Pehle yahan checkWalletAddress() tha jo same wallet hone par rok deta tha.
-    // Ab usko hata diya hai taaki ek hi address 10 IDs me bhi lag sake!
-
-if (user.walletAddressLocked) {
-  return showMessage(
-    'Wallet Address Locked',
-    '🔒 Wallet address cannot be changed after first withdrawal.',
-    'error'
-  );
-}      
-
-    const now = Date.now();
-    if (
-      user.walletAddressChangeCount >= 2 &&
-      user.walletAddressChangeWindowStart &&
-      now - new Date(user.walletAddressChangeWindowStart).getTime() < 24 * 60 * 60 * 1000
-    ) {
-      return showMessage('Wallet Address Locked', '⏳ You can change your wallet address only 2 times within 24 hours.', 'error');
     }
 
     try {
@@ -105,7 +78,7 @@ if (user.walletAddressLocked) {
       const res = await api.put(`/user/${user.userId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
       updateUser(res.data.user || res.data);
       setProfileTxnPassword('');
-      showMessage('Profile Updated Successfully ✅', 'Your profile has been updated successfully.', 'success');
+      showMessage('Profile Updated Successfully ✅', 'Your wallet address has been saved permanently.', 'success');
     } catch (err) {
       showMessage(err.response?.status === 403 ? 'Update Blocked 🚫' : 'Error', err.response?.data?.message || 'Profile update blocked due to security rules.', 'error');
     }
@@ -233,7 +206,7 @@ if (user.walletAddressLocked) {
                       </div>
                    </div>
 
-                   {/* Editable Wallet Address */}
+                   {/* Editable/Locked Wallet Address */}
                    <div className="pt-2 border-t border-slate-100">
                       <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1 mb-1.5">USDT Wallet Address (BEP20)</label>
                       <div className="relative group">
@@ -256,26 +229,28 @@ if (user.walletAddressLocked) {
                       )}
                    </div>
 
-                   {/* Save Section */}
-                   <div className="pt-4 border-t border-slate-100">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Transaction Password to Save</label>
-                      <div className="relative mb-4">
-                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Key size={16} className="text-slate-400" /></div>
-                         <input 
-                            type="password" 
-                            placeholder="Enter Txn Password"
-                            value={profileTxnPassword} 
-                            onChange={e => setProfileTxnPassword(e.target.value)} 
-                            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 pl-10 text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all text-sm" 
-                         />
-                      </div>
-                      <button 
-                         onClick={handleSaveProfile} 
-                         className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-wider shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
-                      >
-                         <Save size={18} /> Update Wallet Address
-                      </button>
-                   </div>
+                   {/* Save Section (Sirf tab dikhega jab Wallet Locked NAHI hoga) */}
+                   {!isWalletLocked && (
+                     <div className="pt-4 border-t border-slate-100">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Transaction Password to Save</label>
+                        <div className="relative mb-4">
+                           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Key size={16} className="text-slate-400" /></div>
+                           <input 
+                              type="password" 
+                              placeholder="Enter Txn Password"
+                              value={profileTxnPassword} 
+                              onChange={e => setProfileTxnPassword(e.target.value)} 
+                              className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 pl-10 text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all text-sm" 
+                           />
+                        </div>
+                        <button 
+                           onClick={handleSaveProfile} 
+                           className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-wider shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
+                        >
+                           <Save size={18} /> Update Wallet Address
+                        </button>
+                     </div>
+                   )}
 
                 </div>
              </div>

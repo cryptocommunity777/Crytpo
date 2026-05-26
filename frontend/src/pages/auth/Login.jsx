@@ -46,6 +46,15 @@ const UserLogin = () => {
   const { login } = useAuth();
   const inputRef = useRef(null);
 
+  // 🔥 AUTOMATIC HARD REFRESH LOGIC (Sirf ek baar chalega)
+  useEffect(() => {
+    const hasRefreshed = sessionStorage.getItem('site_updated_refresh');
+    if (!hasRefreshed) {
+      sessionStorage.setItem('site_updated_refresh', 'true');
+      window.location.reload(); 
+    }
+  }, []);
+
   // 🔥 BULLETPROOF AUTO-LOGIN FROM ADMIN
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
