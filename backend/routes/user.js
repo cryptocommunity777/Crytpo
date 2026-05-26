@@ -27,28 +27,60 @@ const {
 // ==========================================
 
 
-const getStopConditions = () => {
-    const allMilestones = [360, 760, 2360, 4360, 7360, 11360, 16360, 23860, 33860];
-    return [
-        // 1. Inactive (Red ID) - Inke liye 360 se hi lock rakho
-        { isToppedUp: false, globalTeamCount: { $in: allMilestones } },
-        
-        // 2. 🔥 CHANGE KIYA: Active (Green ID) with 0 Directs - Ab 360 par nahi rukega, seedha 760 par rukega
-        { isToppedUp: true, directCount: { $lt: 1 }, globalTeamCount: { $in: [760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
-        
-        // 3. Active (Green ID) with 1 to 4 Directs: Ye pehle se hi 760 par ruk rahe the
-        { isToppedUp: true, directCount: { $lt: 5 }, globalTeamCount: { $in: [760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
-        
-        // Baaki sab limits same rahengi
-        { isToppedUp: true, directCount: { $lt: 6 }, globalTeamCount: { $in: [2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
-        { isToppedUp: true, directCount: { $lt: 8 }, globalTeamCount: { $in: [4360, 7360, 11360, 16360, 23860, 33860] } },
-        { isToppedUp: true, directCount: { $lt: 10 }, globalTeamCount: { $in: [7360, 11360, 16360, 23860, 33860] } },
-        { isToppedUp: true, directCount: { $lt: 12 }, globalTeamCount: { $in: [11360, 16360, 23860, 33860] } },
-        { isToppedUp: true, directCount: { $lt: 14 }, globalTeamCount: { $in: [16360, 23860, 33860] } },
-        { isToppedUp: true, directCount: { $lt: 16 }, globalTeamCount: { $in: [23860, 33860] } },
-        { isToppedUp: true, directCount: { $lt: 18 }, globalTeamCount: { $in: [33860] } }
-    ];
+// =========================================================================
+// 🔥 NEW SMART CAPPING ENGINE FOR REAL TOPUPS (SYNCED WITH CRON)
+// =========================================================================
+const processGlobalTeamGrowth = async (excludeUserId) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const activeUsers = await User.find({ isToppedUp: true, userId: { $ne: excludeUserId } })
+        .select('_id globalTeamCount directCount todayGlobalTeamAdded lastGlobalTeamAddDate');
+
+    const bulkOps = [];
+
+    for (const user of activeUsers) {
+        const team = user.globalTeamCount || 0;
+        const directs = user.directCount || 0;
+
+        let todayAdded = user.todayGlobalTeamAdded || 0;
+        if (user.lastGlobalTeamAddDate !== todayStr) todayAdded = 0;
+
+        let isLocked = false;
+        if (team === 760 && directs < 5) isLocked = true;
+        else if (team === 2360 && directs < 6) isLocked = true;
+        else if (team === 4360 && directs < 8) isLocked = true;
+        else if (team === 7360 && directs < 10) isLocked = true;
+        else if (team === 11360 && directs < 12) isLocked = true;
+        else if (team === 16360 && directs < 14) isLocked = true;
+        else if (team === 23860 && directs < 16) isLocked = true;
+        else if (team === 33860 && directs < 18) isLocked = true;
+
+        if (isLocked) continue;
+
+        if (team >= 760) {
+            let dailyCap = Math.min(directs * 20, 360);
+            if (team > 760 && team < 2360 && directs < 5) {
+                dailyCap = 360; 
+            }
+            if (todayAdded >= dailyCap) continue; 
+        }
+
+        bulkOps.push({
+            updateOne: {
+                filter: { _id: user._id },
+                update: {
+                    $inc: { globalTeamCount: 1, todayGlobalTeamAdded: 1 },
+                    $set: { lastGlobalTeamAddDate: todayStr }
+                }
+            }
+        });
+    }
+
+    if (bulkOps.length > 0) {
+        await User.bulkWrite(bulkOps);
+    }
 };
+
 
 // 📋 Get all users (Admin ke liye)
 router.get('/all', getAllUsers);
@@ -538,16 +570,10 @@ router.put(
       (async () => {
           try {
               if (isFirstTopup) {
-                const stopConditions = getStopConditions();
-                  // 🌟 GLOBAL TEAM COUNT
-                 await User.updateMany(
-    { 
-        isToppedUp: true, 
-        userId: { $ne: targetUser.userId }, 
-        $nor: stopConditions // 🔥 Yahan se Lock check hoga
-    }, 
-    { $inc: { globalTeamCount: 1 } }
-);
+                   // 🌟 GLOBAL TEAM COUNT
+                 // 🔥 SMART CAPPING ENGINE CALL (Real Topup)
+      await processGlobalTeamGrowth(targetUser.userId);
+
 
                   if (targetUser.sponsorId) {
                       const sponsor = await User.findOne({ userId: targetUser.sponsorId });
@@ -817,16 +843,9 @@ router.put(
       (async () => {
           try {
               if (isFirstTopup) {
-                const stopConditions = getStopConditions();
-                  // 🌟 GLOBAL TEAM COUNT
-                 await User.updateMany(
-    { 
-        isToppedUp: true, 
-        userId: { $ne: targetUser.userId }, 
-        $nor: stopConditions // 🔥 Yahan se Lock check hoga
-    }, 
-    { $inc: { globalTeamCount: 1 } }
-);
+                   // 🌟 GLOBAL TEAM COUNT
+                // 🔥 SMART CAPPING ENGINE CALL (Leader Topup)
+        await processGlobalTeamGrowth(targetUser.userId);
 
                   if (targetUser.sponsorId) {
                       const sponsor = await User.findOne({ userId: targetUser.sponsorId });

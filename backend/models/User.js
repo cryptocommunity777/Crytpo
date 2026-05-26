@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema({
   directCount: { type: Number, default: 0 },       // Kitne direct lagaye hain
   globalTeamCount: { type: Number, default: 0 },   // Global downline kitni hai
 
+
+  // 🔥 NAYA: DAILY CAPPING TRACKER (Ab limit yahan save hogi)
+  todayGlobalTeamAdded: { type: Number, default: 0 },
+  lastGlobalTeamAddDate: { type: String, default: "" }, // Format: YYYY-MM-DD
+
   // ==========================================
   // 🔹 SECURITY & TRACKING
   // ==========================================

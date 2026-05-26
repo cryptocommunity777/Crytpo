@@ -23,56 +23,93 @@ const GLOBAL_POOLS = [
 
 const startGlobalGrowthCron = () => {
 
-    // 🔥 YAHAN EK NAYI FUNCTION BANAYI HAI JO CRON MEIN USE HOGI
-    const getStopConditions = () => {
-    const allMilestones = [360, 760, 2360, 4360, 7360, 11360, 16360, 23860, 33860];
-    return [
-        // 1. Inactive (Red ID) - Inke liye 360 se hi lock rakho
-        { isToppedUp: false, globalTeamCount: { $in: allMilestones } },
-        
-        // 2. 🔥 CHANGE KIYA: Active (Green ID) with 0 Directs - Ab 360 par nahi rukega, seedha 760 par rukega
-        { isToppedUp: true, directCount: { $lt: 1 }, globalTeamCount: { $in: [760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
-        
-        // 3. Active (Green ID) with 1 to 4 Directs: Ye pehle se hi 760 par ruk rahe the
-        { isToppedUp: true, directCount: { $lt: 5 }, globalTeamCount: { $in: [760, 2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
-        
-        // Baaki sab limits same rahengi
-        { isToppedUp: true, directCount: { $lt: 6 }, globalTeamCount: { $in: [2360, 4360, 7360, 11360, 16360, 23860, 33860] } },
-        { isToppedUp: true, directCount: { $lt: 8 }, globalTeamCount: { $in: [4360, 7360, 11360, 16360, 23860, 33860] } },
-        { isToppedUp: true, directCount: { $lt: 10 }, globalTeamCount: { $in: [7360, 11360, 16360, 23860, 33860] } },
-        { isToppedUp: true, directCount: { $lt: 12 }, globalTeamCount: { $in: [11360, 16360, 23860, 33860] } },
-        { isToppedUp: true, directCount: { $lt: 14 }, globalTeamCount: { $in: [16360, 23860, 33860] } },
-        { isToppedUp: true, directCount: { $lt: 16 }, globalTeamCount: { $in: [23860, 33860] } },
-        { isToppedUp: true, directCount: { $lt: 18 }, globalTeamCount: { $in: [33860] } }
-    ];
-};
-
     // =========================================================================
     // 1. HAR 1 MINUTE WALI CRON (Growth + Pool Unlock Logic)
     // =========================================================================
     cron.schedule('* * * * *', async () => {
         try {
-            // 🔥 1. FAKE/SYSTEM GROWTH LOGIC 
-            const shouldAddFakeUser = Math.random() < (100 / 1440);  
+            // 🔥 1. FAKE/SYSTEM GROWTH LOGIC (LIVE MODE: 100 Users/Day)
+            // (100 / 1440) ka matlab din me lagbhag 100 users naturally aayenge.
+           const shouldAddFakeUser = Math.random() < (100 / 1440); 
             
-        // const shouldAddFakeUser = true; 
+            // ⚠️ AGAR KABHI TESTING KARNI HO TOH UPAR WALI LINE HATA KE NICHE WALI LAGA DENA:
+             
             if (shouldAddFakeUser) {
                 
                 // =======================================================
-                // 🚀 A. NAYA SMART DISTRIBUTION LOGIC
+                // 🚀 A. NEW ULTRA-SMART DISTRIBUTION LOGIC (WITH CAPPING)
                 // =======================================================
                 
-                const stopConditions = getStopConditions();
+                const todayStr = new Date().toISOString().split('T')[0]; 
 
-                // Ye command un sabko +1 karegi jo upar wale stopConditions me nahi aate
-                await User.updateMany(
-                    { $nor: stopConditions },
-                    { $inc: { globalTeamCount: 1 } }
-                );
+                // Sirf Active Users ko uthayenge. Inactive (Red) IDs yahan already ignore ho rahi hain.
+                const activeUsers = await User.find({ isToppedUp: true })
+                    .select('_id globalTeamCount directCount todayGlobalTeamAdded lastGlobalTeamAddDate');
+
+                const bulkOps = [];
+
+                for (const user of activeUsers) {
+                    const team = user.globalTeamCount || 0;
+                    const directs = user.directCount || 0;
+                    
+                    // Daily limit reset check
+                    let todayAdded = user.todayGlobalTeamAdded || 0;
+                    if (user.lastGlobalTeamAddDate !== todayStr) {
+                        todayAdded = 0;
+                    }
+
+                    // --- STEP 1: STRICT MILESTONE LOCKS (Exact Target par hi rokega) ---
+                    let isLocked = false;
+                    
+                    // Exact milestone par lock lagega
+                    if (team === 760 && directs < 5) isLocked = true;
+                    else if (team === 2360 && directs < 6) isLocked = true;
+                    else if (team === 4360 && directs < 8) isLocked = true;
+                    else if (team === 7360 && directs < 10) isLocked = true;
+                    else if (team === 11360 && directs < 12) isLocked = true;
+                    else if (team === 16360 && directs < 14) isLocked = true;
+                    else if (team === 23860 && directs < 16) isLocked = true;
+                    else if (team === 33860 && directs < 18) isLocked = true;
+
+                    if (isLocked) continue; // Agar exact milestone par direct kam hain, toh yahin Jam/Freeze kardo.
+
+                    // --- STEP 2: DAILY CAPPING LOGIC ---
+                    if (team >= 760) {
+                        let dailyCap = Math.min(directs * 20, 360);
+                        
+                        // 🔥 EXCEPTION: 
+                        // Agar koi purana user 5 level (760) cross kar chuka hai bina 5 direct ke,
+                        // toh usko beech raste me 0 cap dekar latkana nahi hai. 
+                        // Usko naturally Level 6 (2360) tak jaane do.
+                        if (team > 760 && team < 2360 && directs < 5) {
+                            dailyCap = 360; // Natural max cap de diya taaki beech me team na atke
+                        }
+                        
+                        if (todayAdded >= dailyCap) {
+                            continue; // Is user ki aaj ki limit puri ho gayi
+                        }
+                    }
+
+                    // --- STEP 3: AGAR USER ELIGIBLE HAI, TOH BULK WRITE ME DAALO ---
+                    bulkOps.push({
+                        updateOne: {
+                            filter: { _id: user._id },
+                            update: {
+                                $inc: { globalTeamCount: 1, todayGlobalTeamAdded: 1 },
+                                $set: { lastGlobalTeamAddDate: todayStr }
+                            }
+                        }
+                    });
+                }
+
+                // Ek sath sabhi users ko DB mein update karo
+                if (bulkOps.length > 0) {
+                    await User.bulkWrite(bulkOps);
+                }
                 // =======================================================
 
 
-                // B. SYSTEM TOTAL FAKE COUNT (Ye hamesha badhega system stats ke liye)
+                // B. SYSTEM TOTAL FAKE COUNT
                 await SystemStat.findOneAndUpdate(
                     {}, 
                     { $inc: { globalFakeCount: 1 } }, 
@@ -113,7 +150,7 @@ const startGlobalGrowthCron = () => {
                 } 
             }
             
-            // 🔥 2. POOL UNLOCK DISTRIBUTION LOGIC 
+            // 🔥 2. POOL UNLOCK DISTRIBUTION LOGIC (Koi Change Nahi)
             const eligibleUsers = await User.find({ directCount: { $gte: 1 }, isToppedUp: true });
             const todayStr = new Date().toISOString().split('T')[0]; 
 
@@ -155,7 +192,6 @@ const startGlobalGrowthCron = () => {
                     }
                 }
                 
-                // Bracket fix: Ye loop ke theek andar hona chahiye
                 if (isUpdated) await user.save();
             }
         } catch (err) {
@@ -164,7 +200,7 @@ const startGlobalGrowthCron = () => {
     });
 
     // =========================================================================
-    // 2. DAILY MIDNIGHT CRON (Bache hue din ka paisa dene ke liye)
+    // 2. DAILY MIDNIGHT CRON (Koi Change Nahi)
     // =========================================================================
     cron.schedule('0 0 * * *', async () => {
         try {
