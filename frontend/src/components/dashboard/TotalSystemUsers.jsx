@@ -52,7 +52,7 @@ const TotalSystemUsers = ({ user, totalRealUsersFromDB = 0, globalFakeCount = 0 
           <div className="flex items-center gap-3">
               <Zap className="text-white shrink-0" size={20} />
               <span className="text-white font-black text-[11px] md:text-sm uppercase tracking-wider text-center">
-                Fast Track Bonus Ends 10th June 2026
+                Fast Track Offer valid till 10th June 2026 only
               </span>
           </div>
       </div>
