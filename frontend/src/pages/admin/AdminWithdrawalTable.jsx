@@ -4,7 +4,7 @@ import { saveAs } from 'file-saver';
 import { format } from 'date-fns';
 import { FaCopy } from 'react-icons/fa';
 import { ethers } from 'ethers';
-import Swal from 'sweetalert2'; // ✅ Professional Alerts
+import Swal from 'sweetalert2'; 
 import { ExternalLink } from 'lucide-react';
 
 const AdminWithdrawalTable = () => {
@@ -23,10 +23,7 @@ const AdminWithdrawalTable = () => {
   const [statusFilter, setStatusFilter] = useState('pending'); 
   const [loading, setLoading] = useState(false);
 
-
-
   // ----------------- 0. Impersonate User -----------------
- // ----------------- 0. Impersonate User -----------------
   const handleImpersonate = async (userId) => {
     const result = await Swal.fire({
       title: 'Login as User?',
@@ -51,25 +48,21 @@ const AdminWithdrawalTable = () => {
         const { token: userToken, user: impersonatedUser } = res.data;
         const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
 
-        // 🔥 FIXED LOGIC: Subdomain ('good.') ignore aur port 5173 ke liye 🔥
         let targetBaseUrl = "";
         const currentHost = window.location.hostname;
 
-        // Agar domain me 'localhost' aata hai (jaise good.localhost) ya IP 127.0.0.1 hai
         if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
-          targetBaseUrl = "http://localhost:5173"; // Hamesha clean local URL pe bheje
+          targetBaseUrl = "http://localhost:5173"; 
         } else {
-          targetBaseUrl = "https://cryptocommunity.live"; // Live website
+          targetBaseUrl = "https://cryptocommunity.live"; 
         }
 
-        // Final URL banayen
         const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
 
-        // 🚀 POPUP BLOCKER FIX: Hidden link banakar click karwana 
         const link = document.createElement('a');
         link.href = mainWebsiteUrl;
         link.target = '_blank';
-        link.rel = 'noopener noreferrer'; // Security ke liye
+        link.rel = 'noopener noreferrer'; 
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -79,11 +72,12 @@ const AdminWithdrawalTable = () => {
       Swal.fire('Error', error.response?.data?.message || "Failed to impersonate user", 'error');
     }
   };
+
   // ----------------- 1. Professional Blockchain Approve -----------------
   const handleBlockchainApprove = async (item) => {
     try {
       if (!window.ethereum) {
-return Swal.fire('Error', 'MetaMask or Trust Wallet not detected!', 'error');
+        return Swal.fire('Error', 'MetaMask or Trust Wallet not detected!', 'error');
       }
       
       const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -121,14 +115,14 @@ return Swal.fire('Error', 'MetaMask or Trust Wallet not detected!', 'error');
       const balance = await contract.balanceOf(adminAddress);
       const amountInWei = ethers.utils.parseUnits(item.netAmount.toString(), 18);
 
-     if (balance.lt(amountInWei)) {
-  return Swal.fire({
-    title: 'Insufficient Balance',
-    text: `Your wallet only has ${ethers.utils.formatUnits(balance, 18)} USDT, but the required amount is ${item.netAmount} USDT.`,
-    icon: 'error',
-    confirmButtonColor: '#3085d6'
-  });
-}
+      if (balance.lt(amountInWei)) {
+        return Swal.fire({
+          title: 'Insufficient Balance',
+          text: `Your wallet only has ${ethers.utils.formatUnits(balance, 18)} USDT, but the required amount is ${item.netAmount} USDT.`,
+          icon: 'error',
+          confirmButtonColor: '#3085d6'
+        });
+      }
 
       // --- Show Loading Spinner ---
       Swal.fire({
@@ -140,18 +134,24 @@ return Swal.fire('Error', 'MetaMask or Trust Wallet not detected!', 'error');
 
       const tx = await contract.transfer(item.walletAddress, amountInWei);
       
-      // Update text to show transaction is pending on blockchain
       Swal.update({ text: 'Blockchain confirmation ka intezar hai...' });
       
       const receipt = await tx.wait(); 
 
       // --- Backend Update ---
-      const idToUpdate = item.withdrawalId || item._id;
-      await api.put(`/admin/withdrawals/approve/${idToUpdate}`, { txnHash: receipt.transactionHash }, { 
-        headers: { Authorization: `Bearer ${token}` } 
-      });
+      // 🔥 IMPORTNAT: Ab bulk (merged) request mein ek ID pass nahi ho sakti hai.
+      // Agar grouped item hai, toh backend ko saari combined IDs bhejni padengi jisko update karna hai.
+      const idsToUpdate = item.originalIds ? item.originalIds : [item.withdrawalId || item._id];
 
-Swal.fire('Success!', 'Payment has been sent successfully.', 'success');
+      // Assuming your backend API can handle an array of IDs OR you loop through them
+      // Yahan me ek for...of loop lagaya hu taaki saari requests individual API calls me hit ho jaye
+      for (const singleId of idsToUpdate) {
+          await api.put(`/admin/withdrawals/approve/${singleId}`, { txnHash: receipt.transactionHash }, { 
+            headers: { Authorization: `Bearer ${token}` } 
+          });
+      }
+
+      Swal.fire('Success!', 'Payment has been sent successfully.', 'success');
       fetchWithdrawals();
 
     } catch (err) {
@@ -164,53 +164,53 @@ Swal.fire('Success!', 'Payment has been sent successfully.', 'success');
     }
   };
 
-  // ----------------- 2. Modern Update Status -----------------
+  // ----------------- 2. Modern Update Status (Dummy/Reject) -----------------
   const updateStatus = async (item, status) => {
-   if (status === 'approved') {
-  const result = await Swal.fire({
-    title: 'Confirm Withdrawal Approval?',
-    text: `Are you sure you want to transfer ${item.netAmount} USDT to the user's wallet?`,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonColor: '#10b981', // Green color
-    cancelButtonColor: '#ef4444',  // Red color
-    confirmButtonText: 'Yes, Process Payment',
-    cancelButtonText: 'Cancel'
-  });
-  
-  if (result.isConfirmed) {
-    handleBlockchainApprove(item);
-  }
-  return;
-}
+    if (status === 'approved') {
+      const result = await Swal.fire({
+        title: 'Confirm Withdrawal Approval?',
+        text: `Are you sure you want to transfer ${item.netAmount} USDT to the user's wallet?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981', 
+        cancelButtonColor: '#ef4444',  
+        confirmButtonText: 'Yes, Process Payment',
+        cancelButtonText: 'Cancel'
+      });
+      
+      if (result.isConfirmed) {
+        handleBlockchainApprove(item);
+      }
+      return;
+    }
 
     try {
-      let url, body = {};
-      const actualId = item._id || item;
-
+      const idsToUpdate = item.originalIds ? item.originalIds : [item._id || item];
+      
+      let txnHash = "";
       if (status === 'dummy') {
-        const { value: txnHash } = await Swal.fire({
+        const { value: hashInput } = await Swal.fire({
           title: 'Dummy Transaction',
           text: 'Transaction Hash here:',
           input: 'text',
           inputPlaceholder: '0x...',
           showCancelButton: true,
           inputValidator: (value) => {
-if (!value) return 'Transaction hash is required!';
+            if (!value) return 'Transaction hash is required!';
           }
         });
-        
-        if (!txnHash) return;
-        url = `/admin/withdrawals/dummy/${actualId}`;
-        body = { txnHash };
-      } else {
-        url = `/admin/withdrawals/reject/${actualId}`;
+        if (!hashInput) return;
+        txnHash = hashInput;
       }
       
-      // Loader for normal updates
       Swal.fire({ title: 'Updating...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-      
-      await api.put(url, body, { headers: { Authorization: `Bearer ${token}` } });
+
+      for (const singleId of idsToUpdate) {
+         let url = status === 'dummy' ? `/admin/withdrawals/dummy/${singleId}` : `/admin/withdrawals/reject/${singleId}`;
+         let body = status === 'dummy' ? { txnHash } : {};
+         await api.put(url, body, { headers: { Authorization: `Bearer ${token}` } });
+      }
+
       Swal.fire('Updated', 'Status changed!!!.', 'success');
       fetchWithdrawals();
     } catch (err) {
@@ -218,7 +218,7 @@ if (!value) return 'Transaction hash is required!';
     }
   };
 
-  // ----------------- Helpers & Core Logic (SAME) -----------------
+  // ----------------- Helpers & Core Logic -----------------
   const normalizeDate = (d) => {
     if (!d) return null;
     const n = new Date(d);
@@ -250,63 +250,79 @@ if (!value) return 'Transaction hash is required!';
     fetchWithdrawals();
   }, [fromDate, toDate]);
 
+
+  // 🔥 MAIN LOGIC UPDATE YAHI HUA HAI 🔥
   const flattenedData = useMemo(() => {
-    return withdrawals.flatMap(w => {
-      const schedule = Array.isArray(w.schedule) ? w.schedule : [];
+    // 1. Pehle filter karlo jo "Leader Auto Settlement" ya leaders ka record nahi hona chahiye
+    const nonLeaderWithdrawals = withdrawals.filter(w => {
+       const remark = (w.remarks || '').toLowerCase();
+       const desc = (w.description || '').toLowerCase();
+       return !remark.includes('leader auto settlement') && !desc.includes('leader settlement');
+    });
+
+    // 2. Data extract karna basic (schedule check)
+    let extractedData = nonLeaderWithdrawals.flatMap(w => {
       const totalFee = Number(w.fee ?? 0);
       const totalGross = Number(w.grossAmount ?? w.amount ?? 0);
 
-      if (schedule.length) {
-        const feePerDayRaw = totalFee / schedule.length;
-        const grossPerDayRaw = totalGross / schedule.length;
-        let accumulatedFee = 0;
-        let accumulatedGross = 0;
+      const gross = parseFloat(totalGross.toFixed(2));
+      const fee = parseFloat(totalFee.toFixed(2));
+      const net = parseFloat((gross - fee).toFixed(2));
+      const createdAt = w.date ? new Date(w.date) : new Date(w.createdAt);
 
-        return schedule.map((d, idx) => {
-          const fee = idx === schedule.length - 1 ? totalFee - accumulatedFee : parseFloat(feePerDayRaw.toFixed(2));
-          const gross = idx === schedule.length - 1 ? totalGross - accumulatedGross : parseFloat(grossPerDayRaw.toFixed(2));
-          const net = parseFloat((gross - fee).toFixed(2));
-          accumulatedFee += fee;
-          accumulatedGross += gross;
-          const createdAt = d.date ? new Date(d.date) : new Date(w.createdAt);
-
-          return {
-            _id: `${w._id}-${idx}`, // Unique ID for table row
-            withdrawalId: w._id,     // Parent ID
-            userId: w.userId ?? '-',
-            name: w.name ?? '-',
-            source: w.source ?? 'ROI',
-            grossAmount: gross,
-            fee: fee,
-            netAmount: net,
-            walletAddress: d.walletAddress || w.walletAddress || 'No Wallet',
-            txnHash: w.txnHash ?? '-',
-            status: d.status ?? 'pending',
-            createdAt,
-          };
-        });
-      } else {
-        const gross = parseFloat(totalGross.toFixed(2));
-        const fee = parseFloat(totalFee.toFixed(2));
-        const net = parseFloat((gross - fee).toFixed(2));
-        const createdAt = w.date ? new Date(w.date) : new Date(w.createdAt);
-
-        return [{
-          _id: w._id,
-          withdrawalId: w._id,
-          userId: w.userId ?? '-',
-          name: w.name ?? '-',
-          source: w.source ?? 'ROI',
-          grossAmount: gross,
-          fee: fee,
-          netAmount: net,
-          walletAddress: w.walletAddress || 'No Wallet',
-          txnHash: w.txnHash ?? '-',
-          status: w.status ?? 'pending',
-          createdAt,
-        }];
-      }
+      return {
+        _id: w._id,
+        withdrawalId: w._id,
+        userId: w.userId ?? '-',
+        name: w.name ?? '-',
+        source: w.source ?? 'ROI',
+        grossAmount: gross,
+        fee: fee,
+        netAmount: net,
+        walletAddress: w.walletAddress || 'No Wallet',
+        txnHash: w.txnHash ?? '-',
+        status: w.status ?? 'pending',
+        createdAt,
+      };
     });
+
+    // 3. User, Status aur Date ke hisaab se MERGE karna (Taaki 4-5 source ek ban jaye)
+    const groupedData = {};
+
+    extractedData.forEach(item => {
+        // Ek Group banane ki "Chaabi" (Key) banayenge - Same User + Same Status + Same Din
+        const dateStr = format(new Date(item.createdAt), 'yyyy-MM-dd');
+        const groupKey = `${item.userId}_${item.status}_${dateStr}`;
+
+        if (!groupedData[groupKey]) {
+            // Agar group abhi nahi bana hai to initialise kardo
+            groupedData[groupKey] = {
+                ...item,
+                originalIds: [item._id], // Backend ko update karne ke liye original IDs safe rakhni padengi
+                source: item.source.toUpperCase(), // Eg. DIRECT
+            };
+        } else {
+            // Agar group pehle se bana hai toh amounts aur sources add kar do
+            groupedData[groupKey].grossAmount += item.grossAmount;
+            groupedData[groupKey].fee += item.fee;
+            groupedData[groupKey].netAmount += item.netAmount;
+            groupedData[groupKey].originalIds.push(item._id);
+
+            // Source list ko append kar do (Eg. DIRECT, LEVEL)
+            if(!groupedData[groupKey].source.includes(item.source.toUpperCase())) {
+                groupedData[groupKey].source += `, ${item.source.toUpperCase()}`;
+            }
+        }
+    });
+
+    // Ab grouped object ko wapas ek array me convert karke return kardo
+    return Object.values(groupedData).map(grp => ({
+        ...grp,
+        grossAmount: parseFloat(grp.grossAmount.toFixed(2)),
+        fee: parseFloat(grp.fee.toFixed(2)),
+        netAmount: parseFloat(grp.netAmount.toFixed(2)),
+    }));
+
   }, [withdrawals]);
 
   const filteredData = useMemo(() => {
@@ -377,20 +393,6 @@ if (!value) return 'Transaction hash is required!';
       showConfirmButton: false,
       timer: 1500
     });
-  };
-
-  const handleSort = header => {
-    const field =
-      header === 'Gross Amount' ? 'grossAmount' :
-      header === 'Fee' ? 'fee' :
-      header === 'Net Amount' ? 'netAmount' :
-      header === 'Date' ? 'createdAt' : null;
-    if (!field) return;
-    setSortConfig(prev =>
-      prev.key === field
-        ? { key: field, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
-        : { key: field, direction: 'asc' }
-    );
   };
 
   const exportCSV = () => {
@@ -466,7 +468,6 @@ if (!value) return 'Transaction hash is required!';
               <td className="px-4 py-3">{(currentPage-1)*entriesPerPage + idx + 1}</td>
 <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
                 <div className="flex items-center gap-3">
-                  {/* Clickable User ID */}
                   <button
                     onClick={() => handleImpersonate(w.userId)}
                     className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-bold hover:underline"
@@ -476,7 +477,6 @@ if (!value) return 'Transaction hash is required!';
                     <ExternalLink size={14} className="opacity-50" />
                   </button>
 
-                  {/* Copy Button */}
                   <FaCopy 
                     className="cursor-pointer text-black hover:text-gray-800 transition" 
                     onClick={() => handleCopy(w.userId)} 
@@ -486,7 +486,7 @@ if (!value) return 'Transaction hash is required!';
               </td> 
                            <td className="px-4 py-3">{w.name}</td>
               
-              {/* Source Data Row */}
+              {/* Source Data Row (Now shows merged sources like DIRECT, LEVEL, POOL) */}
               <td className="px-4 py-3">
                 <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
                   {w.source || 'ROI'}

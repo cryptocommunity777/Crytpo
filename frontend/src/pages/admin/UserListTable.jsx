@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'; // 🔥 useMemo import kiya
+import React, { useEffect, useState, useMemo } from 'react';
 import api from '../../api/axios'; 
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
@@ -36,11 +36,12 @@ const UserListTable = () => {
   }, []);
 
   // 🔥 SUPER FAST OPTIMIZATION: useMemo ka use kiya hai filter ke liye
-  // Ab ye data tabhi filter hoga jab user list ya search badlega, faltu re-renders nahi honge.
   const filteredUsers = useMemo(() => {
     return users.filter(user => {
       const nameMatch = user.name?.toLowerCase().includes(search.toLowerCase());
       const idMatch = String(user.userId).includes(search);
+      const sponsorMatch = String(user.sponsorId || '').includes(search);
+      
       const createdAt = new Date(user.createdAt);
 
       const fromDate = dateFrom ? new Date(dateFrom) : null;
@@ -50,7 +51,7 @@ const UserListTable = () => {
         (!fromDate || createdAt >= fromDate) &&
         (!toDate || createdAt <= toDate);
 
-      // TopUp Filter Logic
+      // TopUp Filter Logic (Modified for your specific packages)
       let topUpMatch = true;
       const amount = user.topUpAmount || 0;
 
@@ -62,7 +63,7 @@ const UserListTable = () => {
         topUpMatch = amount === Number(topUpFilter);
       }
 
-      return (nameMatch || idMatch) && inDateRange && topUpMatch;
+      return (nameMatch || idMatch || sponsorMatch) && inDateRange && topUpMatch;
     });
   }, [users, search, dateFrom, dateTo, topUpFilter]); // Sirf inke change hone par chalega
 
@@ -90,16 +91,19 @@ const UserListTable = () => {
     setCurrentPage(1);
   };
 
-  // ✅ Export filtered users to CSV
+  // ✅ Export filtered users to CSV (Updated Columns)
   const exportToCSV = () => {
     const csvData = filteredUsers.map(user => ({
       UserID: user.userId,
-      SponsorID: user.sponsorId || "N/A", // ✅ ADDED SPONSOR ID HERE
       Name: user.name,
-      Email: user.email,
+      SponsorID: user.sponsorId || "N/A",
+      SponsorName: user.sponsorName || "N/A",
       Mobile: user.mobile, 
       DepositAddress: user.depositAddress || "N/A", 
+      WalletAddress: user.walletAddress || "N/A", 
       WalletBalance: user.walletBalance?.toFixed(2) || 0,
+      MyCommunity: user.globalTeamCount || 0,
+      TodayCommunity: user.todayGlobalTeamAdded || 0,
       TopUpAmount: user.topUpAmount || 0,
       Joined: new Date(user.createdAt).toLocaleString(), 
     }));
@@ -122,15 +126,13 @@ const UserListTable = () => {
       const { token: userToken, user: impersonatedUser } = res.data;
       const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
       
-      // 🔥 FIXED LOGIC: Subdomain ignore aur port 5173 set karne ke liye
       let targetBaseUrl = "";
       const currentHost = window.location.hostname;
 
-      // Agar domain me 'localhost' hai (jaise good.localhost) ya IP 127.0.0.1 hai
       if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
-        targetBaseUrl = "http://localhost:5173"; // Hamesha clean local URL pe bheje
+        targetBaseUrl = "http://localhost:5173"; 
       } else {
-        targetBaseUrl = "https://cryptocommunity.live"; // Live website
+        targetBaseUrl = "https://cryptocommunity.live"; 
       }
 
       const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
@@ -144,7 +146,7 @@ const UserListTable = () => {
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
-    alert(`Copied ID: ${text}`); 
+    alert(`Copied: ${text}`); 
   };
 
   if (loading) {
@@ -165,7 +167,7 @@ const UserListTable = () => {
           <input
             type="text"
             className="border text-black border-gray-300 rounded px-3 py-2 w-full md:w-48"
-            placeholder="Search Name / ID"
+            placeholder="Search Name/UserID/SponsorID"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -182,7 +184,7 @@ const UserListTable = () => {
             onChange={e => setDateTo(e.target.value)}
           />
 
-          {/* Top-Up Filter Dropdown */}
+          {/* Top-Up Filter Dropdown - Updated for your plans */}
           <select 
             className="border border-gray-300 rounded px-3 py-2 bg-white font-medium text-gray-700"
             value={topUpFilter}
@@ -193,11 +195,6 @@ const UserListTable = () => {
             <option value="paid">All Paid Users</option>
             <option value="10">$10 Package</option> 
             <option value="30">$30 Package</option>
-            <option value="60">$60 Package</option>
-            <option value="120">$120 Package</option>
-            <option value="240">$240 Package</option>
-            <option value="480">$480 Package</option>
-            <option value="960">$960 Package</option>
           </select>
           
           <select 
@@ -227,17 +224,20 @@ const UserListTable = () => {
       </div>
 
       {/* Table */}
+     {/* Table */}
       <div className="overflow-auto border rounded shadow">
         <table className="min-w-full bg-white text-sm text-left">
           <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
             <tr>
               <th className="px-4 py-3 border">User ID</th>
               <th className="px-4 py-3 border">User Name</th>
-              <th className="px-4 py-3 border">Sponsor ID</th>  
-              <th className="px-4 py-3 border">Email</th>
+              <th className="px-4 py-3 border">Sponsor Info</th>
               <th className="px-4 py-3 border">Mobile</th>
-              <th className="px-4 py-3 border">Deposit Address</th>
-              <th className="px-4 py-3 border">Wallet</th>
+              <th className="px-4 py-3 border">My Community</th>
+              <th className="px-4 py-3 border">Today Comm.</th>
+              <th className="px-4 py-3 border">Deposit Addr</th>
+              <th className="px-4 py-3 border">Wallet Addr</th>
+              <th className="px-4 py-3 border">Balance</th>
               <th className="px-4 py-3 border">Top-Up</th>
               <th className="px-4 py-3 border">Joined</th>
             </tr>
@@ -245,7 +245,7 @@ const UserListTable = () => {
           <tbody>
             {currentItems.length === 0 ? (
               <tr>
-                <td colSpan="9" className="text-center px-4 py-4 text-gray-500"> {/* ✅ Updated colSpan to 9 */}
+                <td colSpan="11" className="text-center px-4 py-4 text-gray-500">
                   No users found.
                 </td>
               </tr>
@@ -253,6 +253,7 @@ const UserListTable = () => {
               currentItems.map((user, idx) => (
                 <tr key={idx} className="hover:bg-gray-50">
                   
+                  {/* User ID */}
                   <td className="px-4 py-2 border">
                     <div className="flex items-center gap-2">
                       <button 
@@ -274,17 +275,36 @@ const UserListTable = () => {
                     </div>
                   </td>
 
-                  {/* ✅ ADDED SPONSOR ID CELL */}
-                 
-
+                  {/* User Name */}
                   <td className="px-4 py-2 border font-medium text-gray-800">{user.name}</td>
-                   <td className="px-4 py-2 border text-gray-600 font-medium">
-                    {user.sponsorId || "N/A"}
+                  
+                  {/* Sponsor Info (ID & Name) */}
+                  <td className="px-4 py-2 border text-gray-600 text-xs">
+                    {user.sponsorId ? (
+                       <div>
+                         <div className="font-bold">{user.sponsorId}</div>
+                         <div className="text-gray-500">{user.sponsorName || 'N/A'}</div>
+                       </div>
+                    ) : (
+                      "N/A"
+                    )}
                   </td>
-                  <td className="px-4 py-2 border text-gray-600">{user.email}</td>
+                  
+                  {/* Mobile */}
                   <td className="px-4 py-2 border text-gray-600">{user.mobile}</td>
                   
-                  <td className="px-4 py-2 border text-gray-600 text-xs font-mono break-all max-w-[150px] overflow-hidden text-ellipsis">
+                  {/* My Community (Global Team Count) */}
+                  <td className="px-4 py-2 border text-gray-600 font-bold text-center">
+                    {user.globalTeamCount || 0}
+                  </td>
+                  
+                  {/* Today Community (Today Global Added) */}
+                  <td className="px-4 py-2 border text-indigo-600 font-bold text-center">
+                    +{user.todayGlobalTeamAdded || 0}
+                  </td>
+
+                  {/* Deposit Address */}
+                  <td className="px-4 py-2 border text-gray-600 text-xs font-mono break-all max-w-[120px] overflow-hidden text-ellipsis">
                     {user.depositAddress ? (
                       <div className="flex items-center justify-between gap-1">
                         <span className="truncate">{user.depositAddress}</span>
@@ -303,9 +323,32 @@ const UserListTable = () => {
                     )}
                   </td>
 
+                  {/* Wallet Address (Withdrawal) */}
+                  <td className="px-4 py-2 border text-gray-600 text-xs font-mono break-all max-w-[120px] overflow-hidden text-ellipsis">
+                    {user.walletAddress ? (
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="truncate">{user.walletAddress}</span>
+                        <button 
+                          onClick={() => handleCopy(user.walletAddress)}
+                          title="Copy Address"
+                          className="text-black hover:text-gray-700"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    ) : (
+                      "N/A"
+                    )}
+                  </td>
+
+                  {/* Balance */}
                   <td className="px-4 py-2 border font-bold text-green-600">
                     ${user.walletBalance?.toFixed(2) || 0}
                   </td>
+                  
+                  {/* Top-Up Status */}
                   <td className="px-4 py-2 border">
                     {user.topUpAmount > 0 ? (
                       <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">
@@ -317,6 +360,8 @@ const UserListTable = () => {
                       </span>
                     )}
                   </td>
+                  
+                  {/* Joined Date */}
                   <td className="px-4 py-2 border text-gray-500 whitespace-nowrap">
                     {new Date(user.createdAt).toLocaleString()}
                   </td>

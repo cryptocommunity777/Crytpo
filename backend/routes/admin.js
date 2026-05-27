@@ -1068,10 +1068,46 @@ router.put("/transactions/reverse", verifyAdmin, reverseTransactions);
 // Backend Code (Node.js/Express)
 router.get('/users', verifyAdmin, async (req, res) => {
   try {
-    // 🔥 YAHAN MENE 'sponsorId' ADD KAR DIYA HAI (Agar aapke DB me spelling alag hai toh wo likhna)
-    const users = await User.find()
-      .select('userId sponsorId name email mobile depositAddress walletBalance topUpAmount createdAt') 
-      .sort({ createdAt: -1 });
+    // 🔥 Frontend ki demand ke hisaab se sab fields add kar diye hain
+    // Aur Sponsor Name nikalne ke liye Aggregation ($lookup) use kiya hai
+    const users = await User.aggregate([
+      {
+        $lookup: {
+          from: "users", // MongoDB me collection ka naam hamesha lowercase aur plural hota hai
+          localField: "sponsorId",
+          foreignField: "userId",
+          as: "sponsorInfo"
+        }
+      },
+      {
+        // Sponsor details array me aati hai, usko object me badalne ke liye
+        $unwind: {
+          path: "$sponsorInfo",
+          preserveNullAndEmptyArrays: true // Agar kisi ka sponsor nahi hai toh bhi wo ID hide nahi hogi
+        }
+      },
+      {
+        // 🎯 Sirf wahi data select karo jo frontend par chahiye (Performance ke liye)
+        $project: {
+          userId: 1,
+          name: 1,
+          sponsorId: 1,
+          sponsorName: "$sponsorInfo.name", // 👈 Sponsor ka asli naam yahan se niklega
+          mobile: 1,
+          email: 1, 
+          depositAddress: 1,
+          walletAddress: 1,          // ✅ Withdrawal wallet address
+          walletBalance: 1,
+          topUpAmount: 1,
+          globalTeamCount: 1,        // ✅ My Community
+          todayGlobalTeamAdded: 1,   // ✅ Today Community
+          createdAt: 1
+        }
+      },
+      {
+        $sort: { createdAt: -1 } // Sabse naye users sabse upar dikhenge
+      }
+    ]);
 
     res.json(users);
   } catch (error) {

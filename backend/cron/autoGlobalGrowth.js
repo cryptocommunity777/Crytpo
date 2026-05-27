@@ -167,28 +167,19 @@ const startGlobalGrowthCron = () => {
                         if (!existingPool) {
                             if (!user.activePools) user.activePools = [];
                             
-                            user.activePools.push({
-                                level: lvl.level,
-                                dailyAmount: lvl.daily,
-                                totalDays: lvl.days,
-                                daysPaid: 1, 
-                                lastPaidDate: todayStr, 
-                                status: 'ACTIVE'
-                            });
+                          // 🔥 NAYA CODE (Sirf Pool unlock karega, paisa Midnight cron degi)
+user.activePools.push({
+    level: lvl.level,
+    dailyAmount: lvl.daily,
+    totalDays: lvl.days,
+    daysPaid: 0,       // 🔥 Day 0 set kiya hai, raat ko ye 1 ho jayega
+    lastPaidDate: "",  // 🔥 Blank chhod diya taaki Midnight cron aaj hi isko pakad le
+    status: 'ACTIVE'
+});
 
-                            user.poolIncome = (user.poolIncome || 0) + lvl.daily;
-                            
-                            await Transaction.create({
-                                userId: user.userId, 
-                                type: 'credit',
-                                source: 'pool',
-                                amount: lvl.daily,
-                                description: `Single leg Level ${lvl.level} Unlocked - Day 1 Income`,
-                                status: 'success'
-                            });
-
-                            isUpdated = true;
-                        }
+isUpdated = true;
+// ❌ Yahan se Instant Pool Income add karna aur Transaction create karna HATA DIYA HAI.
+                         }
                     }
                 }
                 

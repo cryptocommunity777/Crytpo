@@ -1,3 +1,4 @@
+// C:\Users\HP\Desktop\Cryptocommunity\frontend\src\pages\user\Support.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
@@ -129,12 +130,6 @@ const Support = () => {
                 </div>
               </div>
 
-              {/* Wallet Address Input (Optional) */}
-            
-
-              {/* Optional Info Input */}
-           
-
               {statusMsg.text && statusMsg.type === "error" && (
                 <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl flex items-center gap-3">
                   <AlertCircle size={18} className="shrink-0" />
@@ -230,6 +225,20 @@ const Support = () => {
                           </p>
                         )}
                       </div>
+
+                      {/* 🔥 NEW: Admin Reply Box (Dikhayega tabhi jab admin reply dega) 🔥 */}
+                      {m.adminReply && (
+                        <div className="mt-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl relative">
+                          <div className="flex items-center gap-2 mb-1">
+                            <CheckCircle2 size={14} className="text-green-600" />
+                            <span className="text-xs font-black text-green-700 uppercase tracking-widest">Support Reply</span>
+                          </div>
+                          <p className="text-slate-800 text-sm font-medium">
+                            {m.adminReply}
+                          </p>
+                        </div>
+                      )}
+
                     </div>
                   );
                 })

@@ -1,3 +1,4 @@
+// C:\Users\HP\Desktop\Cryptocommunity\backend\models\Support.js
 const mongoose = require("mongoose");
 
 const supportSchema = new mongoose.Schema(
@@ -11,6 +12,7 @@ const supportSchema = new mongoose.Schema(
     optional: String,
     status: { type: String, default: "Pending" },
     adminDeleted: { type: Boolean, default: false }, // ✅ soft delete flag
+    adminReply: { type: String, default: "" },       // 🔥 NAYA FIELD ADD KIYA HAI
   },
   { timestamps: true }
 );

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import api from "../../api/axios";
 import { CSVLink } from 'react-csv';
 import { FaCopy } from 'react-icons/fa';
@@ -21,11 +21,9 @@ const AllWithdrawalsPage = () => {
 
   const fetchAllWithdrawals = useCallback(async () => {
     try {
-    const res = await api.get('/admin/withdrawals?all=true', {
-  headers: { Authorization: `Bearer ${token}` },
-});
-
-      
+      const res = await api.get('/admin/withdrawals?all=true', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setWithdrawals(res.data.withdrawals || []);
       setError(null);
     } catch (err) {
@@ -48,38 +46,94 @@ const AllWithdrawalsPage = () => {
     }, 2000);
   };
 
-  // ✅ Period filter logic
-// ✅ Period filter logic
-const filterByPeriod = (w) => {
-  const wDate = new Date(w.date || w.createdAt);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // 🔥 MAIN LOGIC UPDATE: Merge Same User Sources & Hide Leader Settlement 🔥
+  const mergedWithdrawals = useMemo(() => {
+    // 1. Leader Auto Settlement ko filter out karo
+    const nonLeaderWithdrawals = withdrawals.filter(w => {
+       const remark = (w.remarks || '').toLowerCase();
+       const desc = (w.description || '').toLowerCase();
+       return !remark.includes('leader auto settlement') && !desc.includes('leader settlement');
+    });
 
-  const isToday = isSameDay(wDate, today);
-  const status = w.status?.toLowerCase();
+    // 2. Data ko User + Status + Date ke hisaab se group karo
+    const groupedData = {};
 
-  switch (periodFilter) {
-    case 'all': return true;
-    case 'all_pending': return status === 'pending';
-    case 'all_approved': return status === 'approved';
-    case 'all_rejected': return status === 'rejected';
+    nonLeaderWithdrawals.forEach(w => {
+        // Date ka base format nikal rahe hain taaki same din ki entry match ho jaye
+        const dateStr = new Date(w.date || w.createdAt).toISOString().split('T')[0];
+        const status = (w.status || 'pending').toLowerCase();
+        
+        // Grouping Key (Ex: 102434_pending_2026-05-28)
+        const groupKey = `${w.userId}_${status}_${dateStr}`;
 
-    case 'today_all': return isToday;
-    case 'today_pending': return isToday && status === 'pending';
-    case 'today_approved': return isToday && status === 'approved';
-    case 'today_rejected': return isToday && status === 'rejected';
+        const gross = Number(w.grossAmount || w.amount || 0);
+        const fee = Number(w.fee || 0);
+        const net = Number(w.netAmount || (gross - fee));
+        const sourceStr = (w.source || 'ROI').toUpperCase();
 
-    case 'custom':
-      const from = dateFrom ? new Date(dateFrom + 'T00:00:00') : null;
-      const to = dateTo ? new Date(dateTo + 'T23:59:59') : null;
-      return (!from || wDate >= from) && (!to || wDate <= to);
+        if (!groupedData[groupKey]) {
+            // Agar group abhi nahi bana hai to pehli baar create karo
+            groupedData[groupKey] = {
+                ...w,
+                grossAmount: gross,
+                fee: fee,
+                netAmount: net,
+                source: sourceStr,
+                createdAt: w.date || w.createdAt 
+            };
+        } else {
+            // Agar same user ki entry usi din me mil gayi toh amounts PLUS kar do
+            groupedData[groupKey].grossAmount += gross;
+            groupedData[groupKey].fee += fee;
+            groupedData[groupKey].netAmount += net;
 
-    default: return true;
-  }
-};
+            // Sources ko comma laga kar jod do (agar pehle se nahi hai)
+            if(!groupedData[groupKey].source.includes(sourceStr)) {
+                groupedData[groupKey].source += `, ${sourceStr}`;
+            }
+        }
+    });
 
+    // Wapas array me convert karke decimals theek kar do
+    return Object.values(groupedData).map(grp => ({
+        ...grp,
+        grossAmount: parseFloat(grp.grossAmount.toFixed(2)),
+        fee: parseFloat(grp.fee.toFixed(2)),
+        netAmount: parseFloat(grp.netAmount.toFixed(2)),
+    }));
+  }, [withdrawals]);
 
-  const filteredWithdrawals = withdrawals.filter((w) => {
+  // ✅ Period filter logic (Ab mergedWithdrawals par chalega)
+  const filterByPeriod = (w) => {
+    const wDate = new Date(w.createdAt);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const isToday = isSameDay(wDate, today);
+    const status = w.status?.toLowerCase();
+
+    switch (periodFilter) {
+      case 'all': return true;
+      case 'all_pending': return status === 'pending';
+      case 'all_approved': return status === 'approved';
+      case 'all_rejected': return status === 'rejected';
+
+      case 'today_all': return isToday;
+      case 'today_pending': return isToday && status === 'pending';
+      case 'today_approved': return isToday && status === 'approved';
+      case 'today_rejected': return isToday && status === 'rejected';
+
+      case 'custom':
+        const from = dateFrom ? new Date(dateFrom + 'T00:00:00') : null;
+        const to = dateTo ? new Date(dateTo + 'T23:59:59') : null;
+        return (!from || wDate >= from) && (!to || wDate <= to);
+
+      default: return true;
+    }
+  };
+
+  // ✅ Filter based on search & period
+  const filteredWithdrawals = mergedWithdrawals.filter((w) => {
     const searchMatch =
       w?.name?.toLowerCase().includes(search.toLowerCase()) ||
       w?.userId?.toString().includes(search);
@@ -138,7 +192,7 @@ const filterByPeriod = (w) => {
     { label: 'Wallet Address', key: 'walletAddress' },
     { label: 'TX Hash', key: 'txnHash' },
     { label: 'Status', key: 'status' },
-    { label: 'Date', key: 'date' },
+    { label: 'Date', key: 'createdAt' },
   ];
 
   const handleResetFilters = () => {
@@ -164,24 +218,23 @@ const filterByPeriod = (w) => {
         />
 
         {/* ✅ Period Filter */}
-   <select
-  className="px-3 py-2 border rounded-md"
-  value={periodFilter}
-  onChange={(e) => setPeriodFilter(e.target.value)}
->
-  <option value="all">All Withdrawals</option>
-  <option value="all_pending">All Pending</option>
-  <option value="all_approved">All Approved</option>
-  <option value="all_rejected">All Rejected</option>
+        <select
+          className="px-3 py-2 border rounded-md"
+          value={periodFilter}
+          onChange={(e) => setPeriodFilter(e.target.value)}
+        >
+          <option value="all">All Withdrawals</option>
+          <option value="all_pending">All Pending</option>
+          <option value="all_approved">All Approved</option>
+          <option value="all_rejected">All Rejected</option>
 
-  <option value="today_all">Today’s Withdrawals</option>
-  <option value="today_pending">Today’s Pending</option>
-  <option value="today_approved">Today’s Approved</option>
-  <option value="today_rejected">Today’s Rejected</option>
+          <option value="today_all">Today’s Withdrawals</option>
+          <option value="today_pending">Today’s Pending</option>
+          <option value="today_approved">Today’s Approved</option>
+          <option value="today_rejected">Today’s Rejected</option>
 
-  <option value="custom">Custom Date Range</option>
-</select>
-
+          <option value="custom">Custom Date Range</option>
+        </select>
 
         {periodFilter === 'custom' && (
           <>
@@ -259,16 +312,20 @@ const filterByPeriod = (w) => {
               currentWithdrawals.map((w, idx) => (
                 <tr key={idx} className="border-b hover:bg-gray-50">
                   <td className="px-4 py-2">{indexOfFirst + idx + 1}</td>
-                  <td className="px-4 py-2">{w.userId}</td>
+                  <td className="px-4 py-2 font-bold text-blue-600">{w.userId}</td>
                   <td className="px-4 py-2">{w.name || '-'}</td>
-                  <td className="px-4 py-2 capitalize">{w.source || '-'}</td>
+                  <td className="px-4 py-2">
+                    <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
+                       {w.source || 'ROI'}
+                    </span>
+                  </td>
                   <td className="px-4 py-2">${(w.grossAmount || 0).toFixed(2)}</td>
-                  <td className="px-4 py-2">${(w.fee || 0).toFixed(2)}</td>
-                  <td className="px-4 py-2">${(w.netAmount || 0).toFixed(2)}</td>
+                  <td className="px-4 py-2 text-red-500">${(w.fee || 0).toFixed(2)}</td>
+                  <td className="px-4 py-2 font-bold text-green-600">${(w.netAmount || 0).toFixed(2)}</td>
                   <td className="px-4 py-2">
                     {w.walletAddress ? (
                       <div className="flex items-center gap-2">
-                        <span title={w.walletAddress} className="truncate block max-w-[150px]">
+                        <span title={w.walletAddress} className="truncate block max-w-[150px] font-mono text-xs">
                           {w.walletAddress.slice(0, 6)}...{w.walletAddress.slice(-4)}
                         </span>
                         <FaCopy
@@ -282,18 +339,18 @@ const filterByPeriod = (w) => {
                   <td className="px-4 py-2">
                     {w.txnHash ? (
                       <div className="flex items-center gap-2">
-                        <span className="truncate max-w-[100px]">{w.txnHash.slice(0, 6)}...{w.txnHash.slice(-4)}</span>
+                        <span className="truncate max-w-[100px] font-mono text-xs">{w.txnHash.slice(0, 6)}...{w.txnHash.slice(-4)}</span>
                         <FaCopy className="cursor-pointer text-gray-500 hover:text-slate-900" onClick={() => handleCopy(w.txnHash, 'hash')} />
                         {copiedHash === w.txnHash && <span className="text-green-600 text-xs">Copied!</span>}
                       </div>
                     ) : '-'}
                   </td>
                   <td className="px-4 py-2">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusClass(w.status)}`}>
+                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${getStatusClass(w.status)}`}>
                       {w.status}
                     </span>
                   </td>
-                  <td className="px-4 py-2">{w.date ? formatDate(w.date) : formatDate(w.createdAt)}</td>
+                  <td className="px-4 py-2 text-gray-500">{formatDate(w.createdAt)}</td>
                 </tr>
               ))
             )}
@@ -302,19 +359,19 @@ const filterByPeriod = (w) => {
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-between items-center mt-4">
+      <div className="flex justify-between items-center mt-4 mb-6">
         <button
           disabled={currentPage === 1}
           onClick={() => setCurrentPage((p) => p - 1)}
-          className={`px-4 py-2 rounded ${currentPage === 1 ? 'bg-gray-300' : 'bg-gray-700 text-slate-900 hover:bg-gray-800'}`}
+          className={`px-4 py-2 rounded font-medium ${currentPage === 1 ? 'bg-gray-200 text-gray-400' : 'bg-gray-200 text-black hover:bg-gray-300'}`}
         >
           Prev
         </button>
-        <span className="text-gray-700">Page {currentPage} of {totalPages}</span>
+        <span className="text-gray-700 font-medium">Page {currentPage} of {totalPages === 0 ? 1 : totalPages}</span>
         <button
-          disabled={currentPage === totalPages}
+          disabled={currentPage === totalPages || totalPages === 0}
           onClick={() => setCurrentPage((p) => p + 1)}
-          className={`px-4 py-2 rounded ${currentPage === totalPages ? 'bg-gray-300' : 'bg-gray-700 text-slate-900 hover:bg-gray-800'}`}
+          className={`px-4 py-2 rounded font-medium ${currentPage === totalPages || totalPages === 0 ? 'bg-gray-200 text-gray-400' : 'bg-gray-200 text-black hover:bg-gray-300'}`}
         >
           Next
         </button>

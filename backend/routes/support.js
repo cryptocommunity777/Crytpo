@@ -1,3 +1,4 @@
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\support.js
 const express = require("express");
 const router = express.Router();
 const Support = require("../models/Support");
@@ -9,7 +10,7 @@ const verifyAdmin = require("../middleware/adminAuth");
 // -----------------------------------------
 router.post("/create", authMiddleware, async (req, res) => {
   const { message, email, walletAddress, optional } = req.body;
-  const user = req.user; // authMiddleware se user data mil raha hai
+  const user = req.user; 
 
   try {
     const support = await Support.create({
@@ -21,6 +22,7 @@ router.post("/create", authMiddleware, async (req, res) => {
       walletAddress,
       optional,
       status: "Pending", 
+      adminReply: "", // 🔥 Nayi field backend me initialize ho jayegi
     });
     res.status(201).json({ success: true, support });
   } catch (err) {
@@ -29,11 +31,10 @@ router.post("/create", authMiddleware, async (req, res) => {
 });
 
 // -----------------------------------------
-// 2. Get MY supports (User side) - NAYA ROUTE
+// 2. Get MY supports (User side) 
 // -----------------------------------------
 router.get("/me", authMiddleware, async (req, res) => {
   try {
-    // Sirf is user ke messages fetch karo
     const supports = await Support.find({ 
       userId: req.user.userId, 
       adminDeleted: false 
@@ -64,8 +65,28 @@ router.put("/status/:id", verifyAdmin, async (req, res) => {
   const { status } = req.body;
   try {
     const support = await Support.findByIdAndUpdate(
+  req.params.id,
+  { status },
+  { returnDocument: 'after' } // <--- YEH LIKH DO
+);
+    res.json({ success: true, support });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// -----------------------------------------
+// 🔥 4.5 Send Admin Reply (Admin side) 🔥
+// -----------------------------------------
+router.put("/reply/:id", verifyAdmin, async (req, res) => {
+  const { adminReply, status } = req.body;
+  try {
+    const support = await Support.findByIdAndUpdate(
       req.params.id,
-      { status },
+      { 
+        adminReply, 
+        status: status || "Resolved" // Default to resolved if replying
+      },
       { new: true }
     );
     res.json({ success: true, support });
