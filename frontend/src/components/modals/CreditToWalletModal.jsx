@@ -208,7 +208,7 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
       });
 
       if (poolRequestedTotal > 0) {
-          if (poolRequestedTotal > balances.pool) return showMessage("Insufficient Funds", "Total Single leg requested exceeds available balance.");
+          if (poolRequestedTotal > balances.pool) return showMessage("Insufficient Funds", "Total community Income requested exceeds available balance.");
           items.push({ source: "pool", amount: poolRequestedTotal });
           totalRequested += poolRequestedTotal;
       }

@@ -112,7 +112,7 @@ export default function Plan() {
            <div className="mb-4 md:mb-6 p-3 md:p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-pulse shadow-sm">
               <AlertTriangle className="text-red-500 shrink-0 w-6 h-6 md:w-8 md:h-8" />
               <p className="text-red-600 text-[10px] md:text-sm font-bold">
-                 Your ID is inactive. Top-up with <span className="text-red-800 font-black">$30</span> to start building your My Community and unlock Single Leg Community Incomes!
+                 Your ID is inactive. Top-up with <span className="text-red-800 font-black">$30</span> to start building your My Community and unlock Community Incomes!
               </p>
            </div>
         )}

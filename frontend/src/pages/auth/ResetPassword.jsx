@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import api from '../../api/axios'; // Apna API path check kar lena
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Lock, ArrowRight, ShieldCheck, Globe } from 'lucide-react';
+import { Lock, ArrowRight, ShieldCheck, Globe, Eye, EyeOff } from 'lucide-react'; // Eye and EyeOff added
 
 const ResetPassword = () => {
   const { token } = useParams(); // URL se token nikalne ke liye
@@ -12,6 +12,10 @@ const ResetPassword = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // States for toggling password visibility
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
@@ -106,36 +110,50 @@ const ResetPassword = () => {
             {/* New Password Input */}
             <div className="relative group">
                 <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2">New Password</label>
-                <div className="relative">
+                <div className="relative flex items-center">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                     </div>
                     <input
-                        type="password"
+                        type={showNewPassword ? "text" : "password"}
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-bold focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all placeholder-slate-400 font-mono"
-                        placeholder="••••••••"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pl-12 pr-12 text-slate-900 font-bold focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all placeholder-slate-400 font-mono"
+                        placeholder=" "
                         required
                     />
+                    <button 
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-emerald-500 transition-colors focus:outline-none"
+                    >
+                        {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                 </div>
             </div>
 
             {/* Confirm Password Input */}
             <div className="relative group">
                 <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2">Confirm Password</label>
-                <div className="relative">
+                <div className="relative flex items-center">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                     </div>
                     <input
-                        type="password"
+                        type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-bold focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all placeholder-slate-400 font-mono"
-                        placeholder="••••••••"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 pl-12 pr-12 text-slate-900 font-bold focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all placeholder-slate-400 font-mono"
+                        placeholder=" "
                         required
                     />
+                    <button 
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-emerald-500 transition-colors focus:outline-none"
+                    >
+                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                 </div>
             </div>
 

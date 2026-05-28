@@ -197,7 +197,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
       });
 
       if (poolRequestedTotal > 0) {
-          if (!isPromo && poolRequestedTotal > balances.pool) return showMessage("Insufficient Funds", "Total Single leg requested exceeds available balance.");
+          if (!isPromo && poolRequestedTotal > balances.pool) return showMessage("Insufficient Funds", "Total community income requested exceeds available balance.");
           items.push({ source: "pool", amount: poolRequestedTotal });
           totalRequested += poolRequestedTotal;
       }
