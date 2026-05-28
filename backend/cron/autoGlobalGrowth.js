@@ -74,15 +74,15 @@ const startGlobalGrowthCron = () => {
                     if (isLocked) continue; // Agar exact milestone par direct kam hain, toh yahin Jam/Freeze kardo.
 
                     // --- STEP 2: DAILY CAPPING LOGIC ---
+                    // --- STEP 2: DAILY CAPPING LOGIC ---
                     if (team >= 760) {
                         let dailyCap = Math.min(directs * 20, 360);
                         
-                        // 🔥 EXCEPTION: 
-                        // Agar koi purana user 5 level (760) cross kar chuka hai bina 5 direct ke,
-                        // toh usko beech raste me 0 cap dekar latkana nahi hai. 
-                        // Usko naturally Level 6 (2360) tak jaane do.
+                        // 🔥 EXCEPTION FIX: 
+                        // Agar koi purana user galti se 5 level (760) cross kar chuka hai bina 5 direct ke,
+                        // toh usko PENALTY lagegi aur din ka sirf 20 My Community hi badhega.
                         if (team > 760 && team < 2360 && directs < 5) {
-                            dailyCap = 360; // Natural max cap de diya taaki beech me team na atke
+                            dailyCap = 20; // 👈 YAHAN CHANGE KIYA HAI: Pehle yeh 360 tha, ab 20 kar diya hai!
                         }
                         
                         if (todayAdded >= dailyCap) {
