@@ -33,6 +33,7 @@ const {
 const processGlobalTeamGrowth = async (excludeUserId) => {
     const todayStr = new Date().toISOString().split('T')[0];
 
+    // Sirf Active Users ko uthayenge aur jisne ID lagayi hai (excludeUserId) usko chhod denge
     const activeUsers = await User.find({ isToppedUp: true, userId: { $ne: excludeUserId } })
         .select('_id globalTeamCount directCount todayGlobalTeamAdded lastGlobalTeamAddDate');
 
@@ -42,40 +43,56 @@ const processGlobalTeamGrowth = async (excludeUserId) => {
         const team = user.globalTeamCount || 0;
         const directs = user.directCount || 0;
 
+        // Daily limit reset check (Sirf Admin panel me dikhane ke liye chahiye)
         let todayAdded = user.todayGlobalTeamAdded || 0;
-        if (user.lastGlobalTeamAddDate !== todayStr) todayAdded = 0;
-
-        let isLocked = false;
-        if (team === 760 && directs < 5) isLocked = true;
-        else if (team === 2360 && directs < 6) isLocked = true;
-        else if (team === 4360 && directs < 8) isLocked = true;
-        else if (team === 7360 && directs < 10) isLocked = true;
-        else if (team === 11360 && directs < 12) isLocked = true;
-        else if (team === 16360 && directs < 14) isLocked = true;
-        else if (team === 23860 && directs < 16) isLocked = true;
-        else if (team === 33860 && directs < 18) isLocked = true;
-
-        if (isLocked) continue;
-
-        if (team >= 760) {
-            let dailyCap = Math.min(directs * 20, 360);
-            if (team > 760 && team < 2360 && directs < 5) {
-                dailyCap = 360; 
-            }
-            if (todayAdded >= dailyCap) continue; 
+        if (user.lastGlobalTeamAddDate !== todayStr) {
+            todayAdded = 0;
         }
 
-        bulkOps.push({
-            updateOne: {
-                filter: { _id: user._id },
-                update: {
-                    $inc: { globalTeamCount: 1, todayGlobalTeamAdded: 1 },
-                    $set: { lastGlobalTeamAddDate: todayStr }
+        // --- STEP 1: STRICT MILESTONE LOCKS (Level 6 Tak Free Growth) ---
+        let isLocked = false;
+        
+        // 🔥 Level 5 (760) ka lock hata diya. Ab seedha Level 6 (2360) par lock lagega
+        if (team === 2360 && directs < 6) isLocked = true;       // Level 6 to 7
+        else if (team === 4360 && directs < 8) isLocked = true;  // Level 7 to 8
+        else if (team === 7360 && directs < 10) isLocked = true; // Level 8 to 9
+        else if (team === 11360 && directs < 12) isLocked = true; // Level 9 to 10
+        else if (team === 16360 && directs < 14) isLocked = true; // Level 10 to 11
+        else if (team === 23860 && directs < 16) isLocked = true; // Level 11 to 12
+        else if (team === 33860 && directs < 18) isLocked = true; // Full Plan Complete
+
+        if (isLocked) continue; // Agar exact milestone par direct kam hain, toh yahin Jam/Freeze kardo.
+
+        // --- STEP 2: DAILY CAPPING LOGIC (REMOVED COMPLETELY) ---
+        // Ab koi daily limit nahi hai, natural badhega.
+
+        // --- STEP 3: BULK UPDATE PREPARATION ---
+        if (user.lastGlobalTeamAddDate !== todayStr) {
+            // 🔄 NAYA DIN AAYA HAI: Aaj ka count DB me 1 se restart karo
+            bulkOps.push({
+                updateOne: {
+                    filter: { _id: user._id },
+                    update: {
+                        $inc: { globalTeamCount: 1 },
+                        $set: { todayGlobalTeamAdded: 1, lastGlobalTeamAddDate: todayStr }
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            // ⏩ SAME DIN HAI: Normal increment karte raho
+            bulkOps.push({
+                updateOne: {
+                    filter: { _id: user._id },
+                    update: {
+                        $inc: { globalTeamCount: 1, todayGlobalTeamAdded: 1 },
+                        $set: { lastGlobalTeamAddDate: todayStr }
+                    }
+                }
+            });
+        }
     }
 
+    // Ek sath sabhi users ko DB mein update karo
     if (bulkOps.length > 0) {
         await User.bulkWrite(bulkOps);
     }
