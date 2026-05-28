@@ -291,55 +291,48 @@ export default function Plan() {
                   <ul className="space-y-2 text-sm md:text-base text-slate-700 font-medium mb-6">
                     <li className="flex items-start gap-2">
                       <span className="text-blue-500 mt-1">•</span>
-                      After completing the 5-Level Community, the My Community growth system will stop.
+                      After completing the 6-Level Community, the My Community growth system will stop temporarily.
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-blue-500 mt-1">•</span>
-                      Once you complete 5 Directs, your My Community will start growing by 100 members daily.
+                      Once you complete 6 Directs and start taking withdrawals, your My Community growth for the next level will begin automatically.
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-blue-500 mt-1">•</span>
-                      With 6 Directs, your daily My Community growth will increase to 120 members.
+                      After completing Level 7, you must complete the required Directs to unlock and grow Level 8 Community.
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-blue-500 mt-1">•</span>
-                      Every new Direct adds an extra 20 daily members to your My Community growth.
+                      In the same way, you must complete the required Directs for every level to continue increasing your My Community growth.
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-blue-500 mt-1">•</span>
-                      By completing a total of 18 Directs, your My Community growth can reach 360 members daily.
+                      If the required Directs for any level are not completed, your My Community growth will stop until the Direct requirement is fulfilled.
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-500 mt-1">•</span>
+                      Every new Direct increases your overall My Community growth speed and benefits.
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-500 mt-1">•</span>
+                      By completing all 18 Directs, your My Community can achieve continuous daily growth across all active levels.
                     </li>
                   </ul>
 
-                  {/* Growth Formula Highlight Box */}
+                  {/* Important Rules Highlight Box */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                    <h4 className="text-xs font-black text-blue-800 uppercase tracking-widest mb-1">Growth Formula</h4>
-                    <p className="text-lg md:text-xl font-bold text-blue-600">
-                      Daily My Community Growth = Total Directs × 20
-                    </p>
-                  </div>
-
-                  {/* Examples Area */}
-                  <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Examples</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                    <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg text-sm font-semibold text-slate-700 flex justify-between">
-                      <span>5 Directs</span> <span className="text-green-600">100 Daily</span>
-                    </div>
-                    <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg text-sm font-semibold text-slate-700 flex justify-between">
-                      <span>10 Directs</span> <span className="text-green-600">200 Daily</span>
-                    </div>
-                    <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg text-sm font-semibold text-slate-700 flex justify-between">
-                      <span>15 Directs</span> <span className="text-green-600">300 Daily</span>
-                    </div>
-                    <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg text-sm font-semibold text-slate-700 flex justify-between">
-                      <span>18 Directs</span> <span className="text-green-600">360 Daily</span>
+                    <h4 className="text-xs font-black text-blue-800 uppercase tracking-widest mb-3">Important Rules</h4>
+                    <div className="space-y-2 text-sm md:text-base font-semibold text-blue-900">
+                      <p className="flex items-center gap-2"><CheckCircle size={16} className="text-blue-600" /> Complete the required Directs on every level</p>
+                      <p className="flex items-center gap-2"><CheckCircle size={16} className="text-blue-600" /> Start withdrawals to activate next-level growth</p>
+                      <p className="flex items-center gap-2"><CheckCircle size={16} className="text-blue-600" /> More Directs = Faster My Community Growth</p>
+                      <p className="flex items-center gap-2"><CheckCircle size={16} className="text-blue-600" /> Incomplete Directs may pause Community expansion</p>
                     </div>
                   </div>
 
                   {/* Motivational Footer */}
                   <div className="space-y-2 text-sm md:text-base font-bold text-slate-800 bg-orange-50 border border-orange-200 p-4 rounded-lg">
-                    <p>🚀 The faster you complete your Directs, the faster your My Community will grow!</p>
-                    <p className="text-orange-600">🚀 More Directs = Faster My Community Growth!</p>
+                    <p>🚀 The faster you complete your Directs, the faster your My Community will grow and unlock new levels!</p>
                   </div>
 
                 </div>

@@ -29,20 +29,18 @@ const startGlobalGrowthCron = () => {
     cron.schedule('* * * * *', async () => {
         try {
             // 🔥 1. FAKE/SYSTEM GROWTH LOGIC (LIVE MODE: 100 Users/Day)
-            // (100 / 1440) ka matlab din me lagbhag 100 users naturally aayenge.
-           const shouldAddFakeUser = Math.random() < (100 / 1440); 
+            const shouldAddFakeUser = Math.random() < (100 / 1440); 
              
-            // ⚠️ AGAR KABHI TESTING KARNI HO TOH UPAR WALI LINE HATA KE NICHE WALI LAGA DENA:
              
             if (shouldAddFakeUser) {
                 
                 // =======================================================
-                // 🚀 A. NEW ULTRA-SMART DISTRIBUTION LOGIC (WITH CAPPING)
+                // 🚀 A. NEW NATURAL DISTRIBUTION LOGIC (NO CAPPING)
                 // =======================================================
                 
                 const todayStr = new Date().toISOString().split('T')[0]; 
 
-                // Sirf Active Users ko uthayenge. Inactive (Red) IDs yahan already ignore ho rahi hain.
+                // Sirf Active Users ko uthayenge.
                 const activeUsers = await User.find({ isToppedUp: true })
                     .select('_id globalTeamCount directCount todayGlobalTeamAdded lastGlobalTeamAddDate');
 
@@ -52,46 +50,30 @@ const startGlobalGrowthCron = () => {
                     const team = user.globalTeamCount || 0;
                     const directs = user.directCount || 0;
                     
-                    // Daily limit reset check
+                    // Daily limit reset check (Sirf Admin panel me dikhane ke liye chahiye)
                     let todayAdded = user.todayGlobalTeamAdded || 0;
                     if (user.lastGlobalTeamAddDate !== todayStr) {
                         todayAdded = 0;
                     }
 
-                    // --- STEP 1: STRICT MILESTONE LOCKS (Exact Target par hi rokega) ---
+                    // --- STEP 1: STRICT MILESTONE LOCKS (Level 6 Tak Free Growth) ---
                     let isLocked = false;
                     
-                    // Exact milestone par lock lagega
-                    if (team === 760 && directs < 5) isLocked = true;
-                    else if (team === 2360 && directs < 6) isLocked = true;
-                    else if (team === 4360 && directs < 8) isLocked = true;
-                    else if (team === 7360 && directs < 10) isLocked = true;
-                    else if (team === 11360 && directs < 12) isLocked = true;
-                    else if (team === 16360 && directs < 14) isLocked = true;
-                    else if (team === 23860 && directs < 16) isLocked = true;
-                    else if (team === 33860 && directs < 18) isLocked = true;
+                    // 🔥 NAYA LOGIC: Level 5 (760) ka lock hata diya. Ab seedha Level 6 (2360) par lock lagega
+                    if (team === 2360 && directs < 6) isLocked = true;       // Level 6 to 7
+                    else if (team === 4360 && directs < 8) isLocked = true;  // Level 7 to 8
+                    else if (team === 7360 && directs < 10) isLocked = true; // Level 8 to 9
+                    else if (team === 11360 && directs < 12) isLocked = true; // Level 9 to 10
+                    else if (team === 16360 && directs < 14) isLocked = true; // Level 10 to 11
+                    else if (team === 23860 && directs < 16) isLocked = true; // Level 11 to 12
+                    else if (team === 33860 && directs < 18) isLocked = true; // Full Plan Complete
 
                     if (isLocked) continue; // Agar exact milestone par direct kam hain, toh yahin Jam/Freeze kardo.
 
-                    // --- STEP 2: DAILY CAPPING LOGIC ---
-                    // --- STEP 2: DAILY CAPPING LOGIC ---
-                    if (team >= 760) {
-                        let dailyCap = Math.min(directs * 20, 360);
-                        
-                        // 🔥 EXCEPTION FIX: 
-                        // Agar koi purana user galti se 5 level (760) cross kar chuka hai bina 5 direct ke,
-                        // toh usko PENALTY lagegi aur din ka sirf 20 My Community hi badhega.
-                        if (team > 760 && team < 2360 && directs < 5) {
-                            dailyCap = 20; // 👈 YAHAN CHANGE KIYA HAI: Pehle yeh 360 tha, ab 20 kar diya hai!
-                        }
-                        
-                        if (todayAdded >= dailyCap) {
-                            continue; // Is user ki aaj ki limit puri ho gayi
-                        }
-                    }
+                    // --- STEP 2: DAILY CAPPING LOGIC (REMOVED) ---
+                    // Capping puri tarah hata di gayi hai. Natural speed se badhega.
 
                     // --- STEP 3: AGAR USER ELIGIBLE HAI, TOH BULK WRITE ME DAALO ---
-                  // --- STEP 3: AGAR USER ELIGIBLE HAI, TOH BULK WRITE ME DAALO ---
                     if (user.lastGlobalTeamAddDate !== todayStr) {
                         // 🔄 NAYA DIN AAYA HAI: Aaj ka count DB me 1 se restart karo
                         bulkOps.push({
@@ -183,17 +165,16 @@ const startGlobalGrowthCron = () => {
                             if (!user.activePools) user.activePools = [];
                             
                           // 🔥 NAYA CODE (Sirf Pool unlock karega, paisa Midnight cron degi)
-user.activePools.push({
-    level: lvl.level,
-    dailyAmount: lvl.daily,
-    totalDays: lvl.days,
-    daysPaid: 0,       // 🔥 Day 0 set kiya hai, raat ko ye 1 ho jayega
-    lastPaidDate: "",  // 🔥 Blank chhod diya taaki Midnight cron aaj hi isko pakad le
-    status: 'ACTIVE'
-});
+                            user.activePools.push({
+                                level: lvl.level,
+                                dailyAmount: lvl.daily,
+                                totalDays: lvl.days,
+                                daysPaid: 0,       // 🔥 Day 0 set kiya hai, raat ko ye 1 ho jayega
+                                lastPaidDate: "",  // 🔥 Blank chhod diya taaki Midnight cron aaj hi isko pakad le
+                                status: 'ACTIVE'
+                            });
 
-isUpdated = true;
-// ❌ Yahan se Instant Pool Income add karna aur Transaction create karna HATA DIYA HAI.
+                            isUpdated = true;
                          }
                     }
                 }
