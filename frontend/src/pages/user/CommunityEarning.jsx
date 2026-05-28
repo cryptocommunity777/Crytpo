@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "../../api/axios";
 import { getUserId } from "../../utils/authUtils";
-import { Search, ChevronLeft, ChevronRight, Users, Target, CalendarDays, TrendingUp, DollarSign } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Users, Target, CalendarDays, TrendingUp, DollarSign, Filter } from "lucide-react";
 
 const CommunityEarning = () => {
   const userId = getUserId();
@@ -9,6 +9,7 @@ const CommunityEarning = () => {
   const [transactions, setTransactions] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [search, setSearch] = useState("");
+  const [selectedLevel, setSelectedLevel] = useState("All"); 
   const [currentPage, setCurrentPage] = useState(1);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
@@ -28,15 +29,15 @@ const CommunityEarning = () => {
       .then(([poolRes, txnRes]) => {
         setPools(poolRes.data.activePools || []);
         
-        // 🔥 STRICT FILTER: Sirf Pool incomes lenge (Spelling mistakes like "Singel" bhi catch karega)
+        // 🔥 STRICT FILTER: Sirf Pool incomes lenge
         const poolTransactions = (txnRes.data || []).filter(txn => {
            const desc = (txn.description || "").toLowerCase();
            const type = (txn.type || "").toLowerCase();
 
           // Isme 'credited' aur 'fee' word bhi block kar diya
-if (desc.includes('withdrawal') || desc.includes('credit') || desc.includes('fee') || type === 'withdrawal') {
-    return false;
-}
+          if (desc.includes('withdrawal') || desc.includes('credit') || desc.includes('fee') || type === 'withdrawal') {
+              return false;
+          }
 
            // Catch proper words or typos
            return desc.includes('leg') || desc.includes('pool') || desc.includes('community');
@@ -45,22 +46,34 @@ if (desc.includes('withdrawal') || desc.includes('credit') || desc.includes('fee
         const sorted = poolTransactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         
         setTransactions(sorted);
-        setFiltered(sorted);
       })
       .catch((err) => console.error("Failed to fetch community earnings", err))
       .finally(() => setLoading(false));
   }, [userId]);
 
-  const handleSearch = (e) => {
-    const value = e.target.value.toLowerCase();
-    setSearch(value);
-    setCurrentPage(1);
-    if (!value) return setFiltered(transactions);
+  // 🔥 FILTER LOGIC: Search aur Level Tabs/Cards dono ek sath kaam karenge
+  useEffect(() => {
+    let result = transactions;
 
-    const result = transactions.filter(
-      (txn) => txn.description?.toLowerCase().includes(value)
-    );
+    // 1. Agar koi specific level select kiya hai (e.g. "1", "2")
+    if (selectedLevel !== "All") {
+      result = result.filter(txn => {
+        const match = txn.description?.match(/Level\s(\d+)/i);
+        return match && match[1] === String(selectedLevel);
+      });
+    }
+
+    // 2. Agar search box mein kuch type kiya hai
+    if (search) {
+      result = result.filter(txn => txn.description?.toLowerCase().includes(search.toLowerCase()));
+    }
+
     setFiltered(result);
+    setCurrentPage(1); // Jab bhi filter change ho, page 1 par aa jaye
+  }, [transactions, selectedLevel, search]);
+
+  const handleSearch = (e) => {
+    setSearch(e.target.value.toLowerCase());
   };
 
   const handleEntriesChange = (e) => {
@@ -68,7 +81,7 @@ if (desc.includes('withdrawal') || desc.includes('credit') || desc.includes('fee
     setCurrentPage(1);
   };
 
-  // 🔥 100% ACCURATE CALCULATION: Ab total hamesha Pool Progress Bar ke sum ke barabar hoga ($5.00)
+  // 🔥 100% ACCURATE CALCULATION
   const totalCommunityIncome = pools.reduce((sum, pool) => sum + (Number(pool.daysPaid) * Number(pool.dailyAmount)), 0);
 
   const totalPages = Math.ceil(filtered.length / entriesPerPage) || 1;
@@ -78,6 +91,12 @@ if (desc.includes('withdrawal') || desc.includes('credit') || desc.includes('fee
   
   const handlePrev = () => currentPage > 1 && setCurrentPage(p => p - 1);
   const handleNext = () => currentPage < totalPages && setCurrentPage(p => p + 1);
+
+  // 🔥 Kitne levels ki history actually available hai
+  const availableLevels = [...new Set(transactions.map(txn => {
+    const match = txn.description?.match(/Level\s(\d+)/i);
+    return match ? match[1] : null;
+  }).filter(Boolean))].sort((a, b) => Number(a) - Number(b));
 
   return (
     <div className="w-full max-w-7xl mx-auto pb-10 relative z-10 animate-in fade-in duration-500 px-2 sm:px-0">
@@ -115,7 +134,7 @@ if (desc.includes('withdrawal') || desc.includes('credit') || desc.includes('fee
         </div>
       </div>
 
-      {/* 🔥 PROGRESS BAR CARDS SECTION 🔥 */}
+      {/* 🔥 PROGRESS BAR CARDS SECTION (CLICKABLE) 🔥 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
         {loading ? (
            <div className="col-span-full text-center py-5 text-purple-500 font-bold tracking-widest uppercase text-sm">
@@ -131,12 +150,24 @@ if (desc.includes('withdrawal') || desc.includes('credit') || desc.includes('fee
             const progressPercent = Math.min(Math.round((pool.daysPaid / pool.totalDays) * 100), 100);
             const totalEarned = (pool.daysPaid * pool.dailyAmount).toFixed(2);
             const totalPossible = (pool.totalDays * pool.dailyAmount).toFixed(2);
+            
+            // Check if this card is currently selected
+            const isSelected = selectedLevel === String(pool.level);
 
             return (
-              <div key={idx} className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+              <div 
+                key={idx} 
+                // 🔥 NAYA CODE: Box par click karne se filter apply hoga
+                onClick={() => setSelectedLevel(isSelected ? "All" : String(pool.level))}
+                className={`bg-white rounded-2xl p-4 md:p-5 border cursor-pointer relative overflow-hidden group transition-all duration-300 
+                ${isSelected 
+                  ? 'border-purple-500 shadow-md ring-2 ring-purple-100 transform scale-[1.02]' 
+                  : 'border-slate-200 shadow-sm hover:shadow-md hover:border-purple-300'
+                }`}
+              >
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-base md:text-lg font-black text-slate-800 uppercase flex items-center gap-2">
-                    <Target size={18} className="text-purple-500" /> Level {pool.level}
+                    <Target size={18} className={`${isSelected ? 'text-purple-600' : 'text-purple-500'}`} /> Community Level {pool.level}
                   </h3>
                   <span className={`text-[9px] md:text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest ${pool.status === 'ACTIVE' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
                     {pool.status}
@@ -172,6 +203,36 @@ if (desc.includes('withdrawal') || desc.includes('credit') || desc.includes('fee
         )}
       </div>
 
+      {/* 🔥 LEVEL FILTER TABS (Optional - Inko waise hi rakha hai) 🔥 */}
+      {!loading && availableLevels.length > 0 && (
+        <div className="flex overflow-x-auto gap-2 md:gap-3 mb-4 custom-scroll pb-2">
+          <button
+            onClick={() => setSelectedLevel("All")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+              selectedLevel === "All" 
+                ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md' 
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-purple-50'
+            }`}
+          >
+            <Filter size={14} /> All History
+          </button>
+
+          {availableLevels.map(lvl => (
+            <button
+              key={lvl}
+              onClick={() => setSelectedLevel(String(lvl))}
+              className={`px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+                selectedLevel === String(lvl)
+                  ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md' 
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-purple-50'
+              }`}
+            >
+              Community Level {lvl}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Transaction Filter & Search */}
       <div className="flex flex-col sm:flex-row gap-4 mb-4 justify-between items-center bg-white shadow-sm p-3 md:p-4 rounded-2xl border border-slate-200">
         <div className="relative w-full sm:w-80 group">
@@ -180,7 +241,7 @@ if (desc.includes('withdrawal') || desc.includes('credit') || desc.includes('fee
            </div>
            <input
              type="text"
-             placeholder="Search Level or Description..."
+             placeholder="Search History..."
              value={search}
              onChange={handleSearch}
              className="w-full bg-white border border-slate-200 text-slate-900 text-xs sm:text-sm font-bold tracking-wide rounded-xl px-4 py-2.5 sm:py-3 pl-10 focus:border-purple-500 focus:outline-none transition-all placeholder:text-slate-400"
@@ -213,12 +274,14 @@ if (desc.includes('withdrawal') || desc.includes('credit') || desc.includes('fee
                 paginated.map((txn, idx) => {
                   const date = new Date(txn.createdAt);
                   
-                  // 🔥 UNLOCKED TEXT CLEANUP: Yahan wo "Unlocked" wala naam saaf ho jayega
-                  let cleanDesc = txn.description || "Single Leg Community Income";
+                  // 🔥 TEXT CLEANUP
+                  let cleanDesc = txn.description || "Community Income";
+                  const match = cleanDesc.match(/Level\s(\d+)/i);
+                  
                   if (cleanDesc.toLowerCase().includes('unlocked - day 1')) {
-                      const match = cleanDesc.match(/Level\s(\d+)/i);
-                      const levelNo = match ? match[1] : '';
-                      cleanDesc = `Daily Community Income Level ${levelNo} (Day 1)`;
+                      cleanDesc = match ? `Community Level ${match[1]} Income (Day 1)` : cleanDesc;
+                  } else if (match) {
+                      cleanDesc = cleanDesc.replace(/Level\s\d+/i, `Community Level ${match[1]}`);
                   }
 
                   return (
