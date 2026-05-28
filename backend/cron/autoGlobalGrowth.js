@@ -31,7 +31,7 @@ const startGlobalGrowthCron = () => {
             // 🔥 1. FAKE/SYSTEM GROWTH LOGIC (LIVE MODE: 100 Users/Day)
             // (100 / 1440) ka matlab din me lagbhag 100 users naturally aayenge.
            const shouldAddFakeUser = Math.random() < (100 / 1440); 
-            
+             
             // ⚠️ AGAR KABHI TESTING KARNI HO TOH UPAR WALI LINE HATA KE NICHE WALI LAGA DENA:
              
             if (shouldAddFakeUser) {
@@ -91,15 +91,30 @@ const startGlobalGrowthCron = () => {
                     }
 
                     // --- STEP 3: AGAR USER ELIGIBLE HAI, TOH BULK WRITE ME DAALO ---
-                    bulkOps.push({
-                        updateOne: {
-                            filter: { _id: user._id },
-                            update: {
-                                $inc: { globalTeamCount: 1, todayGlobalTeamAdded: 1 },
-                                $set: { lastGlobalTeamAddDate: todayStr }
+                  // --- STEP 3: AGAR USER ELIGIBLE HAI, TOH BULK WRITE ME DAALO ---
+                    if (user.lastGlobalTeamAddDate !== todayStr) {
+                        // 🔄 NAYA DIN AAYA HAI: Aaj ka count DB me 1 se restart karo
+                        bulkOps.push({
+                            updateOne: {
+                                filter: { _id: user._id },
+                                update: {
+                                    $inc: { globalTeamCount: 1 },
+                                    $set: { todayGlobalTeamAdded: 1, lastGlobalTeamAddDate: todayStr }
+                                }
                             }
-                        }
-                    });
+                        });
+                    } else {
+                        // ⏩ SAME DIN HAI: Normal increment karte raho
+                        bulkOps.push({
+                            updateOne: {
+                                filter: { _id: user._id },
+                                update: {
+                                    $inc: { globalTeamCount: 1, todayGlobalTeamAdded: 1 },
+                                    $set: { lastGlobalTeamAddDate: todayStr }
+                                }
+                            }
+                        });
+                    }
                 }
 
                 // Ek sath sabhi users ko DB mein update karo
