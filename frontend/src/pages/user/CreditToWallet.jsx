@@ -13,18 +13,22 @@ const CreditToWalletHistory = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // ✅ pool_1 → Community Level 1, pool → Community Income, etc.
+  // 🔥 SMART FORMATTER: Ab pool1, pool_1, pool 1 sabko handle karega
   const formatSource = (src) => {
     if (!src) return "-";
-    const s = src.toLowerCase();
-    if (s.startsWith("pool_")) {
-      const lvl = src.split("_")[1];
-      return `Community Level ${lvl}`;
+    const s = src.toLowerCase().trim();
+    
+    // Regex jo kisi bhi format (pool1, pool_1, pool 1, pool-1) ko pakad lega
+    const poolMatch = s.match(/^pool[_\-\s]*(\d+)$/);
+    if (poolMatch) {
+      return `Community Level ${poolMatch[1]}`;
     }
+    
     if (s === "pool") return "Community Income";
-    if (s === "direct") return "Direct";
-    if (s === "level") return "Level";
-    if (s === "reward") return "Reward";
+    if (s === "direct") return "Direct Income";
+    if (s === "level") return "Level Income";
+    if (s === "reward") return "Team Reward";
+    
     return src;
   };
 
@@ -48,17 +52,33 @@ const CreditToWalletHistory = () => {
           .filter(tx => {
             const desc = (tx.description || "").toLowerCase();
             const source = (tx.source || "").toLowerCase();
-            return !(
-              source === "system" ||
+            
+            // 🔥 ULTIMATE FILTER
+            if (
+              source === "system" || 
+              source === "pool" ||                 // Block Daily Cron Income
+              source === "instant_leader_bonus"    // Block 10% Instant Bonus
+            ) {
+              return false;
+            }
+
+            if (
               desc.includes("single leg") ||
               desc.includes("singel leg") ||
               desc.includes("auto-pool") ||
-              desc.includes("unlocked")
-            );
+              desc.includes("unlocked") ||
+              desc.includes("community income") ||  
+              desc.includes("instant leader bonus") || 
+              desc.includes("instant bonus")        
+            ) {
+              return false;
+            }
+
+            return true; 
           })
           .map(tx => ({
             ...tx,
-            // ✅ Format source properly — pool_1 → Community Level 1
+            // ✅ Format source properly applying smart function
             source: formatSource(tx.source),
           }))
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -180,7 +200,7 @@ const CreditToWalletHistory = () => {
                 </tr>
               ) : (
                 paginated.map((txn, idx) => {
-                  const date = new Date(txn.createdAt);
+                  const date = new Date(txn.createdAt || txn.date);
                   const isBinary = txn.type === "binary_income";
                   
                   let val = 0;

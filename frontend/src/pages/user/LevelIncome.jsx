@@ -138,6 +138,15 @@ const LevelIncome = () => {
               ) : (
                 paginated.map((txn, idx) => {
                   const date = new Date(txn.createdAt);
+                  
+                  // 🔥 PACKAGE FIX: Default to 30 if package is missing or 0
+                  const packageAmount = Number(txn.package) > 0 ? Number(txn.package) : 30;
+                  
+                  // 🔥 LEADER TEXT FIX: Remove "(Leader)" from description
+                  const cleanDescription = txn.description 
+                    ? txn.description.replace(/\s*\(Leader\)/gi, "") 
+                    : "Level income";
+
                   return (
                     <tr key={txn._id || idx} className="border-b border-slate-100 hover:bg-white/5 transition-colors bg-white">
                       
@@ -161,7 +170,7 @@ const LevelIncome = () => {
                       {/* Package */}
                       <td className="p-4 text-center">
                         <span className="bg-purple-500/10 border border-purple-500/30 text-purple-400 py-1 px-2.5 rounded-md text-[10px] font-black tracking-widest">
-                          {Number(txn.package) > 0 ? `$${Number(txn.package).toFixed(2)}` : "-"}
+                          ${packageAmount.toFixed(2)}
                         </span>
                       </td>
 
@@ -174,7 +183,7 @@ const LevelIncome = () => {
 
                       {/* Description */}
                       <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize">
-                        {txn.description || "Level income"}
+                        {cleanDescription}
                       </td>
 
                     </tr>

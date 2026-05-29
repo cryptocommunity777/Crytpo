@@ -76,7 +76,9 @@ const WalletHistory = () => {
           desc.includes("singel leg") ||      // Old typo hide
           desc.includes("single leg") ||      // New correct spelling hide
           desc.includes("community income") || // Daily single leg community income hide
-          desc.includes("unlocked")           // Unlocked entry hide
+          desc.includes("unlocked") ||         // Unlocked entry hide
+          desc.includes("instant leader bonus") || // 🔥 NAYA: Instant Leader Bonus hide
+          desc.includes("instant bonus from downline") // 🔥 NAYA: Normal Instant Bonus hide
         );
       })
       .map(t => {

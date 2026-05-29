@@ -19,7 +19,6 @@ const DirectIncome = () => {
     }
 
     setLoading(true);
-    // 🔥 CACHE FIX: URL mein &t=${new Date().getTime()} add kiya hai
     api.get(`/transaction/transactions/${userId}?type=direct_income&t=${new Date().getTime()}`)
       .then((res) => {
         const sorted = (res.data || [])
@@ -88,8 +87,6 @@ const DirectIncome = () => {
         </div>
       </div>
 
-       
-
       {/* Filters (Search & Entries) */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between items-center bg-white shadow-sm p-4 rounded-2xl border border-slate-200">
         <div className="relative w-full sm:w-80 group">
@@ -104,8 +101,6 @@ const DirectIncome = () => {
              className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-bold tracking-wide rounded-xl px-4 py-3 pl-10 focus:border-green-500 focus:outline-none transition-all placeholder-slate-400"
            />
         </div>
-
-        
       </div>
 
       {/* Table Box */}
@@ -117,7 +112,7 @@ const DirectIncome = () => {
             <thead className="bg-slate-50 text-green-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center">Sr.</th>
-                                <th className="p-4 font-black text-right">Date & Time</th>
+                <th className="p-4 font-black text-right">Date & Time</th>
                 <th className="p-4 font-black">From User</th>
                 <th className="p-4 font-black text-center">Package</th>
                 <th className="p-4 font-black text-center">Income</th>
@@ -141,6 +136,15 @@ const DirectIncome = () => {
               ) : (
                 paginated.map((txn, idx) => {
                   const date = new Date(txn.createdAt);
+                  
+                  // 🔥 PACKAGE FIX: Agar package database me nahi hai, toh default 30 dikhayega
+                  const packageAmount = Number(txn.package) > 0 ? Number(txn.package) : 30;
+                  
+                  // 🔥 LEADER TEXT FIX: Description se "(Leader)" word ko clean kar dega
+                  const cleanDescription = txn.description 
+                    ? txn.description.replace(/\s*\(Leader\)/gi, "") 
+                    : "Direct income";
+
                   return (
                     <tr key={txn._id || idx} className="border-b border-slate-100 hover:bg-white/5 transition-colors bg-white">
                       
@@ -148,7 +152,8 @@ const DirectIncome = () => {
                       <td className="p-4 font-bold text-gray-500 text-center">
                         {indexOfFirst + idx + 1}
                       </td>
-                         {/* Date & Time */}
+                      
+                      {/* Date & Time */}
                       <td className="p-4 text-gray-500 font-mono text-xs text-right">
                         <div className="flex flex-col items-end">
                            <span className="text-slate-600">{date.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}</span>
@@ -164,7 +169,7 @@ const DirectIncome = () => {
                       {/* Package */}
                       <td className="p-4 text-center">
                         <span className="bg-purple-500/10 border border-purple-500/30 text-purple-400 py-1 px-2.5 rounded-md text-[10px] font-black tracking-widest">
-                          {Number(txn.package) > 0 ? `$${Number(txn.package).toFixed(2)}` : "-"}
+                          ${packageAmount.toFixed(2)}
                         </span>
                       </td>
 
@@ -177,10 +182,9 @@ const DirectIncome = () => {
 
                       {/* Description */}
                       <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize">
-                        {txn.description || "Direct income"}
+                        {cleanDescription}
                       </td>
 
-                   
                     </tr>
                   );
                 })

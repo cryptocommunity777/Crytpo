@@ -4,7 +4,8 @@ const User = require('../models/User');
 const FastTrack = require('../models/FastTrack');
 const Transaction = require('../models/Transaction');
 
-cron.schedule('8 0 * * *', async () => {
+// 🔥 TIME FIX: '0 2 * * *' = Raat 2:00 Baje, timezone = India
+cron.schedule('0 2 * * *', async () => {
     console.log('⏳ Running Fast Track Daily Bonus Cron...');
     try {
         const activeTracks = await FastTrack.find({ status: 'active' });
@@ -63,4 +64,7 @@ cron.schedule('8 0 * * *', async () => {
     } catch (err) {
         console.error('❌ Fast Track Cron Error:', err);
     }
+}, {
+    scheduled: true,
+    timezone: "Asia/Kolkata" // 👉 Server chahe jahan ho, ye India ke time se raat 2 baje hi chalega
 });

@@ -172,7 +172,39 @@ const getDownlineCount = async (sponsorId) => {
   return count;
 };
 
-// ---------------------------
+
+
+
+
+
+
+// Apni backend user routes wali file mein (e.g., routes/user.js)
+const SystemSettings = require('../models/SystemSettings'); // Path check kar lena
+
+// routes/user.js
+
+// 1. Static route ko upar rakhein (Isko pehle check karega)
+router.get('/system-settings', async (req, res) => {
+    try {
+        const SystemSettings = require('../models/SystemSettings');
+        let settings = await SystemSettings.findOne();
+        if (!settings) {
+            settings = await SystemSettings.create({
+                depositEnabled: true, topupEnabled: true, 
+                transferEnabled: true, withdrawEnabled: true, toWalletEnabled: true
+            });
+        }
+        res.json(settings);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching settings" });
+    }
+});
+
+// 2. Dynamic route ko neeche rakhein
+// Express yahan tabhi aayega agar path 'system-settings' nahi hoga
+router.get('/:userId', getUserById); 
+
+  // ---------------------------
 // 1. UPDATED: Direct Team Route
 // ---------------------------
 // ---------------------------

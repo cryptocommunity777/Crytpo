@@ -24,10 +24,21 @@ const TransactionDetails = () => {
         // 🔥 SUPER STRICT LEDGER FILTER 🔥
         sorted = sorted.filter(txn => {
             const tType = (txn.type || "").toLowerCase();
+            const tSource = (txn.source || "").toLowerCase();
+            const tDesc = (txn.description || "").toLowerCase();
             const tUserId = String(txn.userId);
             const tFrom = String(txn.fromUserId);
             const tTo = String(txn.toUserId);
             const me = userId;
+
+            // 0. 🔥 ULTIMATE BLOCKER: Faltu incomes hatao (Jaise Instant Leader Bonus)
+            if (
+              tSource === "instant_leader_bonus" || 
+              tDesc.includes("instant leader bonus") || 
+              tDesc.includes("instant bonus")
+            ) {
+              return false;
+            }
 
             // 1. Promo waale topup ignore karo
             if (tType === "topup" && txn.description?.toUpperCase().includes("PROMOTION")) {
@@ -46,8 +57,6 @@ const TransactionDetails = () => {
             }
 
             // 4. BAAKI SAB IGNORE KAR DO! 
-            // (Agar aapki wajah se kisi Upline ko Level/Direct income gayi hai, 
-            // toh wo uske ledger mein dikhegi, aapke table mein nahi aayegi)
             return false;
         });
 
@@ -104,14 +113,23 @@ const TransactionDetails = () => {
 
   const formatAmount = (txn) => {
     const type = txn.type?.toLowerCase() || "";
-    const amt = txn.amount || 0;
+    
+    // Amount extraction fix
+    let amt = 0;
+    if (txn.amount && typeof txn.amount === 'object' && txn.amount.$numberDecimal) {
+      amt = parseFloat(txn.amount.$numberDecimal);
+    } else if (txn.amount !== undefined && txn.amount !== null) {
+      amt = parseFloat(txn.amount);
+    } else {
+      amt = parseFloat(txn.grossAmount || 0);
+    }
+
     let colorClass = "text-slate-900";
-    let display = `$${amt.toFixed(2)}`;
+    let display = `$${isNaN(amt) ? "0.00" : amt.toFixed(2)}`;
     let icon = null;
 
     if (type === "transfer" || type === "topup") {
       if (String(txn.toUserId) === userId || String(txn.userId) === userId) { 
-        // Agar mujhe transfer aaya hai ya mera topup kisi aur ne kiya
         if(type === "topup" && String(txn.userId) === userId && String(txn.fromUserId) !== userId) {
             display = `+$${amt.toFixed(2)}`; 
             colorClass = "text-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.3)]"; 
@@ -253,7 +271,7 @@ const TransactionDetails = () => {
                 </tr>
               ) : (
                 paginated.map((txn, idx) => {
-                  const date = new Date(txn.createdAt);
+                  const date = new Date(txn.createdAt || txn.date);
                   const { display, colorClass, icon } = formatAmount(txn);
                   
                   return (
@@ -293,6 +311,7 @@ const TransactionDetails = () => {
 >
   {txn.description 
     ? txn.description
+        .replace(/\s*\(Leader\)/gi, "")                         // 🔥 LEADER word hatao
         .replace(/leader settlement:?\s*/gi, "")                // Leader Settlement hataya
         .replace(/(singel|single)\s?leg/gi, "Community Income") // Singel/Single leg ko Community Income kiya
         .replace(/pool/gi, "Community Income")                  // Pool ko Community Income kiya
