@@ -444,58 +444,58 @@ router.post(
 // =====================================================================
 // 🔥 ONE-TIME FIX API: Puraane users ke box balance theek karne ke liye
 // =====================================================================
-router.get("/fix-old-users-pool", async (req, res) => {
-    try {
-        // Un sabhi users ko dhundho jinke paas kam se kam 1 pool active hai
-        const users = await User.find({ "activePools.0": { $exists: true } });
-        let fixedCount = 0;
+// router.get("/fix-old-users-pool", async (req, res) => {
+//     try {
+//         // Un sabhi users ko dhundho jinke paas kam se kam 1 pool active hai
+//         const users = await User.find({ "activePools.0": { $exists: true } });
+//         let fixedCount = 0;
 
-        for (let user of users) {
-            let totalGenerated = 0;
+//         for (let user of users) {
+//             let totalGenerated = 0;
             
-            // 1. Calculate karo ki is user ne aaj tak pool se total kitna kamaya hai
-            user.activePools.forEach(p => {
-                totalGenerated += (Number(p.daysPaid) || 0) * (Number(p.dailyAmount) || 0);
-            });
+//             // 1. Calculate karo ki is user ne aaj tak pool se total kitna kamaya hai
+//             user.activePools.forEach(p => {
+//                 totalGenerated += (Number(p.daysPaid) || 0) * (Number(p.dailyAmount) || 0);
+//             });
 
-            // 2. Check karo ki abhi uske paas kitna bacha hai, taaki pata chale usne nikala kitna tha
-            let currentPoolWallet = Number(user.poolIncome) || 0;
-            let alreadyWithdrawn = totalGenerated - currentPoolWallet;
+//             // 2. Check karo ki abhi uske paas kitna bacha hai, taaki pata chale usne nikala kitna tha
+//             let currentPoolWallet = Number(user.poolIncome) || 0;
+//             let alreadyWithdrawn = totalGenerated - currentPoolWallet;
 
-            // Agar usne kuch nikala tha (alreadyWithdrawn > 0), toh usko dabbon me set karo
-            if (alreadyWithdrawn > 0.01) {
+//             // Agar usne kuch nikala tha (alreadyWithdrawn > 0), toh usko dabbon me set karo
+//             if (alreadyWithdrawn > 0.01) {
                 
-                // Waterfall Method: Pehle Level 1 me dalo, bach jaye toh Level 2 me, and so on...
-                for (let p of user.activePools) {
-                    let generatedForThisPool = (Number(p.daysPaid) || 0) * (Number(p.dailyAmount) || 0);
+//                 // Waterfall Method: Pehle Level 1 me dalo, bach jaye toh Level 2 me, and so on...
+//                 for (let p of user.activePools) {
+//                     let generatedForThisPool = (Number(p.daysPaid) || 0) * (Number(p.dailyAmount) || 0);
                     
-                    if (alreadyWithdrawn > 0.01) {
-                        let deductHere = Math.min(alreadyWithdrawn, generatedForThisPool);
-                        p.withdrawnAmount = deductHere; // Box me withdrawn amount save kar diya
-                        alreadyWithdrawn -= deductHere;
-                    } else {
-                        // Agar nikalne ka amount khatam ho gaya, toh aage ke boxes 0 rahenge
-                        if (!p.withdrawnAmount) p.withdrawnAmount = 0; 
-                    }
-                }
+//                     if (alreadyWithdrawn > 0.01) {
+//                         let deductHere = Math.min(alreadyWithdrawn, generatedForThisPool);
+//                         p.withdrawnAmount = deductHere; // Box me withdrawn amount save kar diya
+//                         alreadyWithdrawn -= deductHere;
+//                     } else {
+//                         // Agar nikalne ka amount khatam ho gaya, toh aage ke boxes 0 rahenge
+//                         if (!p.withdrawnAmount) p.withdrawnAmount = 0; 
+//                     }
+//                 }
                 
-                // Mongoose ko batao ki array me changes huye hain aur save karo
-                user.markModified('activePools');
-                await user.save();
-                fixedCount++;
-            }
-        }
+//                 // Mongoose ko batao ki array me changes huye hain aur save karo
+//                 user.markModified('activePools');
+//                 await user.save();
+//                 fixedCount++;
+//             }
+//         }
 
-        res.json({ 
-            success: true, 
-            message: `Jadoo ho gaya bhai! Total ${fixedCount} puraane users ke dabbe (boxes) ekdum theek ho gaye hain. 🚀` 
-        });
+//         res.json({ 
+//             success: true, 
+//             message: `Jadoo ho gaya bhai! Total ${fixedCount} puraane users ke dabbe (boxes) ekdum theek ho gaye hain. 🚀` 
+//         });
 
-    } catch (error) {
-        console.error("Fix Users Error:", error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
+//     } catch (error) {
+//         console.error("Fix Users Error:", error);
+//         res.status(500).json({ success: false, message: error.message });
+//     }
+// });
   
 // GLOBAL_POOLS array yahan rakhne ki ab zaroorat nahi hai kyunki cron job calculation kar raha hai.
 
