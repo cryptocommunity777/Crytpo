@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import api from '../../api/axios'; // Path zaroor check kar lena
+import api from '../../api/axios'; 
 
-// 🔹 Helper: Amount ko sahi Number me convert karne ke liye
 const getNumericAmount = (amount) => {
   if (!amount) return 0;
   if (typeof amount === 'number') return amount;
@@ -15,7 +14,8 @@ const getNumericAmount = (amount) => {
 const DepositTable = () => {
   const [deposits, setDeposits] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [depositsPerPage, setDepositsPerPage] = useState(10);
+  const [depositsPerPage, setDepositsPerPage] = useState(10); 
+
   const [searchId, setSearchId] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -29,26 +29,26 @@ const DepositTable = () => {
     try {
       const token = localStorage.getItem('adminToken');
       if (!token) {
-        console.error('No admin token found.');
-        setLoading(false);
-        return;
+          console.error('No admin token found.');
+          setLoading(false);
+          return;
       }
 
       const res = await api.get('/admin/transactions', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const allTransactions = res.data || [];
+      const allTransactions = res.data.data || res.data || [];
       
-      // ✅ Optimization: Fetch karte hi timestamp bana lo taaki filter fast chale
-      const processed = allTransactions
+      // ✅ Fetch karte hi timestamp bana liya (Loop fast chalega)
+      const onlyDeposits = allTransactions
         .filter((tx) => tx.type === 'deposit' || tx.type === 'manual_credit')
         .map(tx => ({
             ...tx,
             timestamp: new Date(tx.createdAt || tx.date).getTime()
         }));
 
-      setDeposits(processed);
+      setDeposits(onlyDeposits);
     } catch (err) {
       console.error('Failed to fetch deposits:', err);
     } finally {
@@ -56,7 +56,7 @@ const DepositTable = () => {
     }
   };
 
-  // ✅ Optimized: Filter logic useMemo ke saath (UI Freeze nahi hoga)
+  // ✅ useMemo se UI freeze hona band ho jayega
   const filteredDeposits = useMemo(() => {
     return deposits.filter((deposit) => {
       const depositUserId = deposit.userId ? String(deposit.userId) : "";
@@ -64,12 +64,11 @@ const DepositTable = () => {
       const searchQuery = searchId.toLowerCase();
 
       const matchId = searchId ? (depositUserId.includes(searchQuery) || hashStr.includes(searchQuery)) : true;
-      
       const matchFrom = fromDate ? deposit.timestamp >= new Date(fromDate).getTime() : true;
       
       let matchTo = true;
       if (toDate) {
-        let endDate = new Date(toDate).getTime() + 86399999; // Same day end time
+        let endDate = new Date(toDate).getTime() + 86399999;
         matchTo = deposit.timestamp <= endDate;
       }
       
@@ -77,7 +76,7 @@ const DepositTable = () => {
     });
   }, [deposits, searchId, fromDate, toDate]);
 
-  // ✅ Optimized: Totals calculation (Re-render par calculate nahi hoga)
+  // ✅ Totals ko useMemo me daala (Performance Boost)
   const totalAmount = useMemo(() => 
     filteredDeposits.reduce((sum, d) => sum + getNumericAmount(d.amount), 0), 
   [filteredDeposits]);
@@ -90,13 +89,16 @@ const DepositTable = () => {
   }, [filteredDeposits]);
 
   // Pagination calculations
-  const indexOfLast = currentPage * depositsPerPage;
+  const totalPages = Math.ceil(filteredDeposits.length / depositsPerPage) || 1;
+  // Ensure current page is valid when filtering changes
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  
+  const indexOfLast = validCurrentPage * depositsPerPage;
   const indexOfFirst = indexOfLast - depositsPerPage;
   const currentDeposits = filteredDeposits.slice(indexOfFirst, indexOfLast);
-  const totalPages = Math.ceil(filteredDeposits.length / depositsPerPage) || 1;
 
-  const handleNext = () => currentPage < totalPages && setCurrentPage(prev => prev + 1);
-  const handlePrev = () => currentPage > 1 && setCurrentPage(prev => prev - 1);
+  const handleNext = () => validCurrentPage < totalPages && setCurrentPage(prev => prev + 1);
+  const handlePrev = () => validCurrentPage > 1 && setCurrentPage(prev => prev - 1);
 
   return (
     <div className="bg-white text-black p-6 rounded-2xl shadow-md max-w-7xl mx-auto">
@@ -141,7 +143,9 @@ const DepositTable = () => {
           className="px-4 py-2 border border-gray-300 rounded w-full md:w-1/6 focus:ring-2 focus:ring-indigo-400 focus:outline-none"
         >
           {[10, 20, 50, 100].map(num => (
-            <option key={num} value={num}>{num} per page</option>
+            <option key={num} value={num}>
+              {num} per page
+            </option>
           ))}
         </select>
       </div>
@@ -184,6 +188,7 @@ const DepositTable = () => {
                     <td className="p-3 text-green-600 font-bold">
                       ${getNumericAmount(deposit.amount).toFixed(2)}
                     </td>
+                    
                     <td className="p-3 break-all text-xs font-mono max-w-[200px]">
                       {actualHash ? (
                          <span className="truncate block text-blue-600 font-medium" title={actualHash}>
@@ -195,6 +200,7 @@ const DepositTable = () => {
                         <span className="italic text-black">System Deposit</span>
                       )}
                     </td>
+
                     <td className="p-3 text-gray-600 whitespace-nowrap font-medium">
                       {new Date(deposit.timestamp).toLocaleString('en-GB')}
                     </td>
@@ -228,19 +234,29 @@ const DepositTable = () => {
         <div className="flex justify-between items-center mt-6 text-sm font-semibold text-gray-600">
           <button
             onClick={handlePrev}
-            disabled={currentPage === 1}
+            disabled={validCurrentPage === 1}
             className={`px-5 py-2 rounded transition-colors ${
-              currentPage === 1 ? 'bg-gray-200 cursor-not-allowed' : 'bg-indigo-600 text-slate-900 hover:bg-indigo-700'
+              validCurrentPage === 1
+                ? 'bg-gray-200 cursor-not-allowed'
+                : 'bg-indigo-600 text-slate-900 hover:bg-indigo-700'
             }`}
-          >Previous</button>
-          <span className="bg-gray-100 px-4 py-2 rounded">Page {currentPage} of {totalPages}</span>
+          >
+            Previous
+          </button>
+          <span className="bg-gray-100 px-4 py-2 rounded">
+            Page {validCurrentPage} of {totalPages}
+          </span>
           <button
             onClick={handleNext}
-            disabled={currentPage === totalPages}
+            disabled={validCurrentPage === totalPages}
             className={`px-5 py-2 rounded transition-colors ${
-              currentPage === totalPages ? 'bg-gray-200 cursor-not-allowed' : 'bg-indigo-600 text-slate-900 hover:bg-indigo-700'
+              validCurrentPage === totalPages
+                ? 'bg-gray-200 cursor-not-allowed'
+                : 'bg-indigo-600 text-slate-900 hover:bg-indigo-700'
             }`}
-          >Next</button>
+          >
+            Next
+          </button>
         </div>
       )}
     </div>

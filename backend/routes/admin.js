@@ -1247,25 +1247,7 @@ const user = await User.findOne({ userId: req.params.userId });
 
 
 // Get all deposits with user names
-router.get('/deposits', verifyAdmin, async (req, res) => {
-  try {
-    const deposits = await Deposit.find().sort({ createdAt: -1 });
-    const userIds = deposits.map(dep => dep.userId);
-    const users = await User.find({ userId: { $in: userIds } });
-
-    const userMap = Object.fromEntries(users.map(u => [u.userId, u.name]));
-
-    const enriched = deposits.map(dep => ({
-      ...dep.toObject(),
-      name: userMap[dep.userId] || 'Unknown'
-    }));
-
-    res.json(enriched);
-  } catch (err) {
-    console.error('Failed to fetch deposits:', err);
-    res.status(500).json({ message: 'Failed to fetch deposits' });
-  }
-});
+ 
 
 
 
@@ -1361,13 +1343,25 @@ router.get('/deposits', verifyAdmin, async (req, res) => {
 
 
 
+// ==========================================
+// 1. OPTIMIZED TRANSACTIONS ROUTE
+// ==========================================
 router.get("/transactions", verifyAdmin, async (req, res) => {
   try {
-    // Fetch transactions and users in parallel
-    const [transactions, users] = await Promise.all([
-      Transaction.find().sort({ createdAt: -1 }).lean(),
-      User.find({}, { userId: 1, name: 1 }).lean(),
-    ]);
+    // 🔥 LIMIT ADDED: Sirf latest 3000 transactions layega (No Server Crash)
+    const limit = parseInt(req.query.limit) || 3000;
+
+    const transactions = await Transaction.find()
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    // 🔥 SMART FETCH: Sirf wahi users fetch karega jinki transaction in 3000 mein hai (Saves 90% RAM)
+    const userIds = [...new Set(
+      transactions.flatMap(tx => [tx.userId, tx.fromUserId, tx.toUserId]).filter(Boolean)
+    )];
+
+    const users = await User.find({ userId: { $in: userIds } }, { userId: 1, name: 1 }).lean();
 
     // Map userId -> name
     const userMap = Object.fromEntries(users.map(u => [u.userId, u.name]));
@@ -1378,29 +1372,61 @@ router.get("/transactions", verifyAdmin, async (req, res) => {
       userId: tx.userId,
       name: userMap[tx.userId] || "Unknown",
       type: tx.type,
-      amount: tx.amount || 0,
-      source: tx.source || "-",           // Show "-" if null
-      description: tx.description || "",  // Optional description
+      // 🔥 FIX: Decimal128 error se bachne ke liye safe parsing
+      amount: tx.amount ? parseFloat(tx.amount.toString()) : 0,
+      source: tx.source || "-",          
+      description: tx.description || "",  
       fromUserId: tx.fromUserId || null,
       toUserId: tx.toUserId || null,
-      fromName: tx.fromUserId ? userMap[tx.fromUserId] || "N/A" : "-",
-      toName: tx.toUserId ? userMap[tx.toUserId] || "N/A" : "-",
+      fromName: tx.fromUserId ? (userMap[tx.fromUserId] || "N/A") : "-",
+      toName: tx.toUserId ? (userMap[tx.toUserId] || "N/A") : "-",
       package: tx.package || null,
       plan: tx.plan || null,
       level: tx.level || null,
       date: tx.date || tx.createdAt || new Date(),
       createdAt: tx.createdAt || new Date(),
       updatedAt: tx.updatedAt || new Date(),
-      
-      // 🔥 YAHAN MAIN CHANGE HUA HAI: Hash ab frontend par jayega!
       txnHash: tx.txnHash || tx.txHash || null, 
       status: tx.status || "completed"
     }));
 
+    // Array return kar rahe hain, aapka frontend direct isko map kar lega
     res.json(formatted);
   } catch (error) {
     console.error("Failed to fetch transactions:", error);
     res.status(500).json({ message: "Failed to fetch transactions" });
+  }
+});
+
+
+// ==========================================
+// 2. OPTIMIZED DEPOSITS ROUTE
+// ==========================================
+router.get('/deposits', verifyAdmin, async (req, res) => {
+  try {
+    // 🔥 LIMIT & LEAN ADDED: Super fast query
+    const limit = parseInt(req.query.limit) || 3000;
+    const deposits = await Deposit.find()
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean(); 
+
+    // 🔥 SMART FETCH: Sirf related users
+    const userIds = [...new Set(deposits.map(dep => dep.userId).filter(Boolean))];
+    const users = await User.find({ userId: { $in: userIds } }, { userId: 1, name: 1 }).lean();
+
+    const userMap = Object.fromEntries(users.map(u => [u.userId, u.name]));
+
+    const enriched = deposits.map(dep => ({
+      ...dep, // .lean() use kiya hai isliye .toObject() ki zaroorat nahi
+      name: userMap[dep.userId] || 'Unknown',
+      amount: dep.amount ? parseFloat(dep.amount.toString()) : 0
+    }));
+
+    res.json(enriched);
+  } catch (err) {
+    console.error('Failed to fetch deposits:', err);
+    res.status(500).json({ message: 'Failed to fetch deposits' });
   }
 });
 

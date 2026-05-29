@@ -70,8 +70,6 @@ function UserWithdrawalHistory() {
         lastGroup.totalCryptoNet += Number(item.netAmount || 0);
         lastGroup.totalTopupNet += Number(item.netAmount || 0);
 
-        lastGroup.sources.push(item.source || "-");
-
         if (item.status?.toLowerCase() === "pending")
           lastGroup.status = "pending";
         else if (
@@ -88,7 +86,6 @@ function UserWithdrawalHistory() {
           totalFee: Number(item.fee || 0) * 2,
           totalCryptoNet: Number(item.netAmount || 0),
           totalTopupNet: Number(item.netAmount || 0),
-          sources: [item.source || "-"],
           walletAddress: item.walletAddress,
           status: item.status || "pending",
         });
@@ -110,7 +107,6 @@ function UserWithdrawalHistory() {
 
     const matchSearch =
       g.status?.toLowerCase().includes(searchLower) ||
-      g.sources.join(",").toLowerCase().includes(searchLower) ||
       g.totalGross.toString().includes(searchLower) ||
       new Date(g.createdAt)
         .toLocaleDateString("en-GB")
@@ -145,11 +141,12 @@ function UserWithdrawalHistory() {
   const getStatusDetails = (group) => {
     const s = group.status?.toLowerCase();
 
+    // ✅ Approved wala style change karke green kar diya gaya hai
     if (s === "approved" || s === "success") {
       return {
         label: group.status,
         color:
-          "bg-slate-100 text-slate-700 border border-slate-300",
+          "bg-green-100 text-green-700 border border-green-300",
       };
     }
 
@@ -237,7 +234,7 @@ function UserWithdrawalHistory() {
 
           <input
             type="text"
-            placeholder="Search amount, wallet, source..."
+            placeholder="Search amount, wallet..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-bold tracking-wide rounded-xl px-4 py-3 pl-10 focus:border-slate-400 focus:outline-none transition-all placeholder-slate-400"
@@ -286,10 +283,8 @@ function UserWithdrawalHistory() {
                   </div>
                 </th>
 
-                <th className="p-4 font-black">Source</th>
                 <th className="p-4 font-black">Wallet Address</th>
                 <th className="p-4 font-black text-center">Status</th>
-                <th className="p-4 font-black text-center">Details</th>
               </tr>
             </thead>
 
@@ -297,7 +292,8 @@ function UserWithdrawalHistory() {
 
               {loading ? (
                 <tr>
-                  <td colSpan="10" className="text-center py-10">
+                  {/* ✅ colSpan 8 kar diya hai kyunki 2 columns hat gaye hain */}
+                  <td colSpan="8" className="text-center py-10">
                     <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
                       Loading History...
                     </span>
@@ -305,7 +301,7 @@ function UserWithdrawalHistory() {
                 </tr>
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="text-center py-10">
+                  <td colSpan="8" className="text-center py-10">
                     <span className="text-slate-500 font-bold text-sm uppercase tracking-widest">
                       No Withdrawal Records Found
                     </span>
@@ -346,35 +342,6 @@ function UserWithdrawalHistory() {
                         ${group.totalTopupNet.toFixed(2)}
                       </td>
 
-                     <td className="p-4">
-  <div className="flex flex-wrap items-center gap-1">
-    {[...new Set(group.sources)].map((s, i) => {
-      const source = s?.toLowerCase();
-
-      return (
-        <span
-          key={i}
-          className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border ${
-            source?.includes("pool")
-              ? "bg-green-100 text-green-600 border-green-300"
-              : source?.includes("direct")
-              ? "bg-purple-100 text-purple-600 border-purple-300"
-              : source?.includes("level")
-              ? "bg-blue-100 text-blue-600 border-blue-300"
-              : source?.includes("reward")
-              ? "bg-yellow-100 text-yellow-600 border-yellow-300"
-              : "bg-slate-100 text-slate-700 border-slate-300"
-          }`}
-        >
-          {source?.includes("pool")
-            ? "Community Earning"
-            : s}
-        </span>
-      );
-    })}
-  </div>
-</td>
-
                       <td className="p-4 text-slate-700 font-mono text-[10px] sm:text-xs">
                         {group.walletAddress ? (
                           <span className="px-2 py-1 rounded border border-slate-200">
@@ -393,9 +360,6 @@ function UserWithdrawalHistory() {
                         </span>
                       </td>
 
-                      <td className="p-4 text-center text-slate-400 font-bold">
-                        -
-                      </td>
                     </tr>
                   );
                 })

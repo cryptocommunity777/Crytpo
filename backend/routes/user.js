@@ -99,6 +99,8 @@ const processGlobalTeamGrowth = async (excludeUserId) => {
 };
 
 
+
+
 // 📋 Get all users (Admin ke liye)
 router.get('/all', getAllUsers);
 
@@ -998,53 +1000,172 @@ router.post('/promo-dummy-topup', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: "Invalid transaction password" });
     }
 
-    // 2. 🔥 Get ANY RANDOM Fake User for TODAY ONLY
+    // 2. Indian Names List
+    const dummyNames = [
+    // --- Aapki Purani List ---
+    "Aarav Patil", "Rohan Sharma", "Aditya Singh", "Rahul Verma", "Vikas Yadav", 
+    "Amit Kumar", "Ankit Gupta", "Sandeep Mishra", "Vivek Tiwari", "Rajesh Patel", 
+    "Mohit Sharma", "Ravi Yadav", "Akash Singh", "Deepak Verma", "Pankaj Kumar", 
+    "Nitin Sharma", "Karan Malhotra", "Saurabh Gupta", "Abhishek Jain", "Manish Patel", 
+    "Harsh Mehta", "Yash Shah", "Dhruv Patel", "Jay Mehta", "Meet Shah", "Kunal Joshi", 
+    "Rakesh Solanki", "Pravin Chauhan", "Vimal Desai", "Chirag Modi", "Hardik Patel", 
+    "Nilesh Gandhi", "Vijay Parmar", "Sanjay Bhatt", "Rohit Trivedi", "Gautam Shah", 
+    "Aman Joshi", "Vikas Mehra", "Anurag Singh", "Shubham Yadav", "Ayush Pandey", 
+    "Kartik Sharma", "Prashant Tiwari", "Ritesh Verma", "Sachin Mishra", "Vinay Kumar", 
+    "Akhil Gupta", "Rajat Singh", "Harshit Jain", "Sumit Patel", "Arjun Kapoor", 
+    "Kabir Khanna", "Vivaan Arora", "Ishaan Malhotra", "Reyansh Sethi", "Ayaan Batra", 
+    "Dev Sharma", "Aryan Gupta", "Krish Verma", "Laksh Yadav", "Priya Sharma", 
+    "Pooja Patel", "Sneha Verma", "Neha Gupta", "Riya Singh", "Anjali Yadav", 
+    "Kavita Mishra", "Simran Kaur", "Komal Sharma", "Aarti Patel", "Megha Verma", 
+    "Swati Gupta", "Ritu Singh", "Nisha Sharma", "Divya Patel", "Pallavi Verma", 
+    "Shreya Gupta", "Anita Singh", "Monika Yadav", "Jyoti Mishra", "Sonia Sharma", 
+    "Rashmi Patel", "Preeti Verma", "Sakshi Gupta", "Tanya Singh", "Payal Sharma", 
+    "Madhuri Patel", "Nandini Verma", "Khushi Gupta", "Isha Singh", "Radhika Sharma", 
+    "Muskan Patel", "Ananya Verma", "Kiara Gupta", "Myra Singh", "Meher Sharma", 
+    "Siya Patel", "Aarohi Verma", "Aakash Rao", "Ramesh Gowda", "Suresh Naidu", 
+    "Vinod Reddy", "Prakash Rao", "Mahesh Gowda", "Harsha Naik", "Lokesh Shetty", 
+    "Ganesh Hegde", "Kiran Acharya", "Darshan Rao", "Naveen Gowda", "Tejas Shetty", 
+    "Raghav Rao", "Anand Murthy", "Pradeep Hegde", "Manjunath Naik", "Srinivas Rao", 
+    "Venkatesh Gowda", "Ashwin Shetty", "Arvind Menon", "Rahul Nair", "Joseph Mathew", 
+    "Bibin George", "Vishnu Pillai", "Akhil Kurup", "Nikhil Menon", "Sandeep Nair", 
+    "Manu Varghese", "Rakesh Panicker", "Karthik Iyer", "Arjun Subramanian", "Hari Krishnan", 
+    "Pravin Natarajan", "Ashwin Balaji", "Raghav Raman", "Vivek Chandran", "Naveen Iyer", 
+    "Gokul Swamy", "Dinesh Pillai", "Sai Reddy", "Praneeth Goud", "Venkatesh Naidu", 
+    "Harsha Varma", "Ajay Chowdary", "Ram Charan", "Surya Teja", "Nani Krishna", 
+    "Bharat Rao", "Kiran Reddy", "Gurpreet Singh", "Harpreet Kaur", "Jaspreet Singh", 
+    "Maninder Gill", "Hardeep Sandhu", "Kuldeep Brar", "Navjot Sidhu", "Paramveer Singh", 
+    "Rupinder Dhillon", "Amritpal Grewal", "Rajveer Rathore", "Vikram Sisodia", "Pratap Chauhan", 
+    "Gajendra Shekhawat", "Ajit Rajawat", "Lokesh Bhati", "Sohan Parihar", "Mahendra Solanki", 
+    "Bhawani Jhala", "Dinesh Tanwar", "Amit Dahiya", "Rohit Hooda", "Vikas Malik", 
+    "Naveen Jakhar", "Deepak Sangwan", "Ajay Kadian", "Karan Punia", "Mukesh Deswal", 
+    "Yogesh Phogat", "Parveen Mor", "Ankit Yadav", "Shivam Mishra", "Ayush Pandey", 
+    "Vivek Dubey", "Rahul Tripathi", "Mohit Srivastava", "Abhishek Shukla", "Aman Bajpai", 
+    "Kunal Pathak", "Deepak Awasthi", "Nitish Kumar", "Chandan Jha", "Pankaj Thakur", 
+    "Mukesh Sinha", "Saurabh Rai", "Gautam Anand", "Manish Ojha", "Rahul Narayan", 
+    "Sunil Paswan", "Abhay Mandal", "Soumik Banerjee", "Arijit Chatterjee", "Sayan Ghosh", 
+    "Debashish Bose", "Subrata Das", "Prasenjit Roy", "Tapas Sen", "Kaushik Mitra", 
+    "Anirban Dutta", "Souvik Pal", "Satyajit Nayak", "Debasis Sahoo", "Prakash Mohanty", 
+    "Manas Panda", "Santosh Rout", "Rajesh Pati", "Bikash Swain", "Chandan Jena", 
+    "Rakesh Behera", "Dillip Samal", "Ritam Bora", "Anup Deka", "Pranab Saikia", 
+    "Nayan Gogoi", "Dipak Kalita", "Rahul Baruah", "Kaushik Talukdar", "Manas Bhuyan", 
+    "Bikram Phukan", "Ajit Bordoloi", "Ravi Soren", "Ajay Murmu", "Deepak Hembrom", 
+    "Vikash Tudu", "Rajesh Kisku", "Pankaj Marandi", "Nitesh Minz", "Santosh Besra", 
+    "Akash Purty", "Rohit Mahli", "Mohit Rawat", "Rahul Negi", "Deepak Bisht", 
+    "Ankit Nautiyal", "Saurabh Gusain", "Lokesh Kunwar", "Pankaj Bhandari", "Ashish Uniyal", 
+    "Akash Dhami", "Nitin Bartwal", "Aamir Khan", "Bilal Mir", "Tariq Lone", "Adil Bhat", 
+    "Sameer Zargar", "Junaid Sofi", "Imran Parray", "Faisal Butt", "Arif Andrabi", 
+    "Yasin Malik", "Kevin Dsouza", "Ryan Fernandes", "Jason Pinto", "Allan Mascarenhas", 
+    "Trevor Almeida", "Aaron Menezes", "Joel Sequeira", "Edwin Rebello", "Rohan Correia", 
+    "Clive Noronha", "Aryan Malhotra", "Kabir Khanna", "Vivaan Arora", "Ishaan Kapoor", 
+    "Reyansh Mehra", "Ayaan Sethi", "Dev Batra", "Aryan Oberoi", "Krish Talwar", 
+    "Laksh Juneja", "Priya Malhotra", "Simran Arora", "Riya Kapoor", "Ananya Khanna", 
+    "Kiara Batra", "Myra Talwar", "Siya Oberoi", "Meher Juneja", "Aarohi Sethi", 
+    "Shanaya Mehra", "Aarav Deshmukh",
+
+    // --- Naye Add Kiye Gaye Indian Naam ---
+    "Suresh Saini", "Rajiv Ranjan", "Nishant Tiwari", "Deepika Joshi", "Kunal Deshmukh", 
+    "Alok Pandey", "Praveen Kumar", "Nitin Agarwal", "Sanjay Singh", "Rakesh Sharma", 
+    "Arun Patel", "Sandeep Singh", "Ajay Kumar", "Ramesh Singh", "Dinesh Kumar", 
+    "Naresh Patel", "Prakash Singh", "Ashok Kumar", "Sunil Sharma", "Anil Singh", 
+    "Rajendra Patel", "Pramod Kumar", "Surya Prakash", "Manoj Tiwari", "Santosh Kumar", 
+    "Pradeep Singh", "Satish Kumar", "Kamlesh Patel", "Rajeshwari Iyer", "Lakshmi Narayanan", 
+    "Geeta Menon", "Savitri Devi", "Radha Krishna", "Meena Kumari", "Sunita Sharma", 
+    "Rekha Singh", "Anitha Reddy", "Kavitha Nair", "Renuka Chowdary", "Sujata Mohanty", 
+    "Padma Patil", "Shobha Deshmukh", "Vandana Joshi", "Mamta Yadav", "Sarita Mishra", 
+    "Poonam Chand", "Seema Rao", "Anita Das", "Kiran Bala", "Manju Verma", 
+    "Sushma Rajput", "Pushpa Chaudhary", "Asha Singh", "Usha Kiran", "Rita Das", 
+    "Gita Sen", "Bhavin Patel", "Disha Shah", "Prateek Kadam", "Sneha Joshi", 
+    "Rohan Kulkarni", "Nikhil Deshmukh", "Pooja Shinde", "Anik Ghosh", "Rupa Das", 
+    "Sourav Majumdar", "Alok Sahoo", "Snehasish Mohanty", "Rupali Barman", "Ravi Dube", 
+    "Kiran Jaiswal", "Mukesh Chaurasia", "Anil Kushwaha", "Sunil Soni", "Manoj Gupta",
+    "Gaurav Jha", "Ritesh Deshmukh", "Anupam Kher", "Brijesh Thakur", "Gopal Das", 
+    "Hemant Soren", "Jatin Ahuja", "Kailash Gehlot", "Lalit Modi", "Navin Patnaik",
+    "Omkar Nath", "Partha Chatterjee", "Qasim Ali", "Roshan Baig", "Tarun Gogoi",
+    "Udit Narayan", "Varun Grover", "Waseem Rizvi", "Yogendra Yadav", "Zakir Hussain",
+    "Ankita Lokhande", "Bhumika Chawla", "Chitrangada Singh", "Divya Dutta", "Esha Deol",
+    "Farah Khan", "Gauahar Khan", "Hina Khan", "Isha Koppikar", "Juhi Chawla",
+    "Karisma Kapoor", "Lara Dutta", "Malaika Arora", "Neha Dhupia", "Prachi Desai",
+    "Raveena Tandon", "Shilpa Shetty", "Tabu Hashmi", "Urvashi Rautela", "Vidya Balan"
+];
+
+    const randomNameIndex = Math.floor(Math.random() * dummyNames.length);
+    const generatedName = dummyNames[randomNameIndex];
+    const generatedId = Math.floor(1000000 + Math.random() * 9000000); 
+
+    // 3. FakeUser Table mein add karo (Taaki Global List me dikhe)
     const FakeUser = require('../models/FakeUser');
-    
-    // Aaj ka start (12:00 AM) aur end (11:59 PM) time set kar rahe hain
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    await FakeUser.create({
+        userId: generatedId,
+        name: generatedName,
+        package: 30,
+        country: "India",
+        date: new Date() 
+    });
 
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
+    // =========================================================================
+    // 🚀 NEW: GLOBAL TEAM GROWTH LOGIC (Jaise normal topup aur cron me hota hai)
+    // =========================================================================
+    const activeUsers = await User.find({ isToppedUp: true }).select('_id globalTeamCount directCount');
+    const bulkOps = [];
 
-    const fakeUsers = await FakeUser.aggregate([
-        { 
-            $match: { 
-                date: { $gte: startOfToday, $lte: endOfToday } // Sirf aaj ki date filter karega
-            } 
-        },
-        { $sample: { size: 1 } } // Aaj ki list me se koi bhi 1 random uthayega
-    ]);
+    for (const user of activeUsers) {
+        const team = user.globalTeamCount || 0;
+        const directs = user.directCount || 0;
+        
+        let isLocked = false;
+        
+        // Locking conditions (Same as your cron logic)
+        if (team === 2360 && directs < 6) isLocked = true;
+        else if (team === 4360 && directs < 8) isLocked = true;
+        else if (team === 7360 && directs < 10) isLocked = true;
+        else if (team === 11360 && directs < 12) isLocked = true;
+        else if (team === 16360 && directs < 14) isLocked = true;
+        else if (team === 23860 && directs < 16) isLocked = true;
+        else if (team === 33860 && directs < 18) isLocked = true;
 
-    // Agar aaj ki date ka koi bhi fake user nahi mila table me
-    if (!fakeUsers || fakeUsers.length === 0) {
-        return res.status(400).json({ message: "Aaj ki date ki koi Fake ID database me nahi mili. Please aaj ke liye seed script run karein." });
+        if (!isLocked) {
+            bulkOps.push({
+                updateOne: {
+                    filter: { _id: user._id },
+                    update: { $inc: { globalTeamCount: 1 } } // ✅ Sab eligible users ki team 1 se badha di
+                }
+            });
+        }
     }
 
-    const targetFakeUser = fakeUsers[0];
+    if (bulkOps.length > 0) {
+        await User.bulkWrite(bulkOps);
+    }
+    // =========================================================================
 
-    // 3. 🛑 DATE YA DATA UPDATE NAHI KARNA HAI (Taki Global List disturb na ho)
-    // Hum sirf Transaction table me entry marenge admin history ke liye
-    
-    // 4. Record Dummy Transaction
+    // =========================================================================
+    // 🚀 NEW: TOTAL COMMUNITY COUNT UPDATE (SystemStat)
+    // Ye dashboard par total users ka count badhayega
+    // =========================================================================
+    const SystemStat = require('../models/SystemStat');
+    await SystemStat.findOneAndUpdate(
+        {}, 
+        { $inc: { globalFakeCount: 1 } }, // Total community / Fake count ko +1 kar dega
+        { upsert: true, returnDocument: 'after' }
+    );
+    // 4. Record Dummy Transaction (For Admin History)
     const Transaction = require('../models/Transaction'); 
     await Transaction.create({
-      userId: targetFakeUser.userId,
+      userId: generatedId,
       amount: Number(amount),
       type: "promo", 
       fromUserId: currentUser.userId,
-      toUserId: targetFakeUser.userId,
+      toUserId: generatedId,
       status: "success",
-      description: `Promo showcase generated for Fake ID ${targetFakeUser.userId}`,
+      description: `Promo showcase generated for Fake ID ${generatedId}`,
       date: new Date()
     });
 
-    // 5. Success Response for Frontend Popup
+    // 5. Success Response
     res.json({ 
         success: true, 
-        generatedId: targetFakeUser.userId, 
-        name: targetFakeUser.name 
+        generatedId: generatedId, 
+        name: generatedName 
     });
 
   } catch (err) {
@@ -1052,6 +1173,10 @@ router.post('/promo-dummy-topup', authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error during promo topup: " + err.message });
   }
 });
+
+
+
+
  // Downline Team Business Details
 router.get("/binary-summary/:userId", async (req, res) => {  
   try {
