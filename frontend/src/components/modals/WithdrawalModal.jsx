@@ -40,6 +40,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
     direct: "",
     level: "",
     reward: ""
+    // Dynamic pool_1, pool_2 etc. will be added here via input
   });
   
   const [transactionPassword, setTransactionPassword] = useState("");
@@ -83,12 +84,11 @@ const WithdrawalModal = ({ userId, onClose }) => {
         const userGlobal = Number(u.globalTeamCount) || 0;
         const userDirects = Number(u.directCount) || 0;
         const activePoolsData = u.activePools || []; 
-        let actualAvailablePool = Number(res.data?.pool) || 0; 
         
         let cumulativeGlobal = 0;
         let unlockedLevelsTemp = [];
 
-        // Global check karega, direct check baad me hoga withdraw ke time
+        // Unlock logic
         for (const lvl of GLOBAL_POOLS) {
             cumulativeGlobal += lvl.globalTeam;
             if (userGlobal >= cumulativeGlobal) {
@@ -102,34 +102,25 @@ const WithdrawalModal = ({ userId, onClose }) => {
             }
         }
 
-        let totalGenerated = 0;
+        // 🔥 NAYA SIMPLE MATH (Backend tracking ke hisaab se)
         let boxData = unlockedLevelsTemp.map(lvl => {
             const p = activePoolsData.find(ap => Number(ap.level) === Number(lvl.level));
+            
             const generated = p ? (Number(p.daysPaid) || 0) * (Number(p.dailyAmount) || 0) : 0;
-            totalGenerated += generated;
-            return { ...lvl, generated };
-        });
+            const withdrawnAmt = p ? (Number(p.withdrawnAmount) || 0) : 0; // Backend se aaya exact deduction
+            
+            let available = generated - withdrawnAmt;
+            available = available > 0.01 ? available : 0; // Minus se bachne ke liye
 
-        if (totalGenerated === 0 && actualAvailablePool > 0 && boxData.length > 0) {
-            let splitAmt = actualAvailablePool / boxData.length;
-            boxData = boxData.map(b => ({ ...b, generated: splitAmt }));
-            totalGenerated = actualAvailablePool;
-        }
-
-        let alreadyWithdrawn = Math.max(0, totalGenerated - actualAvailablePool);
-
-        let calculatedUnlocked = boxData.map(box => {
-            let deducted = Math.min(box.generated, alreadyWithdrawn);
-            alreadyWithdrawn -= deducted;
-            let available = box.generated - deducted;
-
-            return {
-                ...box,
-                available: available > 0 ? available : 0 
+            return { 
+                ...lvl, 
+                generated, 
+                withdrawnAmt,
+                available 
             };
         });
-        
-        setUnlockedLevels(calculatedUnlocked);
+
+        setUnlockedLevels(boxData);
       }
     } catch (err) {
       console.error("Fetch Error:", err);
@@ -140,9 +131,20 @@ const WithdrawalModal = ({ userId, onClose }) => {
     fetchData();
   }, [fetchData]);
 
-  const hasMainIncome = balances.direct > 0 || balances.level > 0 || balances.reward > 0;
+  // Total Available for Header
+  const totalCommunityAvailable = unlockedLevels.reduce((sum, lvl) => {
+      // Sirf un boxes ka total jinki direct condition poori hai
+      if (lvl.isDirectMet || isPromo) return sum + lvl.available;
+      return sum;
+  }, 0);
 
-  // Inline handle input change to stop keypad focus issues
+  const totalAvailableToWithdraw = balances.direct + balances.level + balances.reward + totalCommunityAvailable;
+  
+  // Total Community Income Earned So Far (Badge ke liye)
+  const totalCommunityEarned = unlockedLevels.reduce((sum, lvl) => sum + (lvl.generated || 0), 0);
+
+  const hasMainIncome = balances.direct > 0 || balances.level > 0 || balances.reward > 0 || totalCommunityAvailable > 0;
+
   const handleInputChange = (e, source) => {
     const value = e.target.value;
     if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
@@ -183,7 +185,7 @@ const WithdrawalModal = ({ userId, onClose }) => {
       checkAndPush("level", withdrawals.level, balances.level, "Level Income");
       checkAndPush("reward", withdrawals.reward, balances.reward, "Team Reward");
 
-      // Auto-pool withdrawal logic with Direct Checking
+      // 🔥 Level-wise Pool Request
       unlockedLevels.forEach(lvl => {
         const amt = Number(withdrawals[`pool_${lvl.level}`] || 0);
         if (amt > 0) {
@@ -191,15 +193,18 @@ const WithdrawalModal = ({ userId, onClose }) => {
                 throw new Error(`Please complete Total ${lvl.reqDirects} Direct${lvl.reqDirects > 1 ? 's' : ''} to withdraw from Community Lvl ${lvl.level}.`);
             }
             if (!isPromo && amt > lvl.available) throw new Error(`Insufficient funds in Level ${lvl.level} Pool.`);
+            
+            // Backend ko EXACT source bhejna jaise "pool_1", "pool_2"
+            items.push({ source: `pool_${lvl.level}`, amount: amt }); 
+            totalRequested += amt;
             poolRequestedTotal += amt;
             successMessages.push(` Lvl ${lvl.level}`);
         }
       });
 
-      if (poolRequestedTotal > 0) {
-          if (!isPromo && poolRequestedTotal > balances.pool) return showMessage("Insufficient Funds", "Total community income requested exceeds available balance.");
-          items.push({ source: "pool", amount: poolRequestedTotal });
-          totalRequested += poolRequestedTotal;
+      // Master Pool limit check
+      if (poolRequestedTotal > 0 && !isPromo && poolRequestedTotal > balances.pool) {
+          return showMessage("Insufficient Funds", "Total community income requested exceeds available master balance.");
       }
 
       if (totalRequested === 0) return showMessage("Warning", "Enter amount to withdraw.");
@@ -216,7 +221,6 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
       const uniqueSources = [...new Set(successMessages)].join(", ");
       
-      // 🔥 MAIN FIX HERE: Backend se aaya hua naam lenge promo ke case mein
       const finalUserId = (isPromo && response.data.generatedId) ? response.data.generatedId : userId;
       const finalUserName = isPromo ? (response.data.name || "Demo User") : (loggedInUser?.name || "");
 
@@ -251,9 +255,6 @@ const WithdrawalModal = ({ userId, onClose }) => {
       setLoading(false); 
     }
   };
-
-  // 🔥 NEW CALCULATION: Sirf available funds (jo real mein nikal sakte hain) ka total
-  const totalAvailableToWithdraw = balances.direct + balances.level + balances.reward + unlockedLevels.reduce((sum, lvl) => sum + (lvl.available || 0), 0);
 
   return (
     <>
@@ -305,7 +306,6 @@ const WithdrawalModal = ({ userId, onClose }) => {
             {/* Body */}
             <div className="p-3 overflow-y-auto custom-scroll flex-1 flex flex-col gap-3 bg-white relative z-10">
               
-              {/* 🔥 BOX CHANGED HERE 🔥 */}
               <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl flex items-center justify-between shadow-sm">
                  <div className="text-right w-full">
                     <p className="text-black text-[9px] font-bold uppercase tracking-widest">Withdrawable Balance</p>
@@ -413,32 +413,56 @@ const WithdrawalModal = ({ userId, onClose }) => {
                   </div>
               )}
 
-              {/* 🔥 AUTO-POOL BOXES 🔥 */}
-              <div className="flex flex-col gap-3">
+              {/* 🔥 AUTO-POOL BOXES (4-BOX LAYOUT) 🔥 */}
+              <div className="flex flex-col gap-3 mt-2">
+                 {/* Total Badge */}
+                 {unlockedLevels.length > 0 && (
+                    <div className="flex justify-between items-center px-1 mt-1">
+                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Community Levels</span>
+                     </div>
+                 )}
+
                  {unlockedLevels.length > 0 && unlockedLevels.map(lvl => (
-                    <div key={lvl.level} className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">
+                    <div key={lvl.level} className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300 relative overflow-hidden">
+                        
                         <div className="flex justify-between items-center mb-2 px-1">
                             <h3 className="text-slate-700 text-[11px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                                <Layers size={14} className="text-emerald-500" /> Community Lvl {lvl.level}
+                                <Layers size={14} className="text-emerald-500" /> Community Level {lvl.level}
+                                {!lvl.isDirectMet && !isPromo && (
+                                    <span className="text-[8px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded ml-2 shadow-sm font-bold"></span>
+                                )}
                             </h3>
                         </div>
 
+                        {/* 🔥 4-BOX LAYOUT SHURU 🔥 */}
                         <div className="flex flex-row gap-1.5 items-stretch">
-                            <div className="w-1/4 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
-                                <span className="text-[12px] font-black text-emerald-600">${lvl.earning}</span>
+                            {/* 1. Total Limit Box */}
+                            <div className="w-[22%] bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
+                                <span className="text-[11px] font-black text-emerald-600">${lvl.earning}</span>
                             </div>
-                            <div className="w-1/4 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
-                                <span className="text-[12px] font-black text-blue-500">${lvl.available.toFixed(2)}</span>
+                            
+                            {/* 2. Earned So Far Box */}
+                            <div className="w-[22%] bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
+                                <span className="text-[11px] font-black text-purple-500">${lvl.generated.toFixed(2)}</span>
                             </div>
-                            <div className="w-2/4 flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-inner">
+                            
+                            {/* 3. Available Box (Directly connected to backend tracker) */}
+                            <div className={`w-[22%] bg-white p-1 rounded-lg border shadow-sm flex flex-col justify-center items-center ${!lvl.isDirectMet && !isPromo ? 'border-red-200 bg-red-50' : 'border-slate-200'}`}>
+                                <span className={`text-[11px] font-black ${!lvl.isDirectMet && !isPromo ? 'text-red-400 line-through decoration-red-400/50' : 'text-blue-500'}`}>
+                                    ${lvl.available.toFixed(2)}
+                                </span>
+                            </div>
+                            
+                            {/* 4. Input Box */}
+                            <div className={`w-[34%] flex items-center gap-1 bg-white p-1 rounded-lg border shadow-inner ${!lvl.isDirectMet && !isPromo ? 'border-red-200 opacity-60 bg-slate-100' : 'border-slate-200'}`}>
                                 <span className="text-emerald-500 font-bold text-sm pl-2">$</span>
                                 <input 
                                     type="number" 
                                     placeholder="0.00" 
-                                    className="flex-1 bg-transparent border-none text-slate-800 text-[12px] font-black outline-none w-full placeholder-slate-300 py-1 px-1"
+                                    className="flex-1 bg-transparent border-none text-slate-800 text-[12px] font-black outline-none w-full placeholder-slate-300 py-1 px-1 disabled:bg-transparent"
                                     value={withdrawals[`pool_${lvl.level}`] || ""} 
                                     onChange={e => handleInputChange(e, `pool_${lvl.level}`)} 
-                                    disabled={isLeader} 
+                                    disabled={isLeader || (!lvl.isDirectMet && !isPromo)} 
                                 />
                             </div>
                         </div>
@@ -446,11 +470,10 @@ const WithdrawalModal = ({ userId, onClose }) => {
                  ))}
               </div>
 
-              {/* SECURITY - CHHUPA HUA AUTOFILL TRAP */}
+              {/* SECURITY */}
               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mt-1 relative">
                   <label className="text-[9px] text-black block mb-1 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
                   
-                  {/* 🔥 YAHAN CHHUPA HUAA BOX BANA DIYA HAI 🔥 */}
                   <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', opacity: 0 }}>
                       <input type="text" name="hidden_username" tabIndex="-1" autoComplete="username" />
                       <input type="password" name="hidden_password" tabIndex="-1" autoComplete="current-password" />

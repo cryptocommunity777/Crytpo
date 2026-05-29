@@ -4,37 +4,27 @@ const withdrawalSchema = new mongoose.Schema({
   userId: { type: Number, required: true },
   name: { type: String, default: "-" },
 
+  // 🔥 UPDATE: Enum hata diya taaki dynamic sources (pool_1, pool_2) save ho sakein
   source: {
     type: String,
-    required: true,
-    enum: [
-      // 🔥 NAYE $30 PLAN KE INCOME SOURCES 🔥
-      "direct",   // Direct Referral Income
-      "level",    // Standard Team Level Income
-      "pool",     // ✅ 12-Level Global Single Leg Community Income
-      "reward",   // Team Reward Income
-      "wallet",   // Agar Main Wallet se seedha total withdraw ho raha hai
-      "mixed",    // Agar multiple incomes ek sath withdraw ho rahi hain
-      
-      // 🛑 PURAANE SOURCES (Agar database me purani withdrawals padi hain toh inko rehne do, warna delete kar do)
-       ]
+    required: true
   },
 
-  // ✅ NAYA FIELD: 12-Level Pool Plan ke liye (Taki pata rahe user ne kis level ka paisa nikala)
+  // ✅ NAYA FIELD: 12-Level Pool Plan ke liye
   poolLevel: { 
     type: Number, 
     default: 0 
   },
 
   grossAmount: { type: Number, required: true },
-  fee: { type: Number, default: 0 },          // Admin charge / Deduction
-  netAmount: { type: Number, default: 0 },    // User ko kitna milega
+  fee: { type: Number, default: 0 },
+  netAmount: { type: Number, default: 0 },
 
   walletUsed: { type: Number, default: 0 },
   incomeUsed: { type: Number, default: 0 },
 
-  walletAddress: { type: String, default: "" }, // Crypto Wallet Address (TRC20/BEP20)
-  txnHash: { type: String, default: "" },       // Blockchain Transaction Hash
+  walletAddress: { type: String, default: "" },
+  txnHash: { type: String, default: "" },
 
   status: { 
     type: String, 
@@ -43,11 +33,9 @@ const withdrawalSchema = new mongoose.Schema({
   },
 
   remarks: { type: String, default: "" },
-  
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 
-  // (Optional) Agar withdrawal installments mein dena hai
   schedule: [
     {
       day: String,

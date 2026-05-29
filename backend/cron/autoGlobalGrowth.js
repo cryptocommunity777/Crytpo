@@ -21,26 +21,26 @@ const GLOBAL_POOLS = [
     { level: 12, globalTeam: 10000, reqDirects: 18, daily: 10, days: 500 }  
 ];
 
+// 🔥 Exact India (IST) ki Date nikalne ka function
+const getISTDateStr = () => {
+    const d = new Date();
+    const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+    const istDate = new Date(utc + (3600000 * 5.5)); // India is +5:30
+    return istDate.toISOString().split('T')[0];
+};
+
 const startGlobalGrowthCron = () => {
 
     // =========================================================================
-    // 1. HAR 1 MINUTE WALI CRON (Growth + Pool Unlock Logic)
+    // 1. HAR 1 MINUTE WALI CRON (Growth + INSTANT Pool Unlock Logic)
     // =========================================================================
     cron.schedule('* * * * *', async () => {
         try {
             // 🔥 1. FAKE/SYSTEM GROWTH LOGIC (LIVE MODE: 100 Users/Day)
             const shouldAddFakeUser = Math.random() < (100 / 1440); 
-             
+            const todayStr = getISTDateStr();
              
             if (shouldAddFakeUser) {
-                
-                // =======================================================
-                // 🚀 A. NEW NATURAL DISTRIBUTION LOGIC (NO CAPPING)
-                // =======================================================
-                
-                const todayStr = new Date().toISOString().split('T')[0]; 
-
-                // Sirf Active Users ko uthayenge.
                 const activeUsers = await User.find({ isToppedUp: true })
                     .select('_id globalTeamCount directCount todayGlobalTeamAdded lastGlobalTeamAddDate');
 
@@ -50,32 +50,19 @@ const startGlobalGrowthCron = () => {
                     const team = user.globalTeamCount || 0;
                     const directs = user.directCount || 0;
                     
-                    // Daily limit reset check (Sirf Admin panel me dikhane ke liye chahiye)
-                    let todayAdded = user.todayGlobalTeamAdded || 0;
-                    if (user.lastGlobalTeamAddDate !== todayStr) {
-                        todayAdded = 0;
-                    }
-
-                    // --- STEP 1: STRICT MILESTONE LOCKS (Level 6 Tak Free Growth) ---
                     let isLocked = false;
                     
-                    // 🔥 NAYA LOGIC: Level 5 (760) ka lock hata diya. Ab seedha Level 6 (2360) par lock lagega
-                    if (team === 2360 && directs < 6) isLocked = true;       // Level 6 to 7
-                    else if (team === 4360 && directs < 8) isLocked = true;  // Level 7 to 8
-                    else if (team === 7360 && directs < 10) isLocked = true; // Level 8 to 9
-                    else if (team === 11360 && directs < 12) isLocked = true; // Level 9 to 10
-                    else if (team === 16360 && directs < 14) isLocked = true; // Level 10 to 11
-                    else if (team === 23860 && directs < 16) isLocked = true; // Level 11 to 12
-                    else if (team === 33860 && directs < 18) isLocked = true; // Full Plan Complete
+                    if (team === 2360 && directs < 6) isLocked = true;
+                    else if (team === 4360 && directs < 8) isLocked = true;
+                    else if (team === 7360 && directs < 10) isLocked = true;
+                    else if (team === 11360 && directs < 12) isLocked = true;
+                    else if (team === 16360 && directs < 14) isLocked = true;
+                    else if (team === 23860 && directs < 16) isLocked = true;
+                    else if (team === 33860 && directs < 18) isLocked = true;
 
-                    if (isLocked) continue; // Agar exact milestone par direct kam hain, toh yahin Jam/Freeze kardo.
+                    if (isLocked) continue;
 
-                    // --- STEP 2: DAILY CAPPING LOGIC (REMOVED) ---
-                    // Capping puri tarah hata di gayi hai. Natural speed se badhega.
-
-                    // --- STEP 3: AGAR USER ELIGIBLE HAI, TOH BULK WRITE ME DAALO ---
                     if (user.lastGlobalTeamAddDate !== todayStr) {
-                        // 🔄 NAYA DIN AAYA HAI: Aaj ka count DB me 1 se restart karo
                         bulkOps.push({
                             updateOne: {
                                 filter: { _id: user._id },
@@ -86,7 +73,6 @@ const startGlobalGrowthCron = () => {
                             }
                         });
                     } else {
-                        // ⏩ SAME DIN HAI: Normal increment karte raho
                         bulkOps.push({
                             updateOne: {
                                 filter: { _id: user._id },
@@ -99,21 +85,16 @@ const startGlobalGrowthCron = () => {
                     }
                 }
 
-                // Ek sath sabhi users ko DB mein update karo
                 if (bulkOps.length > 0) {
                     await User.bulkWrite(bulkOps);
                 }
-                // =======================================================
 
-
-                // B. SYSTEM TOTAL FAKE COUNT
                 await SystemStat.findOneAndUpdate(
                     {}, 
                     { $inc: { globalFakeCount: 1 } }, 
                     { upsert: true, returnDocument: 'after' }
                 );            
                 
-                // C. EK NAYI FAKE ID CREATE KARNA
                 const randomId = Math.floor(1000000 + Math.random() * 9000000); 
                 const isRealUser = await User.exists({ userId: randomId });
                 const isFakeUser = await FakeUser.exists({ userId: randomId });
@@ -140,16 +121,12 @@ const startGlobalGrowthCron = () => {
                         topUpAmount: 30,
                         date: new Date()
                     });
-                    
-                    console.log(`✅ Cron Success: Fake User [${randomName} - ${randomCountry} - #${randomId}] Created!`);
-                } else {
-                    console.log(`⚠️ ID Clash (${randomId}). Skipping fake user creation this is minute.`);
                 } 
             }
             
-            // 🔥 2. POOL UNLOCK DISTRIBUTION LOGIC (Koi Change Nahi)
+            // 🔥 2. POOL UNLOCK DISTRIBUTION LOGIC (INSTANT PAYOUT ADDED)
             const eligibleUsers = await User.find({ directCount: { $gte: 1 }, isToppedUp: true });
-            const todayStr = new Date().toISOString().split('T')[0]; 
+            const currentTodayStr = getISTDateStr();
 
             for (let user of eligibleUsers) {
                 let isUpdated = false;
@@ -164,14 +141,25 @@ const startGlobalGrowthCron = () => {
                         if (!existingPool) {
                             if (!user.activePools) user.activePools = [];
                             
-                          // 🔥 NAYA CODE (Sirf Pool unlock karega, paisa Midnight cron degi)
+                            // 🚀 NAYA LOGIC: Naya pool unlock hote hi aaj ka din aur paisa de do
                             user.activePools.push({
                                 level: lvl.level,
                                 dailyAmount: lvl.daily,
                                 totalDays: lvl.days,
-                                daysPaid: 0,       // 🔥 Day 0 set kiya hai, raat ko ye 1 ho jayega
-                                lastPaidDate: "",  // 🔥 Blank chhod diya taaki Midnight cron aaj hi isko pakad le
+                                daysPaid: 1,               // 🔥 Day 1
+                                lastPaidDate: currentTodayStr,    // 🔥 Aaj ki date
                                 status: 'ACTIVE'
+                            });
+
+                            user.poolIncome = (user.poolIncome || 0) + lvl.daily; 
+                            
+                            await Transaction.create({
+                                userId: user.userId,
+                                type: 'credit',
+                                source: 'pool',
+                                amount: lvl.daily,
+                                description: `Daily Community Income Level ${lvl.level} (Day 1 of ${lvl.days})`,
+                                status: 'success'
                             });
 
                             isUpdated = true;
@@ -187,12 +175,13 @@ const startGlobalGrowthCron = () => {
     });
 
     // =========================================================================
-    // 2. DAILY MIDNIGHT CRON (Koi Change Nahi)
+    // 2. DAILY MIDNIGHT CRON (Set to 11:30 AM temporarily for testing)
     // =========================================================================
+    // 🔥 Puraane users ko abhi 11:30 par paisa chala jayega
     cron.schedule('0 0 * * *', async () => {
         try {
             const users = await User.find({ "activePools.status": "ACTIVE" });
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getISTDateStr();
 
             for (let user of users) {
                 let isUpdated = false;
@@ -200,12 +189,15 @@ const startGlobalGrowthCron = () => {
                 for (let pool of user.activePools) {
                     if (pool.status === 'ACTIVE' && pool.daysPaid < pool.totalDays) {
                         
+                        // Agar usko aaj paisa mil gaya hai, toh rok do
                         if (pool.lastPaidDate === todayStr) {
                             continue; 
                         }
 
+                        // Paise add karo
                         user.poolIncome = (user.poolIncome || 0) + pool.dailyAmount; 
                         
+                        // Transaction history banao
                         await Transaction.create({
                             userId: user.userId,
                             type: 'credit',
@@ -215,10 +207,12 @@ const startGlobalGrowthCron = () => {
                             status: 'success'
                         });
 
+                        // Day count aage badhao aur aaj ki date daal do
                         pool.daysPaid += 1;
                         pool.lastPaidDate = todayStr; 
                         isUpdated = true;
 
+                        // Agar limits puri ho gayi toh pool Complete kardo
                         if (pool.daysPaid >= pool.totalDays) {
                             pool.status = 'COMPLETED';
                         }
@@ -226,9 +220,13 @@ const startGlobalGrowthCron = () => {
                 }
                 if (isUpdated) await user.save();
             }
+            console.log(`✅ [CRON] Community Payout Done for: ${todayStr}`);
         } catch (err) {
             console.error('[DAILY-POOL] Error:', err);
         }
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata" // India Time
     });
 };
 

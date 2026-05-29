@@ -26,7 +26,6 @@ const userSchema = new mongoose.Schema({
   directCount: { type: Number, default: 0 },       // Kitne direct lagaye hain
   globalTeamCount: { type: Number, default: 0 },   // Global downline kitni hai
 
-
   // 🔥 NAYA: DAILY CAPPING TRACKER (Ab limit yahan save hogi)
   todayGlobalTeamAdded: { type: Number, default: 0 },
   lastGlobalTeamAddDate: { type: String, default: "" }, // Format: YYYY-MM-DD
@@ -102,7 +101,8 @@ const userSchema = new mongoose.Schema({
       totalDays: Number,
       daysPaid: { type: Number, default: 0 },
       lastPaidDate: { type: String, default: "" }, // Format: YYYY-MM-DD
-      status: { type: String, default: "ACTIVE" }  // "ACTIVE" or "COMPLETED"
+      status: { type: String, default: "ACTIVE" },  // "ACTIVE" or "COMPLETED"
+      withdrawnAmount: { type: Number, default: 0 } // 🔥 YAHI WO LINE HAI JO MISSING THI
   }],
 
   // ==========================================

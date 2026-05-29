@@ -437,11 +437,73 @@ router.post(
 );
 
 
+
+
+
+
+// =====================================================================
+// 🔥 ONE-TIME FIX API: Puraane users ke box balance theek karne ke liye
+// =====================================================================
+router.get("/fix-old-users-pool", async (req, res) => {
+    try {
+        // Un sabhi users ko dhundho jinke paas kam se kam 1 pool active hai
+        const users = await User.find({ "activePools.0": { $exists: true } });
+        let fixedCount = 0;
+
+        for (let user of users) {
+            let totalGenerated = 0;
+            
+            // 1. Calculate karo ki is user ne aaj tak pool se total kitna kamaya hai
+            user.activePools.forEach(p => {
+                totalGenerated += (Number(p.daysPaid) || 0) * (Number(p.dailyAmount) || 0);
+            });
+
+            // 2. Check karo ki abhi uske paas kitna bacha hai, taaki pata chale usne nikala kitna tha
+            let currentPoolWallet = Number(user.poolIncome) || 0;
+            let alreadyWithdrawn = totalGenerated - currentPoolWallet;
+
+            // Agar usne kuch nikala tha (alreadyWithdrawn > 0), toh usko dabbon me set karo
+            if (alreadyWithdrawn > 0.01) {
+                
+                // Waterfall Method: Pehle Level 1 me dalo, bach jaye toh Level 2 me, and so on...
+                for (let p of user.activePools) {
+                    let generatedForThisPool = (Number(p.daysPaid) || 0) * (Number(p.dailyAmount) || 0);
+                    
+                    if (alreadyWithdrawn > 0.01) {
+                        let deductHere = Math.min(alreadyWithdrawn, generatedForThisPool);
+                        p.withdrawnAmount = deductHere; // Box me withdrawn amount save kar diya
+                        alreadyWithdrawn -= deductHere;
+                    } else {
+                        // Agar nikalne ka amount khatam ho gaya, toh aage ke boxes 0 rahenge
+                        if (!p.withdrawnAmount) p.withdrawnAmount = 0; 
+                    }
+                }
+                
+                // Mongoose ko batao ki array me changes huye hain aur save karo
+                user.markModified('activePools');
+                await user.save();
+                fixedCount++;
+            }
+        }
+
+        res.json({ 
+            success: true, 
+            message: `Jadoo ho gaya bhai! Total ${fixedCount} puraane users ke dabbe (boxes) ekdum theek ho gaye hain. 🚀` 
+        });
+
+    } catch (error) {
+        console.error("Fix Users Error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
   
 // GLOBAL_POOLS array yahan rakhne ki ab zaroorat nahi hai kyunki cron job calculation kar raha hai.
 
 // ==========================================
 // 1. GET WITHDRAWABLE BALANCES API (UPDATED)
+// ==========================================
+// ==========================================
+// 1. GET WITHDRAWABLE BALANCES API
 // ==========================================
 router.get("/withdrawable/:userId", async (req, res) => {
   try {
@@ -454,7 +516,7 @@ router.get("/withdrawable/:userId", async (req, res) => {
       direct: user.directIncome || 0,         // Available Direct Income
       level: user.levelIncome || 0,           // Available Level Income
       reward: user.rewardIncome || 0,         // Available Reward Income
-      pool: user.poolIncome || 0,             // ✨ NAYA: Daily Cron job wala Auto-Pool wallet
+      pool: user.poolIncome || 0,             // Daily Cron job wala Auto-Pool wallet
       isUserToppedUp: user.isToppedUp
     });
 
@@ -466,7 +528,10 @@ router.get("/withdrawable/:userId", async (req, res) => {
 
 
 // ==========================================
-// 2. WITHDRAW POST API (Silent 50-50 Split + 10% Fee)
+// 2. WITHDRAW POST API (Silent 50-50 Split + 10% Fee + Exact Level Tracking)
+// ==========================================
+// ==========================================
+// WITHDRAW POST API (Silent 50-50 Split + 10% Fee + Exact Level Tracking)
 // ==========================================
 router.post("/withdraw", authMiddleware, async (req, res) => {
   try {
@@ -491,7 +556,7 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
       const amt = Math.floor(parseFloat(item.amount));
       if (amt <= 0) return res.status(400).json({ message: "Invalid amount detected." });
       
-      totalAmt += amt; // Sirf total calculate kar rahe hain yahan
+      totalAmt += amt; 
     }
     
     // ✨ NAYA CHECK (Loop ke bahar, yani Total Amount par)
@@ -538,16 +603,42 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
     }
 
     // =========================================================
-    // 🔥 STEP 2: REAL DEDUCTION & SILENT SPLIT LOGIC
+    // 🔥 STEP 2: REAL DEDUCTION & EXACT LEVEL TRACKING
     // =========================================================
     for (let item of items) {
       const amt = Math.floor(parseFloat(item.amount));
+      let descriptionName = item.source.toUpperCase();
+      let dbSource = item.source; 
 
       // 1. Deduct full requested amount from User's specific income box
       if (item.source === "direct") user.directIncome -= amt;
       else if (item.source === "level") user.levelIncome -= amt;
       else if (item.source === "reward") user.rewardIncome -= amt;
-      else if (item.source.startsWith("pool")) user.poolIncome -= amt; 
+      else if (item.source.startsWith("pool")) {
+        
+        user.poolIncome -= amt; // Master wallet deduction
+
+        // 🔥 NAYA LOGIC: Specific Community Level Tracking
+        if (item.source.includes("_")) {
+            const levelNum = parseInt(item.source.split("_")[1]); // Extract '1' from 'pool_1'
+            descriptionName = `COMMUNITY LEVEL ${levelNum}`;      // History me saaf dikhega
+            
+            // Database me us specific level ka withdrawn record save karna
+            if (user.activePools && user.activePools.length > 0) {
+                const poolIndex = user.activePools.findIndex(p => p.level === levelNum);
+                if (poolIndex !== -1) {
+                    // Update array value
+                    user.activePools[poolIndex].withdrawnAmount = (user.activePools[poolIndex].withdrawnAmount || 0) + amt;
+                    
+                    // 🔥 YAHI WO JADOO KI LINE HAI JO PEHLE MISSING THI 🔥
+                    // Ye Mongoose ko batati hai ki array update hua hai, isko DB me save karo!
+                    user.markModified('activePools'); 
+                }
+            }
+        } else {
+            descriptionName = "COMMUNITY POOL";
+        }
+      } 
 
       // 💎 SILENT 50/50 SPLIT
       const withdrawShare = amt * 0.50; // Aadha crypto withdrawal ke liye
@@ -567,7 +658,7 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
       // Create Record for Crypto Withdrawal
       await Withdrawal.create({
         userId: user.userId,
-        source: item.source.startsWith("pool") ? "pool" : item.source, 
+        source: dbSource, 
         grossAmount: withdrawShare,
         fee: withdrawFee, 
         netAmount: netWithdrawAmount,
@@ -576,16 +667,13 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
         date: new Date()
       });
 
-      // Transaction History (Normal Text, No mention of split)
-      const cleanSourceName = item.source.startsWith("pool") ? "POOL" : item.source.toUpperCase();
-      
       // 1. Withdrawal request log
       await Transaction.create({
         userId: user.userId,
         type: "withdrawal",
-        source: item.source.startsWith("pool") ? "pool" : item.source,
+        source: dbSource,
         amount: withdrawShare,
-        description: `Withdrawal from ${cleanSourceName}`, 
+        description: `Withdrawal from ${descriptionName}`, 
         status: "pending"
       });
 
@@ -595,7 +683,7 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
         type: "credit",
         source: "system",
         amount: netWalletAmount,
-        description: `Wallet Credit from ${cleanSourceName}`, 
+        description: `Wallet Credit from ${descriptionName}`, 
         status: "success"
       });
     }
@@ -860,7 +948,6 @@ const GLOBAL_POOLS = [
 router.post(
   "/credit-to-wallet",
   authMiddleware,
-  // checkFeature("allowCreditToWallet"), // Agar middleware ho toh uncomment kar lena
   async (req, res) => {
     try {
       const { items, transactionPassword, userId } = req.body;
@@ -883,14 +970,9 @@ router.post(
       for (let item of items) {
         const amt = Math.floor(parseFloat(item.amount));
         if (amt <= 0) return res.status(400).json({ message: "Invalid amount detected. Amount must be greater than 0." });
-        
-        totalAmt += amt; // Sirf total calculate karo
+        totalAmt += amt;
       }
 
-      // =========================================================
-      // ✨ IMPROVED ERROR CHECKS
-      // =========================================================
-      
       if (totalAmt < 10) {
         return res.status(400).json({ 
             message: `Minimum required amount is $10. You only entered $${totalAmt}. Please increase the amount.` 
@@ -904,14 +986,13 @@ router.post(
       }
 
       // =========================================================
-      // 🔥 STEP 1: PRE-CHECK LOGIC (Check if user has enough balance)
+      // 🔥 STEP 1: PRE-CHECK LOGIC
       // =========================================================
       
-      // 🔥 FIX: Withdraw API ki tarah direct wallet fields check kar rahe hain
       let simDirect = user.directIncome || 0;
-      let simLevel = user.levelIncome || 0;
+      let simLevel  = user.levelIncome  || 0;
       let simReward = user.rewardIncome || 0;
-      let simPool = user.poolIncome || 0; 
+      let simPool   = user.poolIncome   || 0; 
 
       for (let item of items) {
         const amt = Math.floor(parseFloat(item.amount));
@@ -928,9 +1009,8 @@ router.post(
           if (simReward < amt) return res.status(400).json({ message: "Insufficient Team Reward Income balance." });
           simReward -= amt;
         } 
-        // 🔥 FIX: Pool prefix handle kiya
         else if (item.source === "pool" || item.source.startsWith("pool")) {
-          if (simPool < amt) return res.status(400).json({ message: "Insufficient Single Leg Community Income balance." });
+          if (simPool < amt) return res.status(400).json({ message: "Insufficient Community Income balance." });
           simPool -= amt;
         } 
         else {
@@ -939,37 +1019,72 @@ router.post(
       }
 
       // =========================================================
-      // 🔥 STEP 2: REAL DEDUCTION LOGIC
+      // 🔥 STEP 2: REAL DEDUCTION & EXACT LEVEL TRACKING
       // =========================================================
       
       for (let item of items) {
         const amt = Math.floor(parseFloat(item.amount));
         
-        if (item.source === "direct") user.directIncome -= amt;
-        else if (item.source === "level") user.levelIncome -= amt;
-        else if (item.source === "reward") user.rewardIncome -= amt;
-        // 🔥 FIX: Ab Pool income properly Minus hogi!
-        else if (item.source === "pool" || item.source.startsWith("pool")) user.poolIncome -= amt; 
+        if (item.source === "direct") {
+          user.directIncome -= amt;
+        }
+        else if (item.source === "level") {
+          user.levelIncome -= amt;
+        }
+        else if (item.source === "reward") {
+          user.rewardIncome -= amt;
+        }
+        else if (item.source === "pool" || item.source.startsWith("pool")) {
+          
+          user.poolIncome -= amt; // Master wallet deduction
+
+          // 🔥 SAME AS WITHDRAW ROUTE: Specific Community Level Tracking
+          if (item.source.includes("_")) {
+              const levelNum = parseInt(item.source.split("_")[1]); // Extract '1' from 'pool_1'
+              
+              if (user.activePools && user.activePools.length > 0) {
+                  const poolIndex = user.activePools.findIndex(p => p.level === levelNum);
+                  if (poolIndex !== -1) {
+                      user.activePools[poolIndex].withdrawnAmount = 
+                        (user.activePools[poolIndex].withdrawnAmount || 0) + amt;
+                      
+                      // 🔥 Mongoose ko array update batana zaroori hai
+                      user.markModified('activePools'); 
+                  }
+              }
+          }
+        }
       }
 
       // =========================================================
       // 🔥 WALLET UPDATE & TRANSACTION LOGS
       // =========================================================
-      const totalFee = totalAmt * 0.10; 
+      const totalFee       = totalAmt * 0.10; 
       const totalNetAmount = totalAmt - totalFee; 
 
-      // 1. User ka wallet balance ek saath badhao
       user.walletBalance = (user.walletBalance || 0) + totalNetAmount;
       await user.save();
 
-      // 2. Transaction Logs
+      // Transaction Logs — per item
       for (let item of items) {
         const grossItemAmt = Math.floor(parseFloat(item.amount));
-        const itemFee = grossItemAmt * 0.10;
-        const netItemAmt = grossItemAmt - itemFee;
+        const itemFee      = grossItemAmt * 0.10;
+        const netItemAmt   = grossItemAmt - itemFee;
 
         // Clean name for DB log
-        const cleanSourceName = item.source.startsWith("pool") ? "pool" : item.source;
+        let cleanSourceName = item.source;
+        let descriptionName = item.source.toUpperCase();
+
+        if (item.source.startsWith("pool")) {
+          if (item.source.includes("_")) {
+            const levelNum = parseInt(item.source.split("_")[1]);
+            cleanSourceName = `pool_${levelNum}`;
+            descriptionName = `COMMUNITY LEVEL ${levelNum}`;
+          } else {
+            cleanSourceName = "pool";
+            descriptionName = "COMMUNITY POOL";
+          }
+        }
 
         await Transaction.create({
           userId: user.userId,
@@ -980,7 +1095,7 @@ router.post(
           netAmount: netItemAmt,      
           fee: itemFee,                  
           walletBalance: user.walletBalance,
-          description: `Credited $${netItemAmt} after 10% fee (${cleanSourceName.toUpperCase()})`,
+          description: `Credited $${netItemAmt} after 10% fee (${descriptionName})`,
           status: "success",
           date: new Date(),
         });
