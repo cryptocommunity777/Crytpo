@@ -10,13 +10,12 @@ const WalletHistory = () => {
   const [typeFilter, setTypeFilter] = useState("all");
   const [userId, setUserId] = useState(null);
   
-  // 🔥 NAYA STATE: User ka role check karne ke liye
+  // 🔥 ROLE STATE
   const [userRole, setUserRole] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // ✅ Allowed types for Main Wallet
   const allTypes = [
     "deposit",
     "credit_to_wallet",
@@ -27,7 +26,7 @@ const WalletHistory = () => {
     "withdrawal",
     "manual_credit",
     "manual_debit",
-    "fast_track" // 🔥 Fast Track allowed
+    "fast_track" 
   ];
   const types = ["all", ...allTypes];
 
@@ -39,7 +38,7 @@ const WalletHistory = () => {
       if (!parsedUser?.userId) throw new Error("Invalid user");
       setUserId(String(parsedUser.userId));
       
-      // 🔥 ROLE SAVE KIYA: Taaki aage check kar sakein
+      // Role save kiya
       setUserRole(parsedUser.role ? parsedUser.role.toLowerCase() : "");
 
       fetchWalletHistory(String(parsedUser.userId));
@@ -56,7 +55,6 @@ const WalletHistory = () => {
     setError("");
     const res = await api.get(`/wallet/history/${uid}?t=${new Date().getTime()}`);
 
-    // 🛡️ Safe data extraction: success:true wale format ke liye
     let txns = [];
     if (res.data && Array.isArray(res.data.history)) {
       txns = res.data.history;
@@ -67,22 +65,20 @@ const WalletHistory = () => {
     const formattedHistory = txns
       .filter(t => allTypes.includes(t.type))
       .filter(t => {
-        // 🔥 AUTO-POOL, UNLOCK, AUR DAILY SINGLE LEG ENTRY HIDE KARO
         const desc = (t.description || "").toLowerCase();
         return !(
           desc.includes("auto-pool") || 
           desc.includes("pool level") || 
           desc.includes("pool income") ||
-          desc.includes("singel leg") ||      // Old typo hide
-          desc.includes("single leg") ||      // New correct spelling hide
-          desc.includes("community income") || // Daily single leg community income hide
-          desc.includes("unlocked") ||         // Unlocked entry hide
-          desc.includes("instant leader bonus") || // 🔥 NAYA: Instant Leader Bonus hide
-          desc.includes("instant bonus from downline") // 🔥 NAYA: Normal Instant Bonus hide
+          desc.includes("singel leg") ||      
+          desc.includes("single leg") ||      
+          desc.includes("community income") || 
+          desc.includes("unlocked") ||         
+          desc.includes("instant leader bonus") || 
+          desc.includes("instant bonus from downline") 
         );
       })
       .map(t => {
-        // 💰 Universal Amount Extractor: Sab kuch handle karega
         let val = 0;
         if (t.amount && typeof t.amount === 'object' && t.amount.$numberDecimal) {
           val = parseFloat(t.amount.$numberDecimal);
@@ -95,11 +91,10 @@ const WalletHistory = () => {
         return {
           ...t,
           date: t.createdAt || t.date,
-          rawAmount: isNaN(val) ? 0 : val // Ensure valid number
+          rawAmount: isNaN(val) ? 0 : val
         };
       });
 
-    // Date sorting: Oldest to Newest for balance calculation
     formattedHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
     setTransactions(formattedHistory);
 
@@ -112,7 +107,7 @@ const WalletHistory = () => {
 };
 
  const calculateBalances = () => {
-  let runningBalance = 0; // Local variable to track running total
+  let runningBalance = 0; 
 
   return transactions.map((txn) => {
     let mathImpact = 0;
@@ -122,7 +117,6 @@ const WalletHistory = () => {
     let displayTypeUI = "UNKNOWN";
     let icon = <History size={14} />;
 
-    // 🛡️ SAFER EXTRACTION: Ensure 'amt' is always a valid number
     const amt = Number(txn.rawAmount || 0);
     const myId = String(userId);
     const fromId = txn.fromUserId ? String(txn.fromUserId) : "";
@@ -143,7 +137,7 @@ const WalletHistory = () => {
 
       case "fast_track":
         mathImpact = amt;
-        colorStyle = "text-blue-500"; // Blue for distinct look
+        colorStyle = "text-blue-500"; 
         operator = "+";
         displayTypeUI = "FAST TRACK";
         icon = <Zap size={14} className="text-blue-500" />;
@@ -158,7 +152,6 @@ const WalletHistory = () => {
         break;
 
       case "withdrawal":
-        // 💡 Note: If status is 'pending', impact is 0. If 'success', it's -amt.
         mathImpact = txn.status === "success" || txn.status === "completed" ? -amt : 0;
         colorStyle = "text-slate-500";
         operator = mathImpact < 0 ? "-" : "";
@@ -194,14 +187,15 @@ const WalletHistory = () => {
             colorStyle = "text-yellow-500";
             operator = "";
           } 
-          // 🔥 NAYA LOGIC: Agar user ka role "leader" hai, toh balance nahi katega
+          // 🔥 LEADER LOGIC: Agar user "leader" hai, toh entry dikhegi par balance minus nahi hoga
           else if (userRole === "leader" || finalDescription.toLowerCase().includes("leader")) {
-            mathImpact = 0; // Balance change zero!
-            colorStyle = "text-slate-500"; // Neutral color
-            operator = ""; // Minus hata diya
+            mathImpact = 0; 
+            colorStyle = "text-slate-500"; 
+            operator = ""; 
           } 
+          // 👤 NORMAL USER LOGIC: Pura minus hoga
           else {
-            mathImpact = -amt; // Normal user ke liye minus chalega
+            mathImpact = -amt; 
             colorStyle = "text-red-500";
             operator = "-";
           }
@@ -216,13 +210,18 @@ const WalletHistory = () => {
         break;
     }
 
-    runningBalance += mathImpact;
+    // 🔥 MAIN BALANCE LOGIC 
+    // Normal User = mathImpact jodega ya ghatayega
+    // Leader = running balance change nahi hoga (Hamesha 0 rahega)
+    if (userRole !== "leader") {
+        runningBalance += mathImpact;
+    }
 
     return {
       ...txn,
       description: finalDescription,
-      // 🛡️ Safety Check for toFixed
-      balance: (runningBalance || 0).toFixed(2),
+      // Leader ko strictly 0.00 dikhega, Normal User ko uski running balance
+      balance: userRole === "leader" ? "0.00" : (runningBalance || 0).toFixed(2),
       colorStyle,
       formattedAmount: `${operator} $${(amt || 0).toFixed(2)}`,
       displayTypeUI,
@@ -405,8 +404,8 @@ const WalletHistory = () => {
                   <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize whitespace-normal min-w-[200px]" title={txn.description || "-"}>
   {txn.description 
     ? txn.description
-        .replace(/leader settlement:?\s*/gi, "") // 🔥 Ye "Leader Settlement" hata dega
-        .replace(/pool/gi, "Community Income")   // Ye "pool" ko replace karega
+        .replace(/leader settlement:?\s*/gi, "") 
+        .replace(/pool/gi, "Community Income")   
     : "-"}
 </td>
                     
