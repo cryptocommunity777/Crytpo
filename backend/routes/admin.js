@@ -1199,7 +1199,7 @@ const user = await User.findOne({ userId: req.params.userId });
 
 
 
- 
+
  
 const REWARD_MILESTONES = [
   { target: 50, strongLeg: 25, otherLegs: 25, reward: 30, title: "Target 1 (50 Points)" },
@@ -1412,103 +1412,94 @@ router.get('/monthly-reward-progress', async (req, res) => {
         res.status(500).json({ success: false, message: "Server error" });
     }
 });
+
 // ==========================================
 // 1. OPTIMIZED TRANSACTIONS ROUTE
-// ==========================================
-// ==========================================
-// 1. OPTIMIZED TRANSACTIONS ROUTE
-// ==========================================
-// ==========================================
-// 1. FULL TRANSACTIONS ROUTE (NO LIMIT)
 // ==========================================
 router.get("/transactions", verifyAdmin, async (req, res) => {
   try {
-    // 🔥 LIMIT HATA DI HAI - Ab shuru se lekar end tak saara data aayega
+    // 🔥 LIMIT ADDED: Sirf latest 3000 transactions layega (No Server Crash)
+    const limit = parseInt(req.query.limit) || 3000;
+
     const transactions = await Transaction.find()
       .sort({ createdAt: -1 })
-      .lean(); // Lean = Super Fast Query for bulk data
+      .limit(limit)
+      .lean();
 
-    // Smart Fetch: Sirf related users laayega memory save karne ke liye
+    // 🔥 SMART FETCH: Sirf wahi users fetch karega jinki transaction in 3000 mein hai (Saves 90% RAM)
     const userIds = [...new Set(
       transactions.flatMap(tx => [tx.userId, tx.fromUserId, tx.toUserId]).filter(Boolean)
     )];
 
     const users = await User.find({ userId: { $in: userIds } }, { userId: 1, name: 1 }).lean();
+
+    // Map userId -> name
     const userMap = Object.fromEntries(users.map(u => [u.userId, u.name]));
 
-    const formatted = transactions.map(tx => {
-      // Decimal128 handling jisse amount kabhi kharab ya 0 nahi hoga
-      let safeAmount = 0;
-      if (tx.amount) {
-        if (tx.amount.$numberDecimal) safeAmount = parseFloat(tx.amount.$numberDecimal);
-        else safeAmount = parseFloat(tx.amount.toString()) || 0;
-      }
+    // Format transactions
+    const formatted = transactions.map(tx => ({
+      _id: tx._id,
+      userId: tx.userId,
+      name: userMap[tx.userId] || "Unknown",
+      type: tx.type,
+      // 🔥 FIX: Decimal128 error se bachne ke liye safe parsing
+      amount: tx.amount ? parseFloat(tx.amount.toString()) : 0,
+      source: tx.source || "-",          
+      description: tx.description || "",  
+      fromUserId: tx.fromUserId || null,
+      toUserId: tx.toUserId || null,
+      fromName: tx.fromUserId ? (userMap[tx.fromUserId] || "N/A") : "-",
+      toName: tx.toUserId ? (userMap[tx.toUserId] || "N/A") : "-",
+      package: tx.package || null,
+      plan: tx.plan || null,
+      level: tx.level || null,
+      date: tx.date || tx.createdAt || new Date(),
+      createdAt: tx.createdAt || new Date(),
+      updatedAt: tx.updatedAt || new Date(),
+      txnHash: tx.txnHash || tx.txHash || null, 
+      status: tx.status || "completed"
+    }));
 
-      return {
-        _id: tx._id,
-        userId: tx.userId,
-        name: userMap[tx.userId] || "Unknown",
-        type: tx.type,
-        amount: safeAmount, 
-        source: tx.source || "-",          
-        description: tx.description || "",  
-        fromUserId: tx.fromUserId || null,
-        toUserId: tx.toUserId || null,
-        fromName: tx.fromUserId ? (userMap[tx.fromUserId] || "N/A") : "-",
-        toName: tx.toUserId ? (userMap[tx.toUserId] || "N/A") : "-",
-        package: tx.package || null,
-        plan: tx.plan || null,
-        level: tx.level || null,
-        date: tx.date || tx.createdAt || new Date(),
-        createdAt: tx.createdAt || new Date(),
-        updatedAt: tx.updatedAt || new Date(),
-        txnHash: tx.txnHash || tx.txHash || null, 
-        status: tx.status || "completed"
-      };
-    });
-
-    res.json({ success: true, data: formatted });
+    // Array return kar rahe hain, aapka frontend direct isko map kar lega
+    res.json(formatted);
   } catch (error) {
-    console.error("Failed to fetch all transactions:", error);
-    res.status(500).json({ success: false, message: "Failed to fetch transactions" });
+    console.error("Failed to fetch transactions:", error);
+    res.status(500).json({ message: "Failed to fetch transactions" });
   }
 });
 
 
 // ==========================================
-// 2. FULL DEPOSITS ROUTE (NO LIMIT)
+// 2. OPTIMIZED DEPOSITS ROUTE
 // ==========================================
 router.get('/deposits', verifyAdmin, async (req, res) => {
   try {
-    // 🔥 LIMIT HATA DI HAI - Saare deposits ek sath fetch honge
+    // 🔥 LIMIT & LEAN ADDED: Super fast query
+    const limit = parseInt(req.query.limit) || 3000;
     const deposits = await Deposit.find()
       .sort({ createdAt: -1 })
+      .limit(limit)
       .lean(); 
 
+    // 🔥 SMART FETCH: Sirf related users
     const userIds = [...new Set(deposits.map(dep => dep.userId).filter(Boolean))];
     const users = await User.find({ userId: { $in: userIds } }, { userId: 1, name: 1 }).lean();
+
     const userMap = Object.fromEntries(users.map(u => [u.userId, u.name]));
 
-    const enriched = deposits.map(dep => {
-      let safeAmount = 0;
-      if (dep.amount) {
-        if (dep.amount.$numberDecimal) safeAmount = parseFloat(dep.amount.$numberDecimal);
-        else safeAmount = parseFloat(dep.amount.toString()) || 0;
-      }
+    const enriched = deposits.map(dep => ({
+      ...dep, // .lean() use kiya hai isliye .toObject() ki zaroorat nahi
+      name: userMap[dep.userId] || 'Unknown',
+      amount: dep.amount ? parseFloat(dep.amount.toString()) : 0
+    }));
 
-      return {
-        ...dep,
-        name: userMap[dep.userId] || 'Unknown',
-        amount: safeAmount
-      };
-    });
-
-    res.json({ success: true, data: enriched });
+    res.json(enriched);
   } catch (err) {
-    console.error('Failed to fetch all deposits:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch deposits' });
+    console.error('Failed to fetch deposits:', err);
+    res.status(500).json({ message: 'Failed to fetch deposits' });
   }
 });
+
 
 
 
