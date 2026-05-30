@@ -57,13 +57,8 @@ const AdminWalletHistory = () => {
   ];
   const types = ["all", ...allTypes];
 
-  useEffect(() => {
-    fetchAllWalletHistory();
-  }, []);
-
   const fetchAllWalletHistory = async () => {
     try {
-      setLoading(true);
       const token = localStorage.getItem("adminToken");
       if (!token) {
         setError("Unauthorized. Please login as admin.");
@@ -71,13 +66,15 @@ const AdminWalletHistory = () => {
         return;
       }
 
+      // API call shuru hui
       const res = await api.get("/admin/wallet-summary", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // API Data extraction (Handle both nested {data: []} and direct array)
-      const rawData = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
-      
+      // Response structure handle karna
+      const rawData = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+
+      // Filter array (Ye types display nahi karni hain)
       const excludeTypes = [
         "direct_income",
         "level_income",
@@ -86,82 +83,85 @@ const AdminWalletHistory = () => {
         "roi_income",
       ];
 
-      // 🔥 SUPER FAST OPTIMIZATION: Single Loop for Filtering and Timestamp creation
-      const validTxns = [];
+      // 🔥 FAST MAP/FILTER: Ek hi loop mein exclude aur normalize karna
+      const validData = [];
       for (let i = 0; i < rawData.length; i++) {
         const tx = rawData[i];
         if (!excludeTypes.includes(tx.type)) {
-           // Date parsing done ONLY ONCE here
-           const parsedTimestamp = new Date(tx.createdAt || tx.date).getTime();
-           validTxns.push({
+           // Date parsing once to save browser calculation time later
+           const parsedTime = new Date(tx.createdAt || tx.date).getTime();
+           validData.push({
              ...tx,
-             timestamp: isNaN(parsedTimestamp) ? 0 : parsedTimestamp
+             // Timestamp store kar lete hain taaki dates baar-baar parse na karni padein
+             timestamp: isNaN(parsedTime) ? 0 : parsedTime 
            });
         }
       }
 
-      // Sort: Latest First
-      validTxns.sort((a, b) => b.timestamp - a.timestamp);
-      setTransactions(validTxns);
+      // Sort Descending (Nayi transaction pehle)
+      validData.sort((a, b) => b.timestamp - a.timestamp);
 
+      setTransactions(validData);
     } catch (err) {
       console.error("Admin wallet history fetch error:", err);
       setError("Failed to load wallet history.");
     } finally {
-      setLoading(false);
+      setLoading(false); // Spinner band kardo
     }
   };
+
+  useEffect(() => {
+    fetchAllWalletHistory();
+  }, []);
 
   // 🔹 Handle Pagination Reset on Filter Change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, typeFilter, fromDate, toDate, itemsPerPage]);
 
-  // 🔥 FAST MEMOIZED FILTERING (Browser hang nahi hoga)
+  // 🔥 MAIN FILTERING LOGIC (Using useMemo just like UserListTable to avoid freezing)
   const filteredTxns = useMemo(() => {
     const lowerSearch = searchTerm.toLowerCase();
     
-    // Dates ko loop ke bahar process karo taaki har entry par dobara na karna pade
-    const fromTime = fromDate ? new Date(fromDate).setHours(0, 0, 0, 0) : null;
-    const toTime = toDate ? new Date(toDate).setHours(23, 59, 59, 999) : null;
+    // Dates ko useMemo ke andar loop se pehle process karte hain
+    const filterFromTime = fromDate ? new Date(fromDate).setHours(0, 0, 0, 0) : null;
+    const filterToTime = toDate ? new Date(toDate).setHours(23, 59, 59, 999) : null;
 
     return transactions.filter((txn) => {
-      // 1. Type Filter Fast Check
+      // 1. Type Filter (Sabse fast condition pehle)
       if (typeFilter !== "all" && txn.type !== typeFilter) return false;
 
-      // 2. Date Range Filter Fast Check
-      if (fromTime && txn.timestamp < fromTime) return false;
-      if (toTime && txn.timestamp > toTime) return false;
+      // 2. Date Filter
+      if (filterFromTime && txn.timestamp < filterFromTime) return false;
+      if (filterToTime && txn.timestamp > filterToTime) return false;
 
-      // 3. Search Filter
+      // 3. Search Filter (Slightly heavy string matching)
       if (lowerSearch) {
         const matchesSearch =
           (txn.userId && String(txn.userId).toLowerCase().includes(lowerSearch)) ||
           (txn.name && txn.name.toLowerCase().includes(lowerSearch)) ||
-          (txn.type && txn.type.toLowerCase().includes(lowerSearch)) ||
           (txn.description && txn.description.toLowerCase().includes(lowerSearch));
+          
         if (!matchesSearch) return false;
       }
 
-      return true;
+      return true; // Agar saari conditions pass hui, toh dikhao
     });
   }, [transactions, searchTerm, typeFilter, fromDate, toDate]);
 
-  // 🔹 Pagination Slicing
+  // 🔹 Pagination Slicing (Sirf required rows nikalna)
   const totalPages = Math.ceil(filteredTxns.length / itemsPerPage) || 1;
   const validCurrentPage = Math.min(currentPage, totalPages);
   
   const indexOfLastItem = validCurrentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  
+  // 🔥 Sirf display hone wali (e.g. 10 ya 20) items yahan cut hongi
   const currentItems = filteredTxns.slice(indexOfFirstItem, indexOfLastItem);
 
   const handleNext = () => { if (validCurrentPage < totalPages) setCurrentPage((prev) => prev + 1); };
   const handlePrev = () => { if (validCurrentPage > 1) setCurrentPage((prev) => prev - 1); };
-  
-  const handleEntriesChange = (e) => {
-    setItemsPerPage(Number(e.target.value));
-    setCurrentPage(1);
-  };
+  const handleEntriesChange = (e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); };
 
   // 🔹 Copy Function
   const handleCopy = (text) => {
@@ -169,7 +169,7 @@ const AdminWalletHistory = () => {
     alert(`Copied ID: ${text}`);
   };
 
-  // 🔹 Export filtered history to CSV
+  // 🔹 Export
   const exportToCSV = () => {
     const csvData = filteredTxns.map((txn, i) => ({
       SNo: i + 1,
@@ -189,7 +189,11 @@ const AdminWalletHistory = () => {
   };
 
   if (loading) {
-    return <div className="p-10 text-center text-indigo-600 font-bold tracking-widest uppercase animate-pulse">⏳ Fetching Wallet History...</div>;
+    return (
+      <div className="p-4 text-center text-indigo-600 text-lg font-bold mt-10 animate-pulse">
+        ⏳ Loading massive wallet history... Please wait
+      </div>
+    );
   }
 
   if (error) {
@@ -229,21 +233,21 @@ const AdminWalletHistory = () => {
             ))}
           </select>
 
-          <div className="flex items-center gap-2 border border-gray-300 rounded px-3 py-2 bg-white shadow-sm w-full md:w-auto">
-            <span className="text-sm text-gray-500 whitespace-nowrap">From:</span>
+          <div className="flex items-center gap-2 border border-gray-300 rounded px-3 py-2 bg-white shadow-sm">
+            <span className="text-sm text-gray-500">From:</span>
             <input
               type="date"
-              className="outline-none bg-transparent w-full"
+              className="outline-none bg-transparent"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
             />
           </div>
 
-          <div className="flex items-center gap-2 border border-gray-300 rounded px-3 py-2 bg-white shadow-sm w-full md:w-auto">
-            <span className="text-sm text-gray-500 whitespace-nowrap">To:</span>
+          <div className="flex items-center gap-2 border border-gray-300 rounded px-3 py-2 bg-white shadow-sm">
+            <span className="text-sm text-gray-500">To:</span>
             <input
               type="date"
-              className="outline-none bg-transparent w-full"
+              className="outline-none bg-transparent"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
             />
@@ -252,7 +256,7 @@ const AdminWalletHistory = () => {
           {(fromDate || toDate) && (
             <button
               onClick={() => { setFromDate(""); setToDate(""); }}
-              className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded shadow-sm text-sm font-medium transition whitespace-nowrap"
+              className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded shadow-sm text-sm font-medium transition"
             >
               Clear Dates
             </button>
@@ -271,13 +275,13 @@ const AdminWalletHistory = () => {
         </div>
 
         {/* Export & Count */}
-        <div className="flex gap-4 items-center justify-between md:justify-end border-t md:border-t-0 border-gray-200 pt-4 md:pt-0">
-          <span className="text-gray-600 text-sm font-bold bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+        <div className="flex gap-4 items-center justify-between md:justify-end">
+          <span className="text-gray-600 text-sm font-medium">
             Total: {filteredTxns.length}
           </span>
           <button
             onClick={exportToCSV}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded shadow transition text-sm whitespace-nowrap"
+            className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded shadow transition text-sm"
           >
             Export CSV
           </button>
@@ -285,8 +289,8 @@ const AdminWalletHistory = () => {
       </div>
 
       {/* Table */}
-      <div className="overflow-auto border rounded-lg shadow-sm">
-        <table className="min-w-full bg-white text-sm text-left">
+      <div className="overflow-auto border rounded-lg shadow-sm bg-white">
+        <table className="min-w-full text-sm text-left">
           <thead className="bg-gray-100 text-gray-600 uppercase text-xs border-b">
             <tr>
               <th className="px-4 py-3 border-r">#</th>
@@ -304,7 +308,7 @@ const AdminWalletHistory = () => {
             {currentItems.length === 0 ? (
               <tr>
                 <td colSpan="9" className="text-center px-4 py-8 text-gray-500 font-bold uppercase tracking-widest">
-                  No transactions found matching your criteria.
+                  No transactions found.
                 </td>
               </tr>
             ) : (
@@ -314,12 +318,12 @@ const AdminWalletHistory = () => {
 
                 return (
                   <tr key={txn._id || idx} className="hover:bg-gray-50 border-b transition">
-                    <td className="px-4 py-3 text-gray-600 border-r font-bold">{serialNo}</td>
+                    <td className="px-4 py-3 text-gray-600 border-r">{serialNo}</td>
                     
                     {/* Copyable User ID */}
                     <td className="px-4 py-3 border-r">
                       <div className="flex items-center gap-2">
-                        <span className="font-black text-indigo-600">#{txn.userId}</span>
+                        <span className="font-bold text-indigo-600">{txn.userId}</span>
                         <button
                           onClick={() => handleCopy(txn.userId?.toString())}
                           title="Copy User ID"
@@ -332,31 +336,31 @@ const AdminWalletHistory = () => {
                       </div>
                     </td>
 
-                    <td className="px-4 py-3 border-r text-gray-800 font-bold capitalize">{txn.name || "-"}</td>
+                    <td className="px-4 py-3 border-r text-gray-800 font-medium">{txn.name || "-"}</td>
                     
                     <td className="px-4 py-3 border-r capitalize">
-                      <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider whitespace-nowrap border border-gray-200">
+                      <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-semibold whitespace-nowrap border border-gray-200">
                         {(txn.type || "unknown").replace(/_/g, " ")}
                       </span>
                     </td>
 
-                    <td className={`px-4 py-3 border-r font-black whitespace-nowrap ${isCredit ? 'text-green-600' : 'text-red-500'}`}>
+                    <td className={`px-4 py-3 border-r font-bold whitespace-nowrap ${isCredit ? 'text-green-600' : 'text-red-500'}`}>
                       ${formatAmount(txn.amount)}
                     </td>
 
-                    <td className="px-4 py-3 border-r font-black text-gray-800 whitespace-nowrap">
+                    <td className="px-4 py-3 border-r font-bold text-gray-700 whitespace-nowrap">
                       ${formatAmount(txn.walletBalance || 0)}
                     </td>
 
-                    <td className="px-4 py-3 border-r text-gray-600 text-xs max-w-[200px] truncate" title={txn.description || "-"}>
+                    <td className="px-4 py-3 border-r text-gray-600 text-xs max-w-xs truncate" title={txn.description || "-"}>
                       {txn.description || "-"}
                     </td>
 
-                    <td className="px-4 py-3 border-r text-gray-600 font-bold whitespace-nowrap">
+                    <td className="px-4 py-3 border-r text-gray-500 whitespace-nowrap font-medium">
                       {new Date(txn.timestamp).toLocaleDateString("en-GB")}
                     </td>
 
-                    <td className="px-4 py-3 text-gray-500 text-xs font-semibold whitespace-nowrap">
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap font-medium text-xs">
                       {new Date(txn.timestamp).toLocaleTimeString("en-US", { hour12: true })}
                     </td>
                   </tr>
@@ -370,7 +374,7 @@ const AdminWalletHistory = () => {
       {/* Pagination Footer */}
       {filteredTxns.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mt-4 text-sm">
-          <span className="text-gray-600 font-bold uppercase tracking-widest text-[10px] md:text-xs">
+          <span className="text-gray-600 font-bold uppercase tracking-widest text-[11px]">
             Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredTxns.length)} of {filteredTxns.length} entries
           </span>
           
@@ -381,13 +385,13 @@ const AdminWalletHistory = () => {
               className={`px-4 py-1.5 border rounded-lg font-bold transition ${
                 validCurrentPage === 1 
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' 
-                  : 'bg-white hover:bg-indigo-50 text-indigo-700 border-indigo-200'
+                  : 'bg-white hover:bg-indigo-50 text-indigo-700'
               }`}
             >
-              Prev
+              Previous
             </button>
             
-            <button className="px-4 py-1.5 border rounded-lg bg-indigo-600 text-white font-black shadow-md">
+            <button className="px-4 py-1.5 border rounded-lg bg-indigo-600 text-white font-black shadow">
               {validCurrentPage} / {totalPages}
             </button>
 
@@ -397,7 +401,7 @@ const AdminWalletHistory = () => {
               className={`px-4 py-1.5 border rounded-lg font-bold transition ${
                 validCurrentPage === totalPages 
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' 
-                  : 'bg-white hover:bg-indigo-50 text-indigo-700 border-indigo-200'
+                  : 'bg-white hover:bg-indigo-50 text-indigo-700'
               }`}
             >
               Next

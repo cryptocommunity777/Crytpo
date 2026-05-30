@@ -1,8 +1,8 @@
 // C:\Users\HP\Desktop\Cryptocommunity\frontend\src\pages\admin\MonthlyRewardReport.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../api/axios'; 
-import { Trophy, Search, Users, ArrowUpCircle, Calendar, DollarSign, ChevronLeft, ChevronRight, Award, Copy, LogIn, X, Target } from 'lucide-react';
+import { Trophy, Search, Users, ArrowUpCircle, Calendar, DollarSign, Award, Copy, LogIn, X, Target } from 'lucide-react';
 
 const MonthlyRewardReport = () => {
   const [report, setReport] = useState([]);
@@ -14,7 +14,7 @@ const MonthlyRewardReport = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // 🔥 STATE FOR MODAL (List store karega)
+  // 🔥 STATE FOR MODAL
   const [legModal, setLegModal] = useState({ isOpen: false, title: "", count: 0, list: [] });
 
   useEffect(() => {
@@ -22,10 +22,11 @@ const MonthlyRewardReport = () => {
       try {
         setLoading(true);
         const res = await api.get(`/admin/monthly-reward-progress?date=${selectedMonth}`); 
-        if (res.data.success) {
-          setReport(res.data.data);
-          setCurrentPage(1); 
-        }
+        
+        // Ensure data is array
+        const rawData = Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+        setReport(rawData);
+        setCurrentPage(1); 
       } catch (error) {
         console.error("Failed to fetch report", error);
       } finally {
@@ -35,22 +36,53 @@ const MonthlyRewardReport = () => {
     fetchProgress();
   }, [selectedMonth]); 
 
-  const filteredReport = report.filter(r => 
-    String(r.userId).includes(search) || r.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, itemsPerPage]);
 
+  // 🔥 SUPER FAST MEMOIZED FILTERING (Prevents Browser Hang)
+  const filteredReport = useMemo(() => {
+    if (!search) return report;
+    
+    const lowerSearch = search.toLowerCase().trim();
+    return report.filter(r => {
+      const idMatch = r.userId ? String(r.userId).toLowerCase().includes(lowerSearch) : false;
+      const nameMatch = r.name ? r.name.toLowerCase().includes(lowerSearch) : false;
+      return idMatch || nameMatch;
+    });
+  }, [report, search]);
+
+  // 🔥 MEMOIZED TOTALS (Only calculates once when data arrives)
+  const totals = useMemo(() => {
+    let qualifiedCount = 0;
+    let payoutSum = 0;
+    
+    for (let i = 0; i < report.length; i++) {
+      if (report[i].achievedReward > 0) {
+        qualifiedCount++;
+        payoutSum += report[i].achievedReward;
+      }
+    }
+    
+    return {
+      runners: report.length,
+      qualified: qualifiedCount,
+      estimatedPayout: payoutSum
+    };
+  }, [report]);
+
+  // Pagination Logic
   const totalPages = Math.ceil(filteredReport.length / itemsPerPage) || 1;
-  const indexOfLastItem = currentPage * itemsPerPage;
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  
+  const indexOfLastItem = validCurrentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredReport.slice(indexOfFirstItem, indexOfLastItem);
 
-  const totalRunners = report.length;
-  const totalQualified = report.filter(r => r.achievedReward > 0).length;
-  const totalEstimatedPayout = report.reduce((sum, r) => sum + r.achievedReward, 0);
-
-  const handleNext = () => { if (currentPage < totalPages) setCurrentPage(prev => prev + 1); };
-  const handlePrev = () => { if (currentPage > 1) setCurrentPage(prev => prev - 1); };
-  const handleEntriesChange = (e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); };
+  const handleNext = () => { if (validCurrentPage < totalPages) setCurrentPage(prev => prev + 1); };
+  const handlePrev = () => { if (validCurrentPage > 1) setCurrentPage(prev => prev - 1); };
+  const handleEntriesChange = (e) => { setItemsPerPage(Number(e.target.value)); };
 
   const handleLoginAsUser = async (targetUserId) => {
     try {
@@ -161,35 +193,34 @@ const MonthlyRewardReport = () => {
             <div className="bg-blue-100 p-3 rounded text-blue-600"><Users size={24}/></div>
             <div>
                <p className="text-xs font-bold text-gray-500 uppercase">Active Runners</p>
-               <h3 className="text-xl font-bold text-gray-800">{totalRunners}</h3>
+               <h3 className="text-xl font-bold text-gray-800">{totals.runners}</h3>
             </div>
          </div>
          <div className="bg-white p-4 rounded shadow border border-gray-200 flex items-center gap-4">
             <div className="bg-green-100 p-3 rounded text-green-600"><Award size={24}/></div>
             <div>
                <p className="text-xs font-bold text-gray-500 uppercase">Total Qualified</p>
-               <h3 className="text-xl font-bold text-gray-800">{totalQualified}</h3>
+               <h3 className="text-xl font-bold text-gray-800">{totals.qualified}</h3>
             </div>
          </div>
          <div className="bg-white p-4 rounded shadow border border-gray-200 flex items-center gap-4">
             <div className="bg-yellow-100 p-3 rounded text-yellow-600"><DollarSign size={24}/></div>
             <div>
                <p className="text-xs font-bold text-gray-500 uppercase">Est. Payout</p>
-               <h3 className="text-xl font-bold text-gray-800">${totalEstimatedPayout.toFixed(2)}</h3>
+               <h3 className="text-xl font-bold text-gray-800">${totals.estimatedPayout.toFixed(2)}</h3>
             </div>
          </div>
       </div>
 
       {/* Top Controls */}
       <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 mb-6">
-        
         <div className="flex flex-col md:flex-row gap-2 w-full xl:w-auto flex-wrap">
           <input
             type="text"
             className="border text-black border-gray-300 rounded px-3 py-2 w-full md:w-64"
             placeholder="Search UserID or Name"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            onChange={(e) => { setSearch(e.target.value); }}
           />
           <input 
             type="month" 
@@ -198,12 +229,12 @@ const MonthlyRewardReport = () => {
             onChange={(e) => setSelectedMonth(e.target.value)}
           />
           <select 
-            className="border border-gray-300 text-black rounded px-3 py-2 bg-white"
+            className="border border-gray-300 text-black rounded px-3 py-2 bg-white cursor-pointer"
             value={itemsPerPage}
             onChange={handleEntriesChange}
           >
             <option value={10}>Show 10</option>
-            <option value={20}>Show 20</option>
+            <option value={30}>Show 30</option>
             <option value={50}>Show 50</option>
             <option value={100}>Show 100</option>
           </select>
@@ -222,7 +253,6 @@ const MonthlyRewardReport = () => {
           <thead className="bg-gray-100 text-gray-600 uppercase text-xs border-b border-gray-200">
             <tr>
               <th className="px-4 py-3 border-r text-center w-12">Sr.</th>
-              {/* 🔥 Alag-alag Columns: User ID aur Name */}
               <th className="px-4 py-3 border-r text-center w-32">User ID</th>
               <th className="px-4 py-3 border-r">Name</th>
               <th className="px-4 py-3 border-r text-center">Leg Details (Click)</th>
@@ -233,9 +263,9 @@ const MonthlyRewardReport = () => {
           
           <tbody>
             {loading ? (
-              <tr><td colSpan="6" className="text-center py-10 font-bold text-gray-500">Calculating Team Business... Please Wait.</td></tr>
+              <tr><td colSpan="6" className="text-center py-16 text-indigo-600 font-black uppercase tracking-widest text-lg bg-indigo-50/50 animate-pulse">⏳ Calculating Team Business... Please Wait.</td></tr>
             ) : currentItems.length === 0 ? (
-              <tr><td colSpan="6" className="text-center py-10 font-bold text-gray-500">No data found for this month / search.</td></tr>
+              <tr><td colSpan="6" className="text-center py-10 font-bold text-gray-500 uppercase tracking-widest bg-gray-50">No data found for this month / search.</td></tr>
             ) : (
               currentItems.map((user, idx) => {
                 const strongProgress = Math.min((user.strongLeg / user.nextTargetStrong) * 100, 100) || 0;
@@ -284,14 +314,14 @@ const MonthlyRewardReport = () => {
                       <div className="flex flex-col gap-2 items-center justify-center">
                           <button 
                              onClick={() => openLegModal(user.name, 'Strong Leg', user.strongLeg, user.strongLegList)}
-                             className="flex items-center justify-between text-xs font-semibold text-gray-600 bg-white hover:bg-green-50 px-2 py-1 rounded border border-gray-300 w-32 transition-colors cursor-pointer"
+                             className="flex items-center justify-between text-xs font-semibold text-gray-600 bg-white hover:bg-green-50 px-2 py-1 rounded border border-gray-300 w-32 transition-colors cursor-pointer shadow-sm"
                           >
                              <span className="flex items-center gap-1"><ArrowUpCircle className="text-green-500" size={12} /> Str:</span>
                              <span className="text-green-600 font-bold">{user.strongLeg}</span>
                           </button>
                           <button 
                              onClick={() => openLegModal(user.name, 'Other Legs', user.otherLegs, user.otherLegList)}
-                             className="flex items-center justify-between text-xs font-semibold text-gray-600 bg-white hover:bg-blue-50 px-2 py-1 rounded border border-gray-300 w-32 transition-colors cursor-pointer"
+                             className="flex items-center justify-between text-xs font-semibold text-gray-600 bg-white hover:bg-blue-50 px-2 py-1 rounded border border-gray-300 w-32 transition-colors cursor-pointer shadow-sm"
                           >
                              <span className="flex items-center gap-1"><Users className="text-blue-500" size={12} /> Oth:</span>
                              <span className="text-blue-600 font-bold">{user.otherLegs}</span>
@@ -346,27 +376,31 @@ const MonthlyRewardReport = () => {
       </div>
 
       {/* Pagination Footer */}
-      {filteredReport.length > 0 && (
+      {!loading && filteredReport.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mt-4 text-sm">
-          <span className="text-gray-600">
+          <span className="text-gray-600 font-bold uppercase tracking-widest text-[11px]">
             Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredReport.length)} of {filteredReport.length} entries
           </span>
           
           <div className="flex gap-2">
             <button
               onClick={handlePrev}
-              disabled={currentPage === 1}
-              className={`px-3 py-1 border rounded ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white hover:bg-gray-50 text-gray-700'}`}
+              disabled={validCurrentPage === 1}
+              className={`px-4 py-1.5 rounded-lg font-bold uppercase text-xs tracking-widest transition-all ${
+                validCurrentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' : 'bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm'
+              }`}
             >
-              Previous
+              Prev
             </button>
-            <button className="px-3 py-1 border rounded bg-indigo-600 text-white font-bold">
-              {currentPage}
-            </button>
+            <span className="px-4 py-1.5 border rounded-lg bg-indigo-600 text-white font-black shadow-md">
+              {validCurrentPage} / {totalPages}
+            </span>
             <button
               onClick={handleNext}
-              disabled={currentPage === totalPages}
-              className={`px-3 py-1 border rounded ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white hover:bg-gray-50 text-gray-700'}`}
+              disabled={validCurrentPage === totalPages}
+              className={`px-4 py-1.5 rounded-lg font-bold uppercase text-xs tracking-widest transition-all ${
+                validCurrentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' : 'bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm'
+              }`}
             >
               Next
             </button>

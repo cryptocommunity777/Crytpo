@@ -823,55 +823,7 @@ router.put('/user/:userId/manual-verify', verifyAdmin, async (req, res) => {
 // Fetch all deposits for admin view
 // GET /api/admin/deposits
 // Fetch all deposits (System + Manual) for admin view
-router.get('/deposits', verifyAdmin, async (req, res) => {
-  try {
-    // 1. Pehle Deposit collection se system deposits laao
-    const systemDeposits = await Deposit.find().sort({ createdAt: -1 }).lean();
-    
-    // 2. Phir Transaction collection se manual deposits laao (Agar wo Deposit collection me nahi hain)
-    const manualTxns = await Transaction.find({ 
-      type: 'deposit', 
-      source: 'manual' 
-    }).sort({ createdAt: -1 }).lean();
 
-    // Dono ko mix kar do (par dhyaan rahe ID duplicate na ho)
-    const allDeposits = [...systemDeposits];
-    
-    manualTxns.forEach(tx => {
-       // Agar same txnHash wala record pehle se array me nahi hai toh hi daalo
-       const exists = allDeposits.some(d => d.txnHash === tx.txnHash);
-       if(!exists){
-           allDeposits.push({
-               _id: tx._id,
-               userId: tx.userId,
-               amount: tx.amount,
-               txnHash: tx.txnHash || `MANUAL-${tx._id.toString().substring(0,8)}`,
-               status: tx.status || 'approved',
-               createdAt: tx.createdAt || tx.date
-           });
-       }
-    });
-
-    // 3. Naye mix array ko date ke hisaab se sort karo
-    allDeposits.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    // 4. Sabke naam fetch karo
-    const userIds = [...new Set(allDeposits.map(dep => dep.userId))];
-    const users = await User.find({ userId: { $in: userIds } }, 'userId name').lean();
-    const userMap = Object.fromEntries(users.map(u => [u.userId, u.name]));
-
-    // 5. Response me naam daal kar bhejo
-    const enrichedDeposits = allDeposits.map(dep => ({
-      ...dep,
-      name: userMap[dep.userId] || 'Unknown User'
-    }));
-
-    res.json(enrichedDeposits);
-  } catch (err) {
-    console.error('Failed to fetch all deposits:', err);
-    res.status(500).json({ message: 'Failed to fetch all deposits' });
-  }
-});
 
 // PUT: Reverse any transaction by ID
 // routes/admin.js
@@ -1277,23 +1229,103 @@ const getMonthlyLegStatsForAdmin = async (sponsorId, startOfMonth, endOfMonth) =
 };
 
 // 🔥 MAIN API
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\admin.js
+
+// 🔥 SUPER FAST API: "RAM TREE MAPPING" (0 loops on Database)
 router.get('/monthly-reward-progress', async (req, res) => {
     try {
+        // 1. Date calculation
         let targetDate = new Date();
         if (req.query.date) {
             const [year, month] = req.query.date.split('-');
             targetDate = new Date(year, month - 1, 1);
         }
-
         let startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
         let endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59);
 
-        const usersWithDirects = await User.find({ isToppedUp: true }).lean();
-        
-        let reportData = [];
+        // 2. 🔥 SIRF 1 BAAR DATABASE CALL: Saare users fetch kar lo
+        const allUsers = await User.find({}, 'userId sponsorId name isToppedUp topUpDate').lean();
 
-        for (let user of usersWithDirects) {
-            const stats = await getMonthlyLegStatsForAdmin(user.userId, startOfMonth, endOfMonth);
+        // 3. 🧠 SERVER KI RAM MEIN NETWORK TREE BANAO (Extremely Fast)
+        const userMap = new Map();
+        const directMap = new Map(); // sponsorId -> [array of child userIds]
+
+        for (let u of allUsers) {
+            userMap.set(u.userId, u);
+            if (u.sponsorId) {
+                if (!directMap.has(u.sponsorId)) {
+                    directMap.set(u.sponsorId, []);
+                }
+                directMap.get(u.sponsorId).push(u.userId);
+            }
+        }
+
+        // 4. IN-MEMORY CALCULATION HELPER
+        const getLegStatsRAM = (sponsorId) => {
+            const directs = directMap.get(sponsorId) || [];
+            let legsData = [];
+
+            for (let directId of directs) {
+                let currentLegUsers = [];
+                const directObj = userMap.get(directId);
+
+                // Direct user check
+                if (directObj && directObj.isToppedUp && directObj.topUpDate >= startOfMonth && directObj.topUpDate <= endOfMonth) {
+                    currentLegUsers.push({ userId: directObj.userId, name: directObj.name });
+                }
+
+                // BFS loop in RAM (No database calls here = 1000x faster)
+                let queue = [directId];
+                while (queue.length > 0) {
+                    const currentId = queue.shift();
+                    const downlines = directMap.get(currentId) || [];
+                    
+                    for (let childId of downlines) {
+                        const childObj = userMap.get(childId);
+                        if (childObj && childObj.isToppedUp && childObj.topUpDate >= startOfMonth && childObj.topUpDate <= endOfMonth) {
+                            currentLegUsers.push({ userId: childObj.userId, name: childObj.name });
+                        }
+                        queue.push(childId);
+                    }
+                }
+
+                legsData.push({ size: currentLegUsers.length, usersList: currentLegUsers });
+            }
+
+            legsData.sort((a, b) => b.size - a.size);
+
+            let strongLegCount = 0;
+            let strongLegUsers = [];
+            let otherLegsCount = 0;
+            let otherLegUsers = [];
+
+            if (legsData.length > 0) {
+                strongLegCount = legsData[0].size;
+                strongLegUsers = legsData[0].usersList;
+            }
+            if (legsData.length > 1) {
+                for (let i = 1; i < legsData.length; i++) {
+                    otherLegsCount += legsData[i].size;
+                    otherLegUsers = otherLegUsers.concat(legsData[i].usersList);
+                }
+            }
+
+            return {
+                strongLeg: strongLegCount,
+                otherLegs: otherLegsCount,
+                totalTeam: strongLegCount + otherLegsCount,
+                strongLegList: strongLegUsers,
+                otherLegList: otherLegUsers
+            };
+        };
+
+        // 5. REPORT GENERATION
+        let reportData = [];
+        const activeUsers = allUsers.filter(u => u.isToppedUp);
+
+        for (let user of activeUsers) {
+            // Memory me bane function ko call kar rahe hain (Very fast)
+            const stats = getLegStatsRAM(user.userId);
             
             if (stats.totalTeam > 0) {
                 let achieved = null;
@@ -1313,11 +1345,8 @@ router.get('/monthly-reward-progress', async (req, res) => {
                     strongLeg: stats.strongLeg,
                     otherLegs: stats.otherLegs,
                     totalTeam: stats.totalTeam,
-                    
-                    // 🔥 NAYA: List bhej rahe hain
-                    strongLegList: stats.strongLegList, 
+                    strongLegList: stats.strongLegList,
                     otherLegList: stats.otherLegList,
-                    
                     achievedReward: achieved ? achieved.reward : 0,
                     achievedTitle: achieved ? achieved.title : "Not Qualified",
                     nextTargetReward: nextTarget.reward,
@@ -1329,6 +1358,7 @@ router.get('/monthly-reward-progress', async (req, res) => {
 
         reportData.sort((a, b) => b.totalTeam - a.totalTeam);
         res.json({ success: true, data: reportData });
+
     } catch (error) {
         console.error("Admin Monthly Reward Progress Error:", error);
         res.status(500).json({ success: false, message: "Server error" });
@@ -1343,81 +1373,30 @@ router.get('/monthly-reward-progress', async (req, res) => {
 // ==========================================
 // 1. FULL TRANSACTIONS ROUTE (NO LIMIT)
 // ==========================================
-router.get("/transactions", verifyAdmin, async (req, res) => {
+ router.get('/deposits', verifyAdmin, async (req, res) => {
   try {
-    // 🔥 LIMIT HATA DI HAI - Ab shuru se lekar end tak saara data aayega
-    const transactions = await Transaction.find()
-      .sort({ createdAt: -1 })
-      .lean(); // Lean = Super Fast Query for bulk data
+    // Aggregation pipeline: Database server par hi sab kuch merge aur sort kar dega
+    const allDeposits = await Deposit.aggregate([
+      {
+        $unionWith: {
+          coll: "transactions",
+          pipeline: [{ $match: { type: "deposit", source: "manual" } }]
+        }
+      },
+      { $sort: { createdAt: -1 } }
+    ]);
 
-    // Smart Fetch: Sirf related users laayega memory save karne ke liye
-    const userIds = [...new Set(
-      transactions.flatMap(tx => [tx.userId, tx.fromUserId, tx.toUserId]).filter(Boolean)
-    )];
-
+    // User names fetch karna (Batch fetch)
+    const userIds = [...new Set(allDeposits.map(dep => dep.userId).filter(Boolean))];
     const users = await User.find({ userId: { $in: userIds } }, { userId: 1, name: 1 }).lean();
     const userMap = Object.fromEntries(users.map(u => [u.userId, u.name]));
 
-    const formatted = transactions.map(tx => {
-      // Decimal128 handling jisse amount kabhi kharab ya 0 nahi hoga
-      let safeAmount = 0;
-      if (tx.amount) {
-        if (tx.amount.$numberDecimal) safeAmount = parseFloat(tx.amount.$numberDecimal);
-        else safeAmount = parseFloat(tx.amount.toString()) || 0;
-      }
-
-      return {
-        _id: tx._id,
-        userId: tx.userId,
-        name: userMap[tx.userId] || "Unknown",
-        type: tx.type,
-        amount: safeAmount, 
-        source: tx.source || "-",          
-        description: tx.description || "",  
-        fromUserId: tx.fromUserId || null,
-        toUserId: tx.toUserId || null,
-        fromName: tx.fromUserId ? (userMap[tx.fromUserId] || "N/A") : "-",
-        toName: tx.toUserId ? (userMap[tx.toUserId] || "N/A") : "-",
-        package: tx.package || null,
-        plan: tx.plan || null,
-        level: tx.level || null,
-        date: tx.date || tx.createdAt || new Date(),
-        createdAt: tx.createdAt || new Date(),
-        updatedAt: tx.updatedAt || new Date(),
-        txnHash: tx.txnHash || tx.txHash || null, 
-        status: tx.status || "completed"
-      };
-    });
-
-    res.json({ success: true, data: formatted });
-  } catch (error) {
-    console.error("Failed to fetch all transactions:", error);
-    res.status(500).json({ success: false, message: "Failed to fetch transactions" });
-  }
-});
-
-
-// ==========================================
-// 2. FULL DEPOSITS ROUTE (NO LIMIT)
-// ==========================================
-router.get('/deposits', verifyAdmin, async (req, res) => {
-  try {
-    // 🔥 LIMIT HATA DI HAI - Saare deposits ek sath fetch honge
-    const deposits = await Deposit.find()
-      .sort({ createdAt: -1 })
-      .lean(); 
-
-    const userIds = [...new Set(deposits.map(dep => dep.userId).filter(Boolean))];
-    const users = await User.find({ userId: { $in: userIds } }, { userId: 1, name: 1 }).lean();
-    const userMap = Object.fromEntries(users.map(u => [u.userId, u.name]));
-
-    const enriched = deposits.map(dep => {
+    const enriched = allDeposits.map(dep => {
       let safeAmount = 0;
       if (dep.amount) {
         if (dep.amount.$numberDecimal) safeAmount = parseFloat(dep.amount.$numberDecimal);
         else safeAmount = parseFloat(dep.amount.toString()) || 0;
       }
-
       return {
         ...dep,
         name: userMap[dep.userId] || 'Unknown',
@@ -1427,8 +1406,46 @@ router.get('/deposits', verifyAdmin, async (req, res) => {
 
     res.json({ success: true, data: enriched });
   } catch (err) {
-    console.error('Failed to fetch all deposits:', err);
+    console.error('Failed to fetch deposits:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch deposits' });
+  }
+});
+
+
+router.get("/transactions", verifyAdmin, async (req, res) => {
+  try {
+    // Lean() + sort() on indexed field 'createdAt' is the fastest way
+    const transactions = await Transaction.find()
+      .sort({ createdAt: -1 })
+      .lean(); 
+
+    const userIds = [...new Set(
+      transactions.flatMap(tx => [tx.userId, tx.fromUserId, tx.toUserId]).filter(Boolean)
+    )];
+
+    const users = await User.find({ userId: { $in: userIds } }, { userId: 1, name: 1 }).lean();
+    const userMap = Object.fromEntries(users.map(u => [u.userId, u.name]));
+
+    const formatted = transactions.map(tx => {
+      let safeAmount = 0;
+      if (tx.amount) {
+        if (tx.amount.$numberDecimal) safeAmount = parseFloat(tx.amount.$numberDecimal);
+        else safeAmount = parseFloat(tx.amount.toString()) || 0;
+      }
+
+      return {
+        ...tx,
+        name: userMap[tx.userId] || "Unknown",
+        amount: safeAmount, 
+        fromName: tx.fromUserId ? (userMap[tx.fromUserId] || "N/A") : "-",
+        toName: tx.toUserId ? (userMap[tx.toUserId] || "N/A") : "-"
+      };
+    });
+
+    res.json({ success: true, data: formatted });
+  } catch (error) {
+    console.error("Failed to fetch all transactions:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch transactions" });
   }
 });
 
