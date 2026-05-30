@@ -5,7 +5,7 @@ import {
   FaSitemap, FaProjectDiagram, FaExchangeAlt, FaFileAlt, FaUserPlus, FaGift,
   FaArrowCircleUp, FaArrowCircleDown, FaBell, FaClipboardList, FaCoins,
   FaUserSlash, FaBars, FaTimes, FaHistory, FaShieldAlt, FaBan,
-  FaUserCog, FaYoutube, FaRocket, FaPiggyBank // 🔥 Ye do naye icons import kiye
+  FaUserCog, FaYoutube, FaRocket, FaPiggyBank ,FaTrophy // 🔥 Ye do naye icons import kiye
 } from 'react-icons/fa';
 
 const Sidebar = () => {
@@ -153,6 +153,10 @@ const Sidebar = () => {
               <FaPiggyBank className="inline-block mr-2 text-pink-500" /> Fund Overview
             </NavLink>
 
+            <NavLink to={`${BASE_PATH}/reward-progress`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/reward-progress`)}>
+  <FaTrophy className="inline-block mr-2 text-yellow-500" /> Reward Progress
+</NavLink>
+
             <NavLink to={`${BASE_PATH}/withdrawals/request`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/withdrawals/request`)}>
               <FaArrowCircleDown className="inline-block mr-2" /> Pending Withdrawals
             </NavLink>
@@ -176,6 +180,7 @@ const Sidebar = () => {
             <NavLink to={`${BASE_PATH}/transactions/reverse`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/transactions/reverse`)}>
               <FaExchangeAlt className="inline-block mr-2" /> Reverse Txn
             </NavLink>
+
 
             <div className="pt-2 pb-1">
                 <p className="text-xs font-bold text-black uppercase tracking-wider ml-2">System</p>

@@ -38,9 +38,7 @@ const WalletHistory = () => {
       if (!parsedUser?.userId) throw new Error("Invalid user");
       setUserId(String(parsedUser.userId));
       
-      // Role save kiya
       setUserRole(parsedUser.role ? parsedUser.role.toLowerCase() : "");
-
       fetchWalletHistory(String(parsedUser.userId));
     } catch { setError("Invalid user."); setLoading(false); }
   }, []);
@@ -66,6 +64,16 @@ const WalletHistory = () => {
       .filter(t => allTypes.includes(t.type))
       .filter(t => {
         const desc = (t.description || "").toLowerCase();
+        
+        // 🔥 DUPLICATE ENTRY FIX FOR TRANSFERS
+        // Backend transfer me 2 entries banata hai, humein sirf current user wali dikhani hai
+        if (t.type === 'transfer') {
+            const isSender = String(t.fromUserId) === String(uid) || String(t.userId) === String(uid);
+            const isReceiver = String(t.toUserId) === String(uid);
+            // Agar transfer hai, toh ensure karo ki user is entry ka hissa hai
+            if (!isSender && !isReceiver) return false;
+        }
+
         return !(
           desc.includes("auto-pool") || 
           desc.includes("pool level") || 
@@ -95,8 +103,19 @@ const WalletHistory = () => {
         };
       });
 
-    formattedHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
-    setTransactions(formattedHistory);
+    // Remove direct exact duplicates if backend sends the SAME _id twice (Edge case protection)
+    const uniqueTxns = [];
+    const seenTxnIds = new Set();
+    
+    for (const txn of formattedHistory) {
+        if (!seenTxnIds.has(txn._id)) {
+            seenTxnIds.add(txn._id);
+            uniqueTxns.push(txn);
+        }
+    }
+
+    uniqueTxns.sort((a, b) => new Date(a.date) - new Date(b.date));
+    setTransactions(uniqueTxns);
 
   } catch (err) {
     console.error("Fetch Error:", err);
@@ -187,13 +206,11 @@ const WalletHistory = () => {
             colorStyle = "text-yellow-500";
             operator = "";
           } 
-          // 🔥 LEADER LOGIC: Agar user "leader" hai, toh entry dikhegi par balance minus nahi hoga
           else if (userRole === "leader" || finalDescription.toLowerCase().includes("leader")) {
             mathImpact = 0; 
             colorStyle = "text-slate-500"; 
             operator = ""; 
           } 
-          // 👤 NORMAL USER LOGIC: Pura minus hoga
           else {
             mathImpact = -amt; 
             colorStyle = "text-red-500";
@@ -210,9 +227,6 @@ const WalletHistory = () => {
         break;
     }
 
-    // 🔥 MAIN BALANCE LOGIC 
-    // Normal User = mathImpact jodega ya ghatayega
-    // Leader = running balance change nahi hoga (Hamesha 0 rahega)
     if (userRole !== "leader") {
         runningBalance += mathImpact;
     }
@@ -220,7 +234,6 @@ const WalletHistory = () => {
     return {
       ...txn,
       description: finalDescription,
-      // Leader ko strictly 0.00 dikhega, Normal User ko uski running balance
       balance: userRole === "leader" ? "0.00" : (runningBalance || 0).toFixed(2),
       colorStyle,
       formattedAmount: `${operator} $${(amt || 0).toFixed(2)}`,
@@ -361,7 +374,6 @@ const WalletHistory = () => {
                   
                   let partyInfo = "-";
                   
-                  // 🔥 Fast Track me pata chale kiski wajah se paisa aaya
                   if (txn.type === "fast_track") {
                       partyInfo = txn.fromIdSafe ? `From: ${txn.fromIdSafe}` : "-";
                   }

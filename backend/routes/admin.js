@@ -500,174 +500,6 @@ router.post('/direct-login/:userId', verifyAdmin, async (req, res) => {
 
 
 
-
-// 1. Get Booster Offer Progress List (UPDATED WITH TRANSACTION LOGIC & verifyAdmin)
-router.get('/booster-list', verifyAdmin, async (req, res) => {
-    try {
-const startDate = new Date('2026-05-06T21:00:00+05:30');
-
-        // STEP 1: Transaction table se 6 May ke baad wale sabhi $30 ke valid top-ups nikalo
-        const recentTopups = await Transaction.aggregate([
-            { 
-                $match: { 
-                    type: 'topup',
-                    amount: { $in: [30, "30"] }, // Handle both number and string types
-                    $expr: { $eq: ["$userId", "$toUserId"] }, // Sirf valid receiver uthao
-                    $or: [
-                        { date: { $gte: startDate } },
-                        { createdAt: { $gte: startDate } }
-                    ]
-                } 
-            },
-            { $sort: { date: 1, createdAt: 1 } } // Purana pehle taaki 5th direct ka sahi time mile
-        ]);
-
-        // STEP 2: Un sabhi users ki ID nikalo jinhone $30 ka topup kiya
-        const toppedUpUserIds = [...new Set(recentTopups.map(tx => tx.userId))];
-
-        if (toppedUpUserIds.length === 0) {
-            return res.status(200).json({ success: true, data: [] });
-        }
-
-        // STEP 3: User table se un topup karne wale directs ki details nikalo
-        const directs = await User.find({ userId: { $in: toppedUpUserIds } });
-
-        const progressMap = {};
-
-        // STEP 4: Har direct ke sponsor (upline) ko count do
-        directs.forEach(direct => {
-            if (direct.sponsorId) {
-                if (!progressMap[direct.sponsorId]) {
-                    progressMap[direct.sponsorId] = { directs: [] };
-                }
-
-                // Is direct ka transaction find karo date dikhane ke liye
-                const tx = recentTopups.find(t => t.userId === direct.userId);
-
-                progressMap[direct.sponsorId].directs.push({
-                    userId: direct.userId,
-                    name: direct.name,
-                    activationDate: tx ? (tx.date || tx.createdAt) : null
-                });
-            }
-        });
-
-        // STEP 5: Un sabhi Sponsors ka data nikalo jinke paas yeh directs aaye hain
-        const sponsorIds = Object.keys(progressMap);
-        const sponsors = await User.find({ userId: { $in: sponsorIds } });
-
-        const result = sponsors.map(sponsor => {
-            const userDirects = progressMap[sponsor.userId].directs;
-            let achievedDate = null;
-
-            // Directs ko date ke hisaab se sort karo
-            userDirects.sort((a, b) => new Date(a.activationDate) - new Date(b.activationDate));
-
-            // Agar 5 ya usse zyada hain, toh 5th number wale ki date utha lo
-            if (userDirects.length >= 5) {
-                achievedDate = userDirects[4].activationDate; 
-            }
-
-            return {
-                _id: sponsor._id,
-                userId: sponsor.userId,
-                name: sponsor.name,
-                directCount: userDirects.length,
-                directsList: userDirects, // Box me dikhane ke liye directs ki detail
-                achievedDate: achievedDate,
-                boosterRewardPaid: sponsor.boosterRewardPaid || false
-            };
-        });
-
-        res.status(200).json({ success: true, data: result });
-    } catch (error) {
-        console.error("Booster List Error:", error);
-        res.status(500).json({ success: false, message: "Server Error" });
-    }
-});
-
-// 2. Reward Send API (UPDATED WITH verifyAdmin)
-// Upar file mein bcrypt zaroor import karein agar pehle se nahi hai:
-// const bcrypt = require('bcrypt'); ya const bcrypt = require('bcryptjs');
- 
-// Dhyan rakhein ki aapki file me upar yeh imports hone chahiye:
-// const Admin = require('../models/Admin'); 
-// const Transaction = require('../models/Transaction');
-// const bcrypt = require('bcryptjs');
-
-router.post('/send-booster-reward', verifyAdmin, async (req, res) => {
-    try {
-        console.log("\n--- 👉 Sending Booster Reward Processing ---");
-
-        // 1. Data Extract karo (password dono naam se handle kar rahe hain)
-        const { id, password, adminPassword } = req.body; 
-        const finalPassword = adminPassword || password;
-
-        if (!finalPassword) {
-            return res.status(400).json({ success: false, message: 'Admin password is required!' });
-        }
-
-        // 2. Token se Admin ID nikalo (Bilkul manual-transaction ki tarah)
-        const tokenData = req.admin || req.user;
-        const adminDbId = tokenData.adminId || tokenData.id || tokenData._id;
-
-        // 3. Database me Admin find karo
-        const admin = await Admin.findById(adminDbId); 
-        if (!admin) {
-            console.log("❌ Admin Record Not Found.");
-            return res.status(404).json({ success: false, message: 'Admin account not found. Please Re-Login.' });
-        }
-
-        // 4. Password Verification (Bcrypt)
-        const isMatch = await bcrypt.compare(finalPassword, admin.password);
-        if (!isMatch) {
-            console.log("❌ Password Mismatch");
-            return res.status(403).json({ success: false, message: 'Incorrect Admin Password! Access Denied.' });
-        }
-
-        console.log("✅ Password Matched & Admin Verified for Booster!");
-
-        // --- ⬇️ REWARD & TRANSACTION LOGIC START ---
-
-        // User dhundo jisko reward dena hai (yahan 'id' MongoDB ki _id hai)
-        const user = await User.findById(id);
-        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-        
-        if (user.boosterRewardPaid) {
-            return res.status(400).json({ success: false, message: 'Reward already paid to this user!' });
-        }
-
-        // A. Wallet mein $30 add karna
-        user.walletBalance = (user.walletBalance || 0) + 30;
-        user.boosterRewardPaid = true; 
-        await user.save();
-
-        // B. 🎯 TRANSACTION HISTORY ME ENTRY (Taaki user ko dikhe)
-        const transaction = new Transaction({
-            userId: user.userId, // Target user ki actual ID (e.g., BOOM12345)
-            type: "credit", // System me jo bhi credit type chalta hai (income/credit)
-            amount: 30,
-            txHash: `BOOSTER-${Date.now()}-${Math.floor(Math.random() * 1000)}`, 
-            description: "🎉 Direct Achiever Reward - Booster Offer", // ✅ FIX: Admin ka naam hide kiya aur Achiever likha
-            source: "booster_reward",
-            status: "completed",
-        });
-
-        await transaction.save();
-
-        console.log(`✅ Successfully rewarded $30 to ${user.userId}`);
-
-        res.status(200).json({ 
-            success: true, 
-            message: '$30 Booster Reward sent successfully!',
-            transaction 
-        });
-
-    } catch (error) {
-        console.error("❌ Reward Send Error:", error);
-        res.status(500).json({ success: false, message: "Server Error: " + error.message });
-    }
-});
  
 
 // 🔹 GET /login-stats (For Advanced Login Analytics)
@@ -1133,6 +965,14 @@ router.get('/global-team', verifyAdmin, async (req, res) => {
 });
 
 
+
+
+
+
+
+
+
+
 // POST /auth/register (Admin adds a new user)
 
 // ✅ Admin adds a new user
@@ -1190,6 +1030,7 @@ router.post('/auth/register', verifyAdmin, async (req, res) => {
     res.status(500).json({ message: 'Server error while creating user' });
   }
 });
+
 
 
  
@@ -1261,6 +1102,10 @@ const user = await User.findOne({ userId: req.params.userId });
  
  
  
+
+
+
+
 
  
 
@@ -1343,93 +1188,249 @@ const user = await User.findOne({ userId: req.params.userId });
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+ 
+ 
+const REWARD_MILESTONES = [
+  { target: 50, strongLeg: 25, otherLegs: 25, reward: 30, title: "Target 1 (50 Points)" },
+  { target: 250, strongLeg: 125, otherLegs: 125, reward: 100, title: "Target 2 (250 Points)" },
+  { target: 750, strongLeg: 375, otherLegs: 375, reward: 200, title: "Target 3 (750 Points)" },
+  { target: 1750, strongLeg: 875, otherLegs: 875, reward: 300, title: "Target 4 (1750 Points)" },
+  { target: 3750, strongLeg: 1875, otherLegs: 1875, reward: 500, title: "Target 5 (3750 Points)" },
+  { target: 6750, strongLeg: 3375, otherLegs: 3375, reward: 1000, title: "Target 6 (6750 Points)" },
+  { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7 (11750 Points)" },
+  { target: 21750, strongLeg: 10875, otherLegs: 10875, reward: 3000, title: "Target 8 (21750 Points)" }
+];
+
+// Helper Function: Mahine ka progress nikalne ke liye
+// Helper Function: Mahine ka progress aur EXACT IDs nikalne ke liye
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\admin.js
+
+// 🔥 Helper Function: Ab ID ke sath Name bhi return karega
+const getMonthlyLegStatsForAdmin = async (sponsorId, startOfMonth, endOfMonth) => {
+    // 💡 Name field ko bhi fetch kar rahe hain
+    const directs = await User.find({ sponsorId: sponsorId }, 'userId name isToppedUp topUpDate');
+    
+    let legsData = [];
+
+    for (let direct of directs) {
+        let currentLegUsers = []; 
+        
+        if (direct.isToppedUp && direct.topUpDate >= startOfMonth && direct.topUpDate <= endOfMonth) {
+            // ID aur Name dono store kar rahe hain
+            currentLegUsers.push({ userId: direct.userId, name: direct.name });
+        }
+
+        let queue = [direct.userId];
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+            const downlines = await User.find({ sponsorId: currentId }, 'userId name isToppedUp topUpDate');
+            
+            for (let d of downlines) {
+                if (d.isToppedUp && d.topUpDate >= startOfMonth && d.topUpDate <= endOfMonth) {
+                    currentLegUsers.push({ userId: d.userId, name: d.name }); 
+                }
+                queue.push(d.userId);
+            }
+        }
+        
+        legsData.push({ size: currentLegUsers.length, usersList: currentLegUsers });
+    }
+
+    // Sort by largest leg first
+    legsData.sort((a, b) => b.size - a.size);
+
+    let strongLegCount = 0;
+    let strongLegUsers = [];
+    let otherLegsCount = 0;
+    let otherLegUsers = [];
+
+    if (legsData.length > 0) {
+        strongLegCount = legsData[0].size;
+        strongLegUsers = legsData[0].usersList; 
+    }
+
+    if (legsData.length > 1) {
+        for (let i = 1; i < legsData.length; i++) {
+            otherLegsCount += legsData[i].size;
+            otherLegUsers = otherLegUsers.concat(legsData[i].usersList); 
+        }
+    }
+
+    return { 
+        strongLeg: strongLegCount, 
+        otherLegs: otherLegsCount, 
+        totalTeam: strongLegCount + otherLegsCount,
+        strongLegList: strongLegUsers, // Frontend ko List bhejenge
+        otherLegList: otherLegUsers    // Frontend ko List bhejenge
+    };
+};
+
+// 🔥 MAIN API
+router.get('/monthly-reward-progress', async (req, res) => {
+    try {
+        let targetDate = new Date();
+        if (req.query.date) {
+            const [year, month] = req.query.date.split('-');
+            targetDate = new Date(year, month - 1, 1);
+        }
+
+        let startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+        let endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59);
+
+        const usersWithDirects = await User.find({ isToppedUp: true }).lean();
+        
+        let reportData = [];
+
+        for (let user of usersWithDirects) {
+            const stats = await getMonthlyLegStatsForAdmin(user.userId, startOfMonth, endOfMonth);
+            
+            if (stats.totalTeam > 0) {
+                let achieved = null;
+                let nextTarget = REWARD_MILESTONES[0]; 
+
+                for (let i = 0; i < REWARD_MILESTONES.length; i++) {
+                    const m = REWARD_MILESTONES[i];
+                    if (stats.strongLeg >= m.strongLeg && stats.otherLegs >= m.otherLegs) {
+                        achieved = m;
+                        nextTarget = REWARD_MILESTONES[i + 1] || m; 
+                    }
+                }
+
+                reportData.push({
+                    userId: user.userId,
+                    name: user.name || "User",
+                    strongLeg: stats.strongLeg,
+                    otherLegs: stats.otherLegs,
+                    totalTeam: stats.totalTeam,
+                    
+                    // 🔥 NAYA: List bhej rahe hain
+                    strongLegList: stats.strongLegList, 
+                    otherLegList: stats.otherLegList,
+                    
+                    achievedReward: achieved ? achieved.reward : 0,
+                    achievedTitle: achieved ? achieved.title : "Not Qualified",
+                    nextTargetReward: nextTarget.reward,
+                    nextTargetStrong: nextTarget.strongLeg,
+                    nextTargetOther: nextTarget.otherLegs
+                });
+            }
+        }
+
+        reportData.sort((a, b) => b.totalTeam - a.totalTeam);
+        res.json({ success: true, data: reportData });
+    } catch (error) {
+        console.error("Admin Monthly Reward Progress Error:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
 // ==========================================
 // 1. OPTIMIZED TRANSACTIONS ROUTE
 // ==========================================
+// ==========================================
+// 1. OPTIMIZED TRANSACTIONS ROUTE
+// ==========================================
+// ==========================================
+// 1. FULL TRANSACTIONS ROUTE (NO LIMIT)
+// ==========================================
 router.get("/transactions", verifyAdmin, async (req, res) => {
   try {
-    // 🔥 LIMIT ADDED: Sirf latest 3000 transactions layega (No Server Crash)
-    const limit = parseInt(req.query.limit) || 3000;
-
+    // 🔥 LIMIT HATA DI HAI - Ab shuru se lekar end tak saara data aayega
     const transactions = await Transaction.find()
       .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean();
+      .lean(); // Lean = Super Fast Query for bulk data
 
-    // 🔥 SMART FETCH: Sirf wahi users fetch karega jinki transaction in 3000 mein hai (Saves 90% RAM)
+    // Smart Fetch: Sirf related users laayega memory save karne ke liye
     const userIds = [...new Set(
       transactions.flatMap(tx => [tx.userId, tx.fromUserId, tx.toUserId]).filter(Boolean)
     )];
 
     const users = await User.find({ userId: { $in: userIds } }, { userId: 1, name: 1 }).lean();
-
-    // Map userId -> name
     const userMap = Object.fromEntries(users.map(u => [u.userId, u.name]));
 
-    // Format transactions
-    const formatted = transactions.map(tx => ({
-      _id: tx._id,
-      userId: tx.userId,
-      name: userMap[tx.userId] || "Unknown",
-      type: tx.type,
-      // 🔥 FIX: Decimal128 error se bachne ke liye safe parsing
-      amount: tx.amount ? parseFloat(tx.amount.toString()) : 0,
-      source: tx.source || "-",          
-      description: tx.description || "",  
-      fromUserId: tx.fromUserId || null,
-      toUserId: tx.toUserId || null,
-      fromName: tx.fromUserId ? (userMap[tx.fromUserId] || "N/A") : "-",
-      toName: tx.toUserId ? (userMap[tx.toUserId] || "N/A") : "-",
-      package: tx.package || null,
-      plan: tx.plan || null,
-      level: tx.level || null,
-      date: tx.date || tx.createdAt || new Date(),
-      createdAt: tx.createdAt || new Date(),
-      updatedAt: tx.updatedAt || new Date(),
-      txnHash: tx.txnHash || tx.txHash || null, 
-      status: tx.status || "completed"
-    }));
+    const formatted = transactions.map(tx => {
+      // Decimal128 handling jisse amount kabhi kharab ya 0 nahi hoga
+      let safeAmount = 0;
+      if (tx.amount) {
+        if (tx.amount.$numberDecimal) safeAmount = parseFloat(tx.amount.$numberDecimal);
+        else safeAmount = parseFloat(tx.amount.toString()) || 0;
+      }
 
-    // Array return kar rahe hain, aapka frontend direct isko map kar lega
-    res.json(formatted);
+      return {
+        _id: tx._id,
+        userId: tx.userId,
+        name: userMap[tx.userId] || "Unknown",
+        type: tx.type,
+        amount: safeAmount, 
+        source: tx.source || "-",          
+        description: tx.description || "",  
+        fromUserId: tx.fromUserId || null,
+        toUserId: tx.toUserId || null,
+        fromName: tx.fromUserId ? (userMap[tx.fromUserId] || "N/A") : "-",
+        toName: tx.toUserId ? (userMap[tx.toUserId] || "N/A") : "-",
+        package: tx.package || null,
+        plan: tx.plan || null,
+        level: tx.level || null,
+        date: tx.date || tx.createdAt || new Date(),
+        createdAt: tx.createdAt || new Date(),
+        updatedAt: tx.updatedAt || new Date(),
+        txnHash: tx.txnHash || tx.txHash || null, 
+        status: tx.status || "completed"
+      };
+    });
+
+    res.json({ success: true, data: formatted });
   } catch (error) {
-    console.error("Failed to fetch transactions:", error);
-    res.status(500).json({ message: "Failed to fetch transactions" });
+    console.error("Failed to fetch all transactions:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch transactions" });
   }
 });
 
 
 // ==========================================
-// 2. OPTIMIZED DEPOSITS ROUTE
+// 2. FULL DEPOSITS ROUTE (NO LIMIT)
 // ==========================================
 router.get('/deposits', verifyAdmin, async (req, res) => {
   try {
-    // 🔥 LIMIT & LEAN ADDED: Super fast query
-    const limit = parseInt(req.query.limit) || 3000;
+    // 🔥 LIMIT HATA DI HAI - Saare deposits ek sath fetch honge
     const deposits = await Deposit.find()
       .sort({ createdAt: -1 })
-      .limit(limit)
       .lean(); 
 
-    // 🔥 SMART FETCH: Sirf related users
     const userIds = [...new Set(deposits.map(dep => dep.userId).filter(Boolean))];
     const users = await User.find({ userId: { $in: userIds } }, { userId: 1, name: 1 }).lean();
-
     const userMap = Object.fromEntries(users.map(u => [u.userId, u.name]));
 
-    const enriched = deposits.map(dep => ({
-      ...dep, // .lean() use kiya hai isliye .toObject() ki zaroorat nahi
-      name: userMap[dep.userId] || 'Unknown',
-      amount: dep.amount ? parseFloat(dep.amount.toString()) : 0
-    }));
+    const enriched = deposits.map(dep => {
+      let safeAmount = 0;
+      if (dep.amount) {
+        if (dep.amount.$numberDecimal) safeAmount = parseFloat(dep.amount.$numberDecimal);
+        else safeAmount = parseFloat(dep.amount.toString()) || 0;
+      }
 
-    res.json(enriched);
+      return {
+        ...dep,
+        name: userMap[dep.userId] || 'Unknown',
+        amount: safeAmount
+      };
+    });
+
+    res.json({ success: true, data: enriched });
   } catch (err) {
-    console.error('Failed to fetch deposits:', err);
-    res.status(500).json({ message: 'Failed to fetch deposits' });
+    console.error('Failed to fetch all deposits:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch deposits' });
   }
 });
-
 
 
 

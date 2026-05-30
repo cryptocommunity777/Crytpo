@@ -73,6 +73,7 @@ import AdminSecurity from './pages/admin/AdminSecurity.jsx';
 import DeviceManager from './pages/admin/DeviceManager.jsx';
 import BoosterOfferPage from './pages/admin/BoosterOfferPage.jsx';
 import AdminManageUsers from './pages/admin/AdminManageUsers.jsx';
+import MonthlyRewardReport from './pages/admin/MonthlyRewardReport.jsx';
 
 // 📜 Scroll Restoration
 const ScrollToTop = () => {
@@ -154,6 +155,7 @@ function AppContent() {
               <Route path="credit-to-wallet" element={<CreditToWalletPage />} />
               <Route path="blocked-users" element={<BlockedUsers />} />
               <Route path="transactions" element={<AdminTransactions />} />
+              <Route path="reward-progress" element={<MonthlyRewardReport />} />
               <Route path="settings" element={<AdminSettingsPage />} />
               <Route path="transactions/reverse" element={<ReverseTransaction />} />
               <Route path="login-stats" element={<AdminLoginStats />} />

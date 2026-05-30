@@ -40,15 +40,32 @@ const DepositTable = () => {
 
       const allTransactions = res.data.data || res.data || [];
       
-      // ✅ Fetch karte hi timestamp bana liya (Loop fast chalega)
-      const onlyDeposits = allTransactions
-        .filter((tx) => tx.type === 'deposit' || tx.type === 'manual_credit')
-        .map(tx => ({
-            ...tx,
-            timestamp: new Date(tx.createdAt || tx.date).getTime()
-        }));
+      // 🔥 SUPER FAST OPTIMIZATION: Sirf ek loop chalega (filter aur map dono ek sath)
+      const validDeposits = [];
+      
+      for (let i = 0; i < allTransactions.length; i++) {
+          const tx = allTransactions[i];
+          const txType = (tx.type || '').toLowerCase(); // Safe lowercasing
+          
+          // Entry miss na ho isliye conditions thodi broad kar di hain
+          if (txType === 'deposit' || txType === 'manual_credit' || txType.includes('deposit')) {
+              
+              // Date NaN (Invalid) na bane iski guarantee
+              const rawDate = tx.createdAt || tx.date || tx.timestamp;
+              let parsedTimestamp = new Date(rawDate).getTime();
+              if (isNaN(parsedTimestamp)) parsedTimestamp = 0;
 
-      setDeposits(onlyDeposits);
+              validDeposits.push({
+                  ...tx,
+                  timestamp: parsedTimestamp
+              });
+          }
+      }
+
+      // Latest pehle dikhane ke liye sort kar diya
+      validDeposits.sort((a, b) => b.timestamp - a.timestamp);
+      setDeposits(validDeposits);
+
     } catch (err) {
       console.error('Failed to fetch deposits:', err);
     } finally {
@@ -56,7 +73,7 @@ const DepositTable = () => {
     }
   };
 
-  // ✅ useMemo se UI freeze hona band ho jayega
+  // 🔥 useMemo filtering ko lagatar update hone se rokta hai
   const filteredDeposits = useMemo(() => {
     return deposits.filter((deposit) => {
       const depositUserId = deposit.userId ? String(deposit.userId) : "";
@@ -64,8 +81,9 @@ const DepositTable = () => {
       const searchQuery = searchId.toLowerCase();
 
       const matchId = searchId ? (depositUserId.includes(searchQuery) || hashStr.includes(searchQuery)) : true;
-      const matchFrom = fromDate ? deposit.timestamp >= new Date(fromDate).getTime() : true;
       
+      // Date Logic: Agar kisi ki date 0 hai, toh use hamesha dikhao warna gayab ho jayega
+      const matchFrom = fromDate ? deposit.timestamp >= new Date(fromDate).getTime() : true;
       let matchTo = true;
       if (toDate) {
         let endDate = new Date(toDate).getTime() + 86399999;
@@ -76,7 +94,7 @@ const DepositTable = () => {
     });
   }, [deposits, searchId, fromDate, toDate]);
 
-  // ✅ Totals ko useMemo me daala (Performance Boost)
+  // Totals calculations
   const totalAmount = useMemo(() => 
     filteredDeposits.reduce((sum, d) => sum + getNumericAmount(d.amount), 0), 
   [filteredDeposits]);
@@ -90,7 +108,6 @@ const DepositTable = () => {
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredDeposits.length / depositsPerPage) || 1;
-  // Ensure current page is valid when filtering changes
   const validCurrentPage = Math.min(currentPage, totalPages);
   
   const indexOfLast = validCurrentPage * depositsPerPage;
@@ -154,7 +171,7 @@ const DepositTable = () => {
       <div className="overflow-x-auto rounded-lg shadow border border-gray-200">
         <table className="w-full table-auto text-left border-collapse">
           <thead>
-            <tr className="bg-indigo-600 text-slate-900 text-sm">
+            <tr className="bg-indigo-600 text-white text-sm">
               <th className="p-3 border-b">#</th>
               <th className="p-3 border-b">User ID</th>
               <th className="p-3 border-b">Name</th>
@@ -167,7 +184,9 @@ const DepositTable = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="7" className="text-center py-8 text-gray-500 font-semibold">Loading deposits...</td>
+                <td colSpan="7" className="text-center py-10 text-gray-500 font-bold uppercase tracking-widest animate-pulse">
+                  ⏳ Syncing Database... Please Wait
+                </td>
               </tr>
             ) : currentDeposits.length > 0 ? (
               currentDeposits.map((deposit, index) => {
@@ -182,35 +201,38 @@ const DepositTable = () => {
                       isTodayRecord ? 'bg-yellow-50' : 'bg-white hover:bg-gray-50'
                     }`}
                   >
-                    <td className="p-3 text-gray-500">{serial}</td>
-                    <td className="p-3 font-bold text-indigo-600">{deposit.userId || 'N/A'}</td>
-                    <td className="p-3 font-medium text-gray-800">{deposit.name || 'Unknown'}</td>
-                    <td className="p-3 text-green-600 font-bold">
+                    <td className="p-3 text-gray-500 font-bold">{serial}</td>
+                    <td className="p-3 font-black text-indigo-600">#{deposit.userId || 'N/A'}</td>
+                    <td className="p-3 font-bold text-gray-800 capitalize">{deposit.name || 'Unknown'}</td>
+                    <td className="p-3 text-green-600 font-black">
                       ${getNumericAmount(deposit.amount).toFixed(2)}
                     </td>
                     
-                    <td className="p-3 break-all text-xs font-mono max-w-[200px]">
+                    <td className="p-3 break-all text-[11px] font-mono max-w-[200px]">
                       {actualHash ? (
-                         <span className="truncate block text-blue-600 font-medium" title={actualHash}>
+                         <span className="truncate block text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded border border-blue-100" title={actualHash}>
                            {actualHash}
                          </span>
                       ) : deposit.type === 'manual_credit' || deposit.description?.includes('Manual') ? (
-                        <span className="italic text-green-500 font-semibold">Manual Deposit</span>
+                        <span className="italic text-green-600 font-bold bg-green-50 px-2 py-1 rounded border border-green-100">Manual Deposit</span>
                       ) : (
-                        <span className="italic text-black">System Deposit</span>
+                        <span className="italic text-gray-500 font-bold">System Deposit</span>
                       )}
                     </td>
 
-                    <td className="p-3 text-gray-600 whitespace-nowrap font-medium">
-                      {new Date(deposit.timestamp).toLocaleString('en-GB')}
+                    <td className="p-3 text-gray-600 font-bold text-xs uppercase tracking-wide">
+                      {deposit.timestamp > 0 ? new Date(deposit.timestamp).toLocaleDateString('en-GB') : 'Unknown'}
+                      <span className="block text-[10px] text-gray-400">
+                         {deposit.timestamp > 0 ? new Date(deposit.timestamp).toLocaleTimeString() : ''}
+                      </span>
                     </td>
                     <td className="p-3 text-center">
-                       <span className={`px-3 py-1 text-xs rounded-full font-bold uppercase tracking-wider ${
-                         deposit.status === 'approved' || deposit.status === 'completed' || !deposit.status
-                         ? 'bg-green-100 text-green-700' 
+                       <span className={`px-3 py-1 text-[10px] rounded-md font-black uppercase tracking-wider border ${
+                         deposit.status === 'approved' || deposit.status === 'completed' || deposit.status === 'success' || !deposit.status
+                         ? 'bg-green-50 text-green-600 border-green-200' 
                          : deposit.status === 'pending'
-                         ? 'bg-yellow-100 text-yellow-700'
-                         : 'bg-red-100 text-red-700'
+                         ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
+                         : 'bg-red-50 text-red-600 border-red-200'
                        }`}>
                          {deposit.status || "Completed"}
                        </span>
@@ -220,7 +242,7 @@ const DepositTable = () => {
               })
             ) : (
               <tr>
-                <td colSpan="7" className="text-center py-10 text-gray-500 font-semibold">
+                <td colSpan="7" className="text-center py-10 text-gray-500 font-semibold uppercase tracking-widest">
                   No deposits found in the system.
                 </td>
               </tr>
@@ -237,13 +259,13 @@ const DepositTable = () => {
             disabled={validCurrentPage === 1}
             className={`px-5 py-2 rounded transition-colors ${
               validCurrentPage === 1
-                ? 'bg-gray-200 cursor-not-allowed'
-                : 'bg-indigo-600 text-slate-900 hover:bg-indigo-700'
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md'
             }`}
           >
             Previous
           </button>
-          <span className="bg-gray-100 px-4 py-2 rounded">
+          <span className="bg-gray-50 border border-gray-200 px-4 py-2 rounded font-bold text-indigo-800">
             Page {validCurrentPage} of {totalPages}
           </span>
           <button
@@ -251,8 +273,8 @@ const DepositTable = () => {
             disabled={validCurrentPage === totalPages}
             className={`px-5 py-2 rounded transition-colors ${
               validCurrentPage === totalPages
-                ? 'bg-gray-200 cursor-not-allowed'
-                : 'bg-indigo-600 text-slate-900 hover:bg-indigo-700'
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md'
             }`}
           >
             Next

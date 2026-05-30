@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
-import api from "../../api/axios"; // Apne folder path ke hisaab se check kar lena
+// C:\Users\HP\Desktop\Cryptocommunity\frontend\src\pages\admin\AdminWalletHistory.jsx
+
+import React, { useEffect, useState, useMemo } from "react";
+import api from "../../api/axios"; 
 import Papa from "papaparse";
 import { saveAs } from "file-saver";
 
@@ -73,26 +75,35 @@ const AdminWalletHistory = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Filter out income types initially
-      const filteredData = Array.isArray(res.data)
-        ? res.data.filter(
-            (tx) =>
-              ![
-                "direct_income",
-                "level_income",
-                "plan_income",
-                "spin_income",
-                "roi_income",
-              ].includes(tx.type)
-          )
-        : [];
+      // API Data extraction (Handle both nested {data: []} and direct array)
+      const rawData = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+      
+      const excludeTypes = [
+        "direct_income",
+        "level_income",
+        "plan_income",
+        "spin_income",
+        "roi_income",
+      ];
+
+      // 🔥 SUPER FAST OPTIMIZATION: Single Loop for Filtering and Timestamp creation
+      const validTxns = [];
+      for (let i = 0; i < rawData.length; i++) {
+        const tx = rawData[i];
+        if (!excludeTypes.includes(tx.type)) {
+           // Date parsing done ONLY ONCE here
+           const parsedTimestamp = new Date(tx.createdAt || tx.date).getTime();
+           validTxns.push({
+             ...tx,
+             timestamp: isNaN(parsedTimestamp) ? 0 : parsedTimestamp
+           });
+        }
+      }
 
       // Sort: Latest First
-      const sortedData = filteredData.sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      );
+      validTxns.sort((a, b) => b.timestamp - a.timestamp);
+      setTransactions(validTxns);
 
-      setTransactions(sortedData);
     } catch (err) {
       console.error("Admin wallet history fetch error:", err);
       setError("Failed to load wallet history.");
@@ -106,47 +117,47 @@ const AdminWalletHistory = () => {
     setCurrentPage(1);
   }, [searchTerm, typeFilter, fromDate, toDate, itemsPerPage]);
 
-  // 🔹 Main Filtering Logic
-  const filteredTxns = transactions.filter((txn) => {
-    // 1. Search Filter
+  // 🔥 FAST MEMOIZED FILTERING (Browser hang nahi hoga)
+  const filteredTxns = useMemo(() => {
     const lowerSearch = searchTerm.toLowerCase();
-    const matchesSearch =
-      txn.userId?.toString().includes(lowerSearch) ||
-      txn.name?.toLowerCase().includes(lowerSearch) ||
-      txn.type?.toLowerCase().includes(lowerSearch) ||
-      txn.description?.toLowerCase().includes(lowerSearch);
+    
+    // Dates ko loop ke bahar process karo taaki har entry par dobara na karna pade
+    const fromTime = fromDate ? new Date(fromDate).setHours(0, 0, 0, 0) : null;
+    const toTime = toDate ? new Date(toDate).setHours(23, 59, 59, 999) : null;
 
-    // 2. Type Filter
-    const matchesType = typeFilter === "all" || txn.type === typeFilter;
+    return transactions.filter((txn) => {
+      // 1. Type Filter Fast Check
+      if (typeFilter !== "all" && txn.type !== typeFilter) return false;
 
-    // 3. Date Range Filter
-    let matchesDate = true;
-    if (fromDate || toDate) {
-      const txnDate = new Date(txn.createdAt).setHours(0, 0, 0, 0); // Normalize time
-      const from = fromDate ? new Date(fromDate).setHours(0, 0, 0, 0) : null;
-      const to = toDate ? new Date(toDate).setHours(0, 0, 0, 0) : null;
+      // 2. Date Range Filter Fast Check
+      if (fromTime && txn.timestamp < fromTime) return false;
+      if (toTime && txn.timestamp > toTime) return false;
 
-      if (from && txnDate < from) matchesDate = false;
-      if (to && txnDate > to) matchesDate = false;
-    }
+      // 3. Search Filter
+      if (lowerSearch) {
+        const matchesSearch =
+          (txn.userId && String(txn.userId).toLowerCase().includes(lowerSearch)) ||
+          (txn.name && txn.name.toLowerCase().includes(lowerSearch)) ||
+          (txn.type && txn.type.toLowerCase().includes(lowerSearch)) ||
+          (txn.description && txn.description.toLowerCase().includes(lowerSearch));
+        if (!matchesSearch) return false;
+      }
 
-    return matchesSearch && matchesType && matchesDate;
-  });
+      return true;
+    });
+  }, [transactions, searchTerm, typeFilter, fromDate, toDate]);
 
   // 🔹 Pagination Slicing
-  const indexOfLastItem = currentPage * itemsPerPage;
+  const totalPages = Math.ceil(filteredTxns.length / itemsPerPage) || 1;
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  
+  const indexOfLastItem = validCurrentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredTxns.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredTxns.length / itemsPerPage);
 
-  const handleNext = () => {
-    if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
-  };
-
-  const handlePrev = () => {
-    if (currentPage > 1) setCurrentPage((prev) => prev - 1);
-  };
-
+  const handleNext = () => { if (validCurrentPage < totalPages) setCurrentPage((prev) => prev + 1); };
+  const handlePrev = () => { if (validCurrentPage > 1) setCurrentPage((prev) => prev - 1); };
+  
   const handleEntriesChange = (e) => {
     setItemsPerPage(Number(e.target.value));
     setCurrentPage(1);
@@ -168,8 +179,8 @@ const AdminWalletHistory = () => {
       Amount: formatAmount(txn.amount),
       WalletBalance: formatAmount(txn.walletBalance || 0),
       Description: txn.description || "-",
-      Date: new Date(txn.createdAt).toLocaleDateString("en-GB"),
-      Time: new Date(txn.createdAt).toLocaleTimeString("en-US", { hour12: true }),
+      Date: new Date(txn.timestamp).toLocaleDateString("en-GB"),
+      Time: new Date(txn.timestamp).toLocaleTimeString("en-US", { hour12: true }),
     }));
 
     const csv = Papa.unparse(csvData);
@@ -178,7 +189,7 @@ const AdminWalletHistory = () => {
   };
 
   if (loading) {
-    return <div className="p-4 text-center text-gray-600 text-lg">Loading wallet history...</div>;
+    return <div className="p-10 text-center text-indigo-600 font-bold tracking-widest uppercase animate-pulse">⏳ Fetching Wallet History...</div>;
   }
 
   if (error) {
@@ -218,21 +229,21 @@ const AdminWalletHistory = () => {
             ))}
           </select>
 
-          <div className="flex items-center gap-2 border border-gray-300 rounded px-3 py-2 bg-white shadow-sm">
-            <span className="text-sm text-gray-500">From:</span>
+          <div className="flex items-center gap-2 border border-gray-300 rounded px-3 py-2 bg-white shadow-sm w-full md:w-auto">
+            <span className="text-sm text-gray-500 whitespace-nowrap">From:</span>
             <input
               type="date"
-              className="outline-none bg-transparent"
+              className="outline-none bg-transparent w-full"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
             />
           </div>
 
-          <div className="flex items-center gap-2 border border-gray-300 rounded px-3 py-2 bg-white shadow-sm">
-            <span className="text-sm text-gray-500">To:</span>
+          <div className="flex items-center gap-2 border border-gray-300 rounded px-3 py-2 bg-white shadow-sm w-full md:w-auto">
+            <span className="text-sm text-gray-500 whitespace-nowrap">To:</span>
             <input
               type="date"
-              className="outline-none bg-transparent"
+              className="outline-none bg-transparent w-full"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
             />
@@ -241,7 +252,7 @@ const AdminWalletHistory = () => {
           {(fromDate || toDate) && (
             <button
               onClick={() => { setFromDate(""); setToDate(""); }}
-              className="bg-red-500 hover:bg-red-600 text-slate-900 px-3 py-2 rounded shadow-sm text-sm font-medium transition"
+              className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded shadow-sm text-sm font-medium transition whitespace-nowrap"
             >
               Clear Dates
             </button>
@@ -260,13 +271,13 @@ const AdminWalletHistory = () => {
         </div>
 
         {/* Export & Count */}
-        <div className="flex gap-4 items-center justify-between md:justify-end">
-          <span className="text-gray-600 text-sm font-medium">
+        <div className="flex gap-4 items-center justify-between md:justify-end border-t md:border-t-0 border-gray-200 pt-4 md:pt-0">
+          <span className="text-gray-600 text-sm font-bold bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
             Total: {filteredTxns.length}
           </span>
           <button
             onClick={exportToCSV}
-            className="bg-green-600 hover:bg-green-700 text-slate-900 font-medium py-2 px-4 rounded shadow transition text-sm"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded shadow transition text-sm whitespace-nowrap"
           >
             Export CSV
           </button>
@@ -292,28 +303,27 @@ const AdminWalletHistory = () => {
           <tbody>
             {currentItems.length === 0 ? (
               <tr>
-                <td colSpan="9" className="text-center px-4 py-8 text-gray-500">
+                <td colSpan="9" className="text-center px-4 py-8 text-gray-500 font-bold uppercase tracking-widest">
                   No transactions found matching your criteria.
                 </td>
               </tr>
             ) : (
               currentItems.map((txn, idx) => {
-                const createdAt = new Date(txn.createdAt);
                 const isCredit = ["deposit", "credit_to_wallet", "topup"].includes(txn.type);
                 const serialNo = indexOfFirstItem + idx + 1;
 
                 return (
                   <tr key={txn._id || idx} className="hover:bg-gray-50 border-b transition">
-                    <td className="px-4 py-3 text-gray-600 border-r">{serialNo}</td>
+                    <td className="px-4 py-3 text-gray-600 border-r font-bold">{serialNo}</td>
                     
                     {/* Copyable User ID */}
                     <td className="px-4 py-3 border-r">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-indigo-600">{txn.userId}</span>
+                        <span className="font-black text-indigo-600">#{txn.userId}</span>
                         <button
-                          onClick={() => handleCopy(txn.userId.toString())}
+                          onClick={() => handleCopy(txn.userId?.toString())}
                           title="Copy User ID"
-                          className="text-black hover:text-gray-700 transition"
+                          className="text-gray-400 hover:text-black transition"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
@@ -322,32 +332,32 @@ const AdminWalletHistory = () => {
                       </div>
                     </td>
 
-                    <td className="px-4 py-3 border-r text-gray-800 font-medium">{txn.name || "-"}</td>
+                    <td className="px-4 py-3 border-r text-gray-800 font-bold capitalize">{txn.name || "-"}</td>
                     
                     <td className="px-4 py-3 border-r capitalize">
-                      <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-semibold whitespace-nowrap">
+                      <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider whitespace-nowrap border border-gray-200">
                         {(txn.type || "unknown").replace(/_/g, " ")}
                       </span>
                     </td>
 
-                    <td className={`px-4 py-3 border-r font-bold whitespace-nowrap ${isCredit ? 'text-green-600' : 'text-red-500'}`}>
+                    <td className={`px-4 py-3 border-r font-black whitespace-nowrap ${isCredit ? 'text-green-600' : 'text-red-500'}`}>
                       ${formatAmount(txn.amount)}
                     </td>
 
-                    <td className="px-4 py-3 border-r font-bold text-gray-700 whitespace-nowrap">
+                    <td className="px-4 py-3 border-r font-black text-gray-800 whitespace-nowrap">
                       ${formatAmount(txn.walletBalance || 0)}
                     </td>
 
-                    <td className="px-4 py-3 border-r text-gray-600 text-xs max-w-xs truncate" title={txn.description || "-"}>
+                    <td className="px-4 py-3 border-r text-gray-600 text-xs max-w-[200px] truncate" title={txn.description || "-"}>
                       {txn.description || "-"}
                     </td>
 
-                    <td className="px-4 py-3 border-r text-gray-500 whitespace-nowrap">
-                      {createdAt.toLocaleDateString("en-GB")}
+                    <td className="px-4 py-3 border-r text-gray-600 font-bold whitespace-nowrap">
+                      {new Date(txn.timestamp).toLocaleDateString("en-GB")}
                     </td>
 
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                      {createdAt.toLocaleTimeString("en-US", { hour12: true })}
+                    <td className="px-4 py-3 text-gray-500 text-xs font-semibold whitespace-nowrap">
+                      {new Date(txn.timestamp).toLocaleTimeString("en-US", { hour12: true })}
                     </td>
                   </tr>
                 );
@@ -360,34 +370,34 @@ const AdminWalletHistory = () => {
       {/* Pagination Footer */}
       {filteredTxns.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mt-4 text-sm">
-          <span className="text-gray-600">
+          <span className="text-gray-600 font-bold uppercase tracking-widest text-[10px] md:text-xs">
             Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredTxns.length)} of {filteredTxns.length} entries
           </span>
           
           <div className="flex gap-2">
             <button
               onClick={handlePrev}
-              disabled={currentPage === 1}
-              className={`px-3 py-1 border rounded transition ${
-                currentPage === 1 
-                  ? 'bg-gray-100 text-black cursor-not-allowed' 
-                  : 'bg-white hover:bg-gray-50 text-gray-700'
+              disabled={validCurrentPage === 1}
+              className={`px-4 py-1.5 border rounded-lg font-bold transition ${
+                validCurrentPage === 1 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' 
+                  : 'bg-white hover:bg-indigo-50 text-indigo-700 border-indigo-200'
               }`}
             >
-              Previous
+              Prev
             </button>
             
-            <button className="px-3 py-1 border rounded bg-indigo-600 text-slate-900 font-bold">
-              {currentPage}
+            <button className="px-4 py-1.5 border rounded-lg bg-indigo-600 text-white font-black shadow-md">
+              {validCurrentPage} / {totalPages}
             </button>
 
             <button
               onClick={handleNext}
-              disabled={currentPage === totalPages}
-              className={`px-3 py-1 border rounded transition ${
-                currentPage === totalPages 
-                  ? 'bg-gray-100 text-black cursor-not-allowed' 
-                  : 'bg-white hover:bg-gray-50 text-gray-700'
+              disabled={validCurrentPage === totalPages}
+              className={`px-4 py-1.5 border rounded-lg font-bold transition ${
+                validCurrentPage === totalPages 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' 
+                  : 'bg-white hover:bg-indigo-50 text-indigo-700 border-indigo-200'
               }`}
             >
               Next
