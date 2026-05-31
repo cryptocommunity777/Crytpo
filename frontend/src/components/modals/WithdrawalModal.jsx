@@ -203,9 +203,9 @@ const WithdrawalModal = ({ userId, onClose }) => {
       });
 
       // Master Pool limit check
-      if (poolRequestedTotal > 0 && !isPromo && poolRequestedTotal > balances.pool) {
-          return showMessage("Insufficient Funds", "Total community income requested exceeds available master balance.");
-      }
+      // if (poolRequestedTotal > 0 && !isPromo && poolRequestedTotal > balances.pool) {
+      //     return showMessage("Insufficient Funds", "Total community income requested exceeds available master balance.");
+      // }
 
       if (totalRequested === 0) return showMessage("Warning", "Enter amount to withdraw.");
       if (!isPromo && totalRequested < 10) return showMessage("Warning", "Minimum total withdrawal amount is $10.");
