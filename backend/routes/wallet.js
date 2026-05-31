@@ -594,7 +594,7 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
         simRewardWallet -= amt;
       }
       else if (item.source.startsWith("pool")) {
-        if (simPoolWallet < amt) return res.status(400).json({ message: "Insufficient Auto-Pool balance." });
+        if (simPoolWallet < amt) return res.status(400).json({ message: "Insufficient Community balance." });
         simPoolWallet -= amt; 
       } 
       else {
