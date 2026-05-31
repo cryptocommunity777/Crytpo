@@ -1112,7 +1112,7 @@ const user = await User.findOne({ userId: req.params.userId });
 
 
  // Get deduplicated top-up users
- router.get('/topup-users', verifyAdmin, async (req, res) => {
+router.get('/topup-users', verifyAdmin, async (req, res) => {
   try {
     const topups = await Transaction.aggregate([
       { 
@@ -1164,9 +1164,18 @@ const user = await User.findOne({ userId: req.params.userId });
       let amount = Number(amountStr) || 0;
       if (amount === 0) amount = 30; // Fallback for old records
 
-      // 👑 ROLE FINDER (Leader ya Normal)
+      // 👑 ROLE & "TOPPED UP BY" FINDER
       const initiatorId = Number(tx.fromUserId || tx.userId);
       const initiatorRole = userMap[initiatorId]?.role === 'leader' ? 'leader' : 'normal';
+
+      // 🔥 NAYA LOGIC: Kisne Top-Up kiya?
+      let topUpByName = "Self"; 
+      if (tx.fromUserId && Number(tx.fromUserId) !== Number(tx.userId)) {
+          const senderName = userMap[Number(tx.fromUserId)]?.name || 'Unknown';
+          topUpByName = `${senderName} (#${tx.fromUserId})`; // Result: "Rahul Sharma (#123456)"
+      } else if (tx.source === 'admin' || tx.source === 'system') {
+          topUpByName = "System / Admin";
+      }
 
       return {
         _id: tx._id,
@@ -1175,7 +1184,8 @@ const user = await User.findOne({ userId: req.params.userId });
         mobile: userMap[Number(tx.userId)]?.mobile || 'N/A', 
         topUpAmount: amount,
         topUpDate: tx.date || tx.createdAt,
-        initiatorRole: initiatorRole // 🔥 NAYA FIELD FRONTEND KE LIYE
+        initiatorRole: initiatorRole, 
+        topUpBy: topUpByName // 🔥 NAYA FIELD FRONTEND KE LIYE BHEJ DIYA
       };
     });
 
@@ -1199,8 +1209,6 @@ const user = await User.findOne({ userId: req.params.userId });
 
 
 
-
- 
 const REWARD_MILESTONES = [
   { target: 50, strongLeg: 25, otherLegs: 25, reward: 30, title: "Target 1 (50 Points)" },
   { target: 250, strongLeg: 125, otherLegs: 125, reward: 100, title: "Target 2 (250 Points)" },
@@ -1212,10 +1220,6 @@ const REWARD_MILESTONES = [
   { target: 21750, strongLeg: 10875, otherLegs: 10875, reward: 3000, title: "Target 8 (21750 Points)" }
 ];
 
-// Helper Function: Mahine ka progress nikalne ke liye
-// Helper Function: Mahine ka progress aur EXACT IDs nikalne ke liye
-// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\admin.js
-
 // 🔥 Helper Function: Ab ID ke sath Name bhi return karega
 const getMonthlyLegStatsForAdmin = async (sponsorId, startOfMonth, endOfMonth) => {
     // 💡 Name field ko bhi fetch kar rahe hain
@@ -1226,10 +1230,8 @@ const getMonthlyLegStatsForAdmin = async (sponsorId, startOfMonth, endOfMonth) =
     for (let direct of directs) {
         let currentLegUsers = []; 
         
-        if (direct.isToppedUp && direct.topUpDate >= startOfMonth && direct.topUpDate <= endOfMonth) {
-            // ID aur Name dono store kar rahe hain
-            currentLegUsers.push({ userId: direct.userId, name: direct.name });
-        }
+        // 🛑 FIX: Direct user ka apna top-up count hata diya gaya hai.
+        // (Pehle yahan direct ki id push hoti thi, ab nahi hogi)
 
         let queue = [direct.userId];
         while (queue.length > 0) {
@@ -1276,10 +1278,9 @@ const getMonthlyLegStatsForAdmin = async (sponsorId, startOfMonth, endOfMonth) =
     };
 };
 
-// 🔥 MAIN API
-// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\admin.js
-
+// =========================================================================
 // 🔥 SUPER FAST API: "RAM TREE MAPPING" (0 loops on Database)
+// =========================================================================
 router.get('/monthly-reward-progress', async (req, res) => {
     try {
         // 1. Date calculation
@@ -1315,12 +1316,9 @@ router.get('/monthly-reward-progress', async (req, res) => {
 
             for (let directId of directs) {
                 let currentLegUsers = [];
-                const directObj = userMap.get(directId);
 
-                // Direct user check
-                if (directObj && directObj.isToppedUp && directObj.topUpDate >= startOfMonth && directObj.topUpDate <= endOfMonth) {
-                    currentLegUsers.push({ userId: directObj.userId, name: directObj.name });
-                }
+                // 🛑 FIX: Yahan se bhi Direct ka point hataya gaya hai!
+                // Sirf uski downlines hi us leg me count hongi.
 
                 // BFS loop in RAM (No database calls here = 1000x faster)
                 let queue = [directId];
@@ -1330,6 +1328,7 @@ router.get('/monthly-reward-progress', async (req, res) => {
                     
                     for (let childId of downlines) {
                         const childObj = userMap.get(childId);
+                        // Agar child user required month me topup hua hai toh list me daalo
                         if (childObj && childObj.isToppedUp && childObj.topUpDate >= startOfMonth && childObj.topUpDate <= endOfMonth) {
                             currentLegUsers.push({ userId: childObj.userId, name: childObj.name });
                         }
@@ -1412,6 +1411,67 @@ router.get('/monthly-reward-progress', async (req, res) => {
         res.status(500).json({ success: false, message: "Server error" });
     }
 });
+
+
+
+
+
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\admin.js
+
+// 🔥 NEW API: Wallet Balance & Paid Directs List (With > 0 Filter)
+router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
+    try {
+        const stats = await User.aggregate([
+            {
+                $project: {
+                    userId: 1,
+                    name: 1,
+                    walletBalance: { $ifNull: ["$walletBalance", 0] },
+                }
+            },
+            {
+                $lookup: {
+                    from: "users", // Database me table ka naam (small case)
+                    localField: "userId",
+                    foreignField: "sponsorId",
+                    pipeline: [
+                        { $match: { isToppedUp: true } }, // Sirf un directs ko gino jo Topped Up hain
+                        { $count: "paidDirects" }
+                    ],
+                    as: "directsData"
+                }
+            },
+            {
+                $addFields: {
+                    paidDirectCount: {
+                        $ifNull: [{ $arrayElemAt: ["$directsData.paidDirects", 0] }, 0]
+                    }
+                }
+            },
+            {
+                $project: {
+                    directsData: 0 // Kachra hata do
+                }
+            },
+            {
+                // 🔥 Yahan filter lagaya hai: Balance > 0 HO **YA** Paid Directs > 0 HO
+                $match: {
+                    $or: [
+                        { walletBalance: { $gt: 0 } },
+                        { paidDirectCount: { $gt: 0 } }
+                    ]
+                }
+            },
+            { $sort: { walletBalance: -1 } } // Default sorting (Highest balance first)
+        ]);
+
+        res.json({ success: true, data: stats });
+    } catch (error) {
+        console.error("Wallet Direct Stats Error:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
 
 // ==========================================
 // 1. OPTIMIZED TRANSACTIONS ROUTE
@@ -1501,6 +1561,39 @@ router.get('/deposits', verifyAdmin, async (req, res) => {
 });
 
 
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\admin.js
+
+// 🔥 SUPER FAST DEPOSITS API
+router.get('/all-deposits-fast', verifyAdmin, async (req, res) => {
+    try {
+        // 1. Sirf deposits aur manual_credits fetch karo, lean() se query 5x fast ho jayegi
+        const deposits = await Transaction.find({ 
+            type: { $in: ['deposit', 'manual_credit'] } 
+        }).sort({ createdAt: -1 }).lean();
+
+        // 2. Unik User IDs nikalo taaki database pe baar-baar call na jaye
+        const uniqueUserIds = [...new Set(deposits.map(d => Number(d.userId)))];
+
+        // 3. Ek hi baar mein saare users ke naam utha lo
+        const users = await User.find({ userId: { $in: uniqueUserIds } }, 'userId name').lean();
+        
+        // 4. Memory (RAM) mein Map banao
+        const userMap = {};
+        users.forEach(u => userMap[u.userId] = u.name);
+
+        // 5. Final data merge karke bhej do
+        const finalData = deposits.map(d => ({
+            ...d,
+            name: userMap[Number(d.userId)] || 'Unknown',
+            amount: d.amount && d.amount.$numberDecimal ? Number(d.amount.$numberDecimal) : Number(d.amount),
+        }));
+
+        res.json({ success: true, data: finalData });
+    } catch (error) {
+        console.error('Fast Deposits Fetch Error:', error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
 
 
 router.get('/direct-income', verifyAdmin, async (req, res) => {
@@ -2031,6 +2124,142 @@ router.put('/withdrawals/reject/:id', verifyAdmin, async (req, res) => {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
+});
+
+
+
+
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\admin.js
+
+// 1. 🔥 LEADER LIST FETCH KARNE KI API
+router.get('/leader-withdrawal-list', verifyAdmin, async (req, res) => {
+    try {
+        // 🔥 UPDATE 1: 'walletBalance' ko find query mein add kiya
+        const leaders = await User.find({ role: 'leader' }, 'userId name walletBalance directIncome levelIncome rewardIncome poolIncome walletAddress').lean();
+        
+        const leaderData = leaders.map(user => {
+            const totalIncome = (user.directIncome || 0) + (user.levelIncome || 0) + (user.rewardIncome || 0) + (user.poolIncome || 0);
+            const eligibleWithdrawal = Math.floor(totalIncome / 10) * 10; // Sirf 10 ke multiples
+            
+            return {
+                userId: user.userId,
+                name: user.name,
+                // 🔥 UPDATE 2: Yahan Frontend ke liye walletBalance bhej diya
+                walletBalance: user.walletBalance || 0,
+                totalIncome: totalIncome,
+                eligibleWithdrawal: eligibleWithdrawal,
+                remainingAfter: totalIncome - eligibleWithdrawal,
+                walletAddress: user.walletAddress || "Not Set"
+            };
+        });
+
+        // Jinka balance sabse zyada hai wo upar aayenge
+        leaderData.sort((a, b) => b.totalIncome - a.totalIncome);
+
+        res.json({ success: true, data: leaderData });
+    } catch (error) {
+        console.error("Leader List Error:", error);
+        res.status(500).json({ success: false, message: "Failed to fetch leaders." });
+    }
+});
+
+
+// 2. 🔥 LEADER AUTO-WITHDRAWAL EXECUTE KARNE KI API (10 ke Multiples mein)
+router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) => {
+    try {
+        const leaderId = Number(req.params.userId);
+        const user = await User.findOne({ userId: leaderId, role: 'leader' });
+
+        if (!user) return res.status(404).json({ success: false, message: "Leader not found." });
+
+        // 🔥 SIRF INCOME SOURCES KA TOTAL (Wallet Balance excluded)
+        const dInc = user.directIncome || 0;
+        const lInc = user.levelIncome || 0;
+        const rInc = user.rewardIncome || 0;
+        const pInc = user.poolIncome || 0;
+
+        const totalIncome = dInc + lInc + rInc + pInc;
+        const eligibleAmt = Math.floor(totalIncome / 10) * 10; 
+        
+        if (eligibleAmt < 10) {
+            return res.status(400).json({ success: false, message: "Income balance is less than $10. Cannot withdraw." });
+        }
+
+        let remainingToDeduct = eligibleAmt;
+        const deductions = { direct: 0, level: 0, reward: 0, pool: 0 };
+
+        // 🧠 Logic: Income boxes se deduction
+        if (user.directIncome > 0 && remainingToDeduct > 0) {
+            let amt = Math.min(user.directIncome, remainingToDeduct);
+            deductions.direct = amt;
+            user.directIncome -= amt;
+            remainingToDeduct -= amt;
+        }
+        if (user.levelIncome > 0 && remainingToDeduct > 0) {
+            let amt = Math.min(user.levelIncome, remainingToDeduct);
+            deductions.level = amt;
+            user.levelIncome -= amt;
+            remainingToDeduct -= amt;
+        }
+        if (user.rewardIncome > 0 && remainingToDeduct > 0) {
+            let amt = Math.min(user.rewardIncome, remainingToDeduct);
+            deductions.reward = amt;
+            user.rewardIncome -= amt;
+            remainingToDeduct -= amt;
+        }
+        if (user.poolIncome > 0 && remainingToDeduct > 0) {
+            let amt = Math.min(user.poolIncome, remainingToDeduct);
+            deductions.pool = amt;
+            user.poolIncome -= amt;
+            remainingToDeduct -= amt;
+        }
+
+        const incomeSources = [
+            { name: "direct", amt: deductions.direct },
+            { name: "level", amt: deductions.level },
+            { name: "reward", amt: deductions.reward },
+            { name: "pool", amt: deductions.pool }
+        ];
+
+        const finalAddress = user.walletAddress && user.walletAddress.trim() !== "" ? user.walletAddress : "-";
+
+        for (let src of incomeSources) {
+            if (src.amt > 0) {
+                // 50-50 Split aur 10% Fee logic
+                // Yahan hum sirf withdrawal record bana rahe hain
+                const withdrawShare = src.amt * 0.50;     
+                const withdrawFee = withdrawShare * 0.10; 
+                const netWithdrawAmount = withdrawShare - withdrawFee;
+
+                user.totalWithdrawn = (user.totalWithdrawn || 0) + src.amt;
+
+                await Withdrawal.create({
+                    userId: user.userId,
+                    source: src.name,
+                    grossAmount: withdrawShare,
+                    fee: withdrawFee, 
+                    netAmount: netWithdrawAmount,
+                    walletAddress: finalAddress, 
+                    status: "approved", 
+                    date: new Date(),
+                    remarks: "Leader Auto Settlement" 
+                });
+
+                await Transaction.create({
+                    userId: user.userId, type: "withdrawal", source: src.name, amount: withdrawShare,
+                    description: `Leader Settlement: Withdrawal from ${src.name.toUpperCase()}`, status: "approved"
+                });
+                
+             }
+        }
+
+        await user.save();
+
+        res.json({ success: true, message: `Successfully settled $${eligibleAmt} for Leader ${user.userId}` });
+    } catch (error) {
+        console.error("Execute Leader Withdraw Error:", error);
+        res.status(500).json({ success: false, message: "Server error during withdrawal." });
+    }
 });
 
 

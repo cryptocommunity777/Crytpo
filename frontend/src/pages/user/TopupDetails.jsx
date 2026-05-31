@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api/axios";
-import { Search, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownLeft, RefreshCcw, CheckCircle2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownLeft, RefreshCcw, CheckCircle2, User } from "lucide-react";
 
 const TopupDetails = () => {
   const { user } = useAuth();
@@ -29,12 +29,15 @@ const TopupDetails = () => {
         
         if (Array.isArray(res.data)) {
           const userTopups = res.data
-            .filter((t) => t.type === "topup")
+            .filter((t) => t.type === "topup" || t.type === "debit_topup") // Ensuring all topup types are caught
             .filter((t) => !t.description?.toUpperCase().includes("PROMOTION"));
 
           const uniqueTopups = Array.from(
             new Map(userTopups.map((t) => [`${t._id}-${t.createdAt}`, t])).values()
           );
+
+          // Sorting by latest first
+          uniqueTopups.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
 
           setTopups(uniqueTopups);
         } else {
@@ -90,18 +93,18 @@ const TopupDetails = () => {
       {/* Scrollbar CSS */}
       <style>{`
         .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #050505; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #f97316; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f8fafc; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
       `}</style>
 
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
+          <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-emerald-700 uppercase tracking-wide flex items-center gap-3">
              <RefreshCcw className="text-green-500" size={28} /> Node Top-Up Details
           </h2>
-          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
-            Track all self and team node activations
+          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
+            Track all self, sent, and received node activations
           </p>
         </div>
       </div>
@@ -111,33 +114,32 @@ const TopupDetails = () => {
         
         <div className="relative w-full sm:w-80 group">
            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-             <Search size={16} className="text-gray-500 group-focus-within:text-green-500 transition-colors" />
+             <Search size={16} className="text-gray-400 group-focus-within:text-green-500 transition-colors" />
            </div>
            <input
              type="text"
              placeholder="Search ID, details, amount..."
              value={searchQuery}
              onChange={handleSearch}
-             className="w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-3 pl-10 focus:border-green-500 focus:outline-none transition-all placeholder-slate-400 font-bold tracking-wide"
+             className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-3 pl-10 focus:border-green-500 focus:bg-white focus:outline-none transition-all placeholder-slate-400 font-bold tracking-wide shadow-inner"
            />
         </div>
 
-     
       </div>
 
       {/* Table Box */}
-      <div className="bg-white shadow-sm backdrop-blur-xl rounded-2xl border border-slate-200 overflow-hidden shadow-2xl relative">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-green-600/5 blur-[100px] pointer-events-none rounded-full"></div>
+      <div className="bg-white shadow-sm rounded-2xl border border-slate-200 overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/5 blur-[80px] pointer-events-none rounded-full"></div>
         
         <div className="overflow-x-auto custom-scroll w-full relative z-10">
           <table className="w-full text-xs sm:text-sm text-left whitespace-nowrap">
-            <thead className="bg-slate-50 text-green-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
+            <thead className="bg-slate-50 text-slate-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center">Sr.</th>
-                                <th className="p-4 font-black text-right">Date & Time</th>
-                <th className="p-4 font-black">Action</th>
-                <th className="p-4 font-black">Sender ID</th>
-                <th className="p-4 font-black">Receiver ID</th>
+                <th className="p-4 font-black">Date & Time</th>
+                <th className="p-4 font-black">Action Type</th>
+                <th className="p-4 font-black">Topped Up By (Sender)</th>
+                <th className="p-4 font-black">Topped Up For (Receiver)</th>
                 <th className="p-4 font-black text-center">Amount</th>
                 <th className="p-4 font-black">Details</th>
               </tr>
@@ -154,7 +156,7 @@ const TopupDetails = () => {
               ) : error ? (
                 <tr>
                   <td colSpan="7" className="text-center py-10">
-                     <span className="text-red-400 font-bold text-sm uppercase tracking-widest bg-red-500/10 px-4 py-2 rounded-lg border border-red-500/20">{error}</span>
+                     <span className="text-red-500 font-bold text-sm uppercase tracking-widest bg-red-50 px-4 py-2 rounded-lg border border-red-200">{error}</span>
                   </td>
                 </tr>
               ) : currentRows.length === 0 ? (
@@ -166,58 +168,80 @@ const TopupDetails = () => {
               ) : (
                 currentRows.map((t, idx) => {
                   
-                  // 🔥 Logic for Sender & Receiver
-                  const senderId = t.fromUserId || t.userId || "N/A";
-                  const receiverId = t.toUserId || t.userId || "N/A";
-                  const descLower = (t.description || "").toLowerCase();
-                  
+                  // 🔥 LOGIC TO FIND EXACT SENDER AND RECEIVER
+                  // Agar 'fromUserId' nahi hai (yani user ne khud kiya), toh userId hi sender hai.
+                  // Agar 'toUserId' nahi hai (yani kiske liye hua explicitly nahi diya), toh userId hi receiver hai.
+                  const senderId = String(t.fromUserId || t.userId);
+                  const receiverId = String(t.toUserId || t.userId);
+                  const currentUserId = String(user?.userId);
+
                   let tagDetails = { icon: null, text: "", style: "" };
 
-                  if (senderId === receiverId || descLower.includes("self")) {
-                    tagDetails = { icon: <CheckCircle2 size={12}/>, text: "SELF TOPUP", style: "bg-green-500/10 text-green-400 border-green-500/30" };
-                  } else if (receiverId === user?.userId || descLower.includes("received")) {
-                    tagDetails = { icon: <ArrowDownLeft size={12}/>, text: "RECEIVED", style: "bg-blue-500/10 text-blue-400 border-blue-500/30" };
-                  } else if (senderId === user?.userId || descLower.includes("sent")) {
-                    tagDetails = { icon: <ArrowUpRight size={12}/>, text: "SENT TOPUP", style: "bg-green-500/10 text-green-400 border-green-500/30" };
+                  // Determine relation to the current user
+                  if (senderId === receiverId) {
+                    tagDetails = { icon: <CheckCircle2 size={12}/>, text: "SELF ACTIVATION", style: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+                  } else if (receiverId === currentUserId) {
+                    tagDetails = { icon: <ArrowDownLeft size={12}/>, text: "ACTIVATED BY UPLINE", style: "bg-blue-50 text-blue-600 border-blue-200" };
+                  } else if (senderId === currentUserId) {
+                    tagDetails = { icon: <ArrowUpRight size={12}/>, text: "ACTIVATED FOR TEAM", style: "bg-amber-50 text-amber-600 border-amber-200" };
                   } else {
-                    tagDetails = { icon: <CheckCircle2 size={12}/>, text: "ACTIVATED", style: "bg-white/5 text-black border-slate-200" };
+                    tagDetails = { icon: <CheckCircle2 size={12}/>, text: "ACTIVATED", style: "bg-slate-100 text-slate-600 border-slate-200" };
                   }
 
                   return (
                     <tr
                       key={`${t._id}-${t.createdAt}-${idx}`}
-                      className="border-b border-slate-100 hover:bg-white/5 transition-colors bg-white"
+                      className="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-white"
                     >
                       <td className="p-4 font-bold text-gray-500 text-center">
                         {indexOfFirstRow + idx + 1}
                       </td>
-                        <td className="p-4 text-gray-500 font-mono text-xs text-right">
-                        {t.createdAt ? format(new Date(t.createdAt), "dd MMM yyyy, HH:mm") : "N/A"}
+                      
+                      <td className="p-4 text-slate-600 font-mono text-[11px] sm:text-xs">
+                        <div className="flex flex-col">
+                           <span className="font-bold">{t.createdAt || t.date ? format(new Date(t.createdAt || t.date), "dd MMM yyyy") : "N/A"}</span>
+                           <span className="text-slate-400">{t.createdAt || t.date ? format(new Date(t.createdAt || t.date), "hh:mm a") : ""}</span>
+                        </div>
                       </td>
 
                       <td className="p-4">
-                        <span className={`flex items-center gap-1.5 w-fit border py-1 px-2.5 rounded-md text-[9px] font-black tracking-widest ${tagDetails.style}`}>
+                        <span className={`flex items-center gap-1.5 w-fit border py-1.5 px-3 rounded-md text-[10px] font-black tracking-widest shadow-sm ${tagDetails.style}`}>
                           {tagDetails.icon} {tagDetails.text}
                         </span>
                       </td>
 
-                      <td className="p-4 font-black text-slate-600">
-                        {senderId}
+                      {/* SENDER COLUMN */}
+                      <td className="p-4 font-black text-slate-700 text-sm">
+                        <div className="flex items-center gap-2">
+                           <div className="p-1.5 bg-slate-100 rounded-full text-slate-400"><User size={14}/></div>
+                           {senderId === currentUserId ? (
+                             <span className="text-indigo-600 font-black">#{senderId} <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded ml-1">YOU</span></span>
+                           ) : (
+                             <span>#{senderId}</span>
+                           )}
+                        </div>
                       </td>
 
-                      <td className="p-4 font-black text-slate-900">
-                        {receiverId} 
+                      {/* RECEIVER COLUMN */}
+                      <td className="p-4 font-black text-slate-700 text-sm">
+                        <div className="flex items-center gap-2">
+                           <div className="p-1.5 bg-slate-100 rounded-full text-slate-400"><User size={14}/></div>
+                           {receiverId === currentUserId ? (
+                             <span className="text-indigo-600 font-black">#{receiverId} <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded ml-1">YOU</span></span>
+                           ) : (
+                             <span>#{receiverId}</span>
+                           )}
+                        </div>
                       </td>
 
                       <td className="p-4 font-black text-center">
-                         <span className="text-green-400 drop-shadow-[0_0_5px_rgba(249,115,22,0.5)] text-base">${t.amount}</span>
+                         <span className="text-green-600 bg-green-50 border border-green-100 px-3 py-1 rounded-lg text-sm">${t.amount || t.grossAmount}</span>
                       </td>
 
-                      <td className="p-4 text-black text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={t.description || "Top-up package"}>
+                      <td className="p-4 text-slate-600 text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={t.description || "Top-up package"}>
                         {t.description || "Top-up package"}
                       </td>
 
-                    
                     </tr>
                   );
                 })
@@ -228,28 +252,38 @@ const TopupDetails = () => {
 
         {/* Pagination Footer */}
         {!loading && filteredTopups.length > 0 && (
-           <div className="p-4 border-t border-slate-100 bg-slate-50/40 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-10">
-              <span className="text-gray-500 text-[10px] md:text-xs font-black uppercase tracking-widest">
-                Showing {indexOfFirstRow + 1} to {Math.min(indexOfLastRow, filteredTopups.length)} of {filteredTopups.length} Entries
+           <div className="p-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-10">
+              
+              <div className="flex items-center gap-3">
+                 <span className="text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Rows:</span>
+                 <select value={rowsPerPage} onChange={handleRowsPerPageChange} className="bg-white border border-slate-200 text-slate-900 text-xs font-bold rounded-lg px-2 py-1 focus:border-green-500 outline-none cursor-pointer">
+                   <option value={10}>10</option>
+                   <option value={20}>20</option>
+                   <option value={50}>50</option>
+                 </select>
+              </div>
+
+              <span className="text-slate-500 text-[10px] md:text-xs font-black uppercase tracking-widest">
+                Showing {indexOfFirstRow + 1} to {Math.min(indexOfLastRow, filteredTopups.length)} of {filteredTopups.length}
               </span>
               
               <div className="flex items-center gap-2">
                  <button
                    onClick={handlePrev}
                    disabled={currentPage === 1}
-                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === 1 ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-white/10 text-slate-900 hover:bg-green-500/20 hover:text-green-500 border border-transparent hover:border-green-500/30'}`}
+                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === 1 ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' : 'bg-white text-slate-700 hover:bg-green-50 hover:text-green-600 border border-slate-200 shadow-sm'}`}
                  >
                    <ChevronLeft size={18} />
                  </button>
                  
-                 <span className="bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-2 rounded-lg">
+                 <span className="bg-white border border-slate-200 text-slate-800 text-xs font-bold px-4 py-2 rounded-lg shadow-sm">
                     {currentPage} / {totalPages}
                  </span>
                  
                  <button
                    onClick={handleNext}
                    disabled={currentPage === totalPages}
-                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === totalPages ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-white/10 text-slate-900 hover:bg-green-500/20 hover:text-green-500 border border-transparent hover:border-green-500/30'}`}
+                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === totalPages ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' : 'bg-white text-slate-700 hover:bg-green-50 hover:text-green-600 border border-slate-200 shadow-sm'}`}
                  >
                    <ChevronRight size={18} />
                  </button>

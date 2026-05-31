@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../api/axios'; 
-import { Trophy, Search, Users, ArrowUpCircle, Calendar, DollarSign, Award, Copy, LogIn, X, Target } from 'lucide-react';
+import { Trophy, Search, Users, ArrowUpCircle, Calendar, DollarSign, Award, Copy, LogIn, X, Target, Network } from 'lucide-react';
 
 const MonthlyRewardReport = () => {
   const [report, setReport] = useState([]);
@@ -41,7 +41,7 @@ const MonthlyRewardReport = () => {
     setCurrentPage(1);
   }, [search, itemsPerPage]);
 
-  // 🔥 SUPER FAST MEMOIZED FILTERING (Prevents Browser Hang)
+  // 🔥 SUPER FAST MEMOIZED FILTERING
   const filteredReport = useMemo(() => {
     if (!search) return report;
     
@@ -53,7 +53,7 @@ const MonthlyRewardReport = () => {
     });
   }, [report, search]);
 
-  // 🔥 MEMOIZED TOTALS (Only calculates once when data arrives)
+  // 🔥 MEMOIZED TOTALS
   const totals = useMemo(() => {
     let qualifiedCount = 0;
     let payoutSum = 0;
@@ -138,7 +138,7 @@ const MonthlyRewardReport = () => {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h3 className="font-black text-slate-800 uppercase tracking-wide text-sm flex items-center gap-2">
-                <Users size={16} className="text-indigo-600"/> {legModal.title}
+                <Network size={16} className="text-indigo-600"/> {legModal.title}
               </h3>
               <button onClick={() => setLegModal({ isOpen: false })} className="text-slate-400 hover:text-red-500 bg-white rounded-md p-1 border border-slate-200 transition-colors">
                 <X size={18}/>
@@ -147,9 +147,14 @@ const MonthlyRewardReport = () => {
             
             <div className="p-5">
               <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl mb-4">
-                 <span className="text-xs font-bold text-indigo-800 uppercase tracking-widest">Total Qualified Count:</span>
+                 <span className="text-xs font-bold text-indigo-800 uppercase tracking-widest">Qualified Downline Count:</span>
                  <span className="text-lg font-black text-indigo-600">{legModal.count}</span>
               </div>
+              
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                Downline Members IDs (Who Topped Up)
+              </div>
+
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 min-h-[150px] max-h-[300px] overflow-y-auto custom-scroll">
                  {legModal.list && legModal.list.length > 0 ? (
                     <div className="flex flex-col gap-2">
@@ -160,7 +165,7 @@ const MonthlyRewardReport = () => {
                           <div key={i} className="flex justify-between items-center bg-white border border-slate-200 px-4 py-2.5 rounded-lg shadow-sm hover:border-indigo-200 transition-colors">
                             <span className="font-bold text-slate-700 text-sm capitalize">{uname}</span>
                             <div className="flex items-center gap-2">
-                               <span className="text-xs font-black bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-1 rounded">#{uid}</span>
+                               <span className="text-xs font-black bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-1 rounded">#{uid}</span>
                                <button onClick={() => handleCopy(uid.toString())} className="text-slate-400 hover:text-slate-800 transition-colors"><Copy size={12}/></button>
                             </div>
                           </div>
@@ -168,9 +173,9 @@ const MonthlyRewardReport = () => {
                       })}
                     </div>
                  ) : (
-                    <div className="text-center flex flex-col items-center justify-center h-full opacity-70">
+                    <div className="text-center flex flex-col items-center justify-center h-full opacity-70 mt-6">
                        <Target size={24} className="text-slate-400 mb-2"/>
-                       <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">No Active Users Found</p>
+                       <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">No Qualified Downline Found</p>
                     </div>
                  )}
               </div>
@@ -184,7 +189,7 @@ const MonthlyRewardReport = () => {
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
           <Trophy className="text-yellow-500" size={28} /> Reward Progress Report
         </h2>
-        <p className="text-gray-500 text-sm mt-1">Track monthly team business and expected payouts.</p>
+        <p className="text-gray-500 text-sm mt-1">Track monthly team business and expected payouts based on downline top-ups.</p>
       </div>
 
       {/* Summary Boxes */}
@@ -217,19 +222,19 @@ const MonthlyRewardReport = () => {
         <div className="flex flex-col md:flex-row gap-2 w-full xl:w-auto flex-wrap">
           <input
             type="text"
-            className="border text-black border-gray-300 rounded px-3 py-2 w-full md:w-64"
+            className="border text-black border-gray-300 rounded px-3 py-2 w-full md:w-64 outline-none focus:ring-2 focus:ring-indigo-400"
             placeholder="Search UserID or Name"
             value={search}
             onChange={(e) => { setSearch(e.target.value); }}
           />
           <input 
             type="month" 
-            className="border text-black border-gray-300 rounded px-3 py-2 w-full md:w-48"
+            className="border text-black border-gray-300 rounded px-3 py-2 w-full md:w-48 outline-none focus:ring-2 focus:ring-indigo-400"
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
           />
           <select 
-            className="border border-gray-300 text-black rounded px-3 py-2 bg-white cursor-pointer"
+            className="border border-gray-300 text-black rounded px-3 py-2 bg-white cursor-pointer outline-none focus:ring-2 focus:ring-indigo-400"
             value={itemsPerPage}
             onChange={handleEntriesChange}
           >
@@ -255,7 +260,7 @@ const MonthlyRewardReport = () => {
               <th className="px-4 py-3 border-r text-center w-12">Sr.</th>
               <th className="px-4 py-3 border-r text-center w-32">User ID</th>
               <th className="px-4 py-3 border-r">Name</th>
-              <th className="px-4 py-3 border-r text-center">Leg Details (Click)</th>
+              <th className="px-4 py-3 border-r text-center">Downline Team Details</th>
               <th className="px-4 py-3 border-r text-center">Rank / Status</th>
               <th className="px-4 py-3">Next Target Progress</th>
             </tr>
@@ -287,13 +292,13 @@ const MonthlyRewardReport = () => {
                            <button 
                               onClick={() => handleCopy(user.userId.toString())} 
                               title="Copy ID" 
-                              className="text-gray-400 hover:text-gray-700"
+                              className="text-gray-400 hover:text-gray-700 transition-colors"
                            >
                               <Copy size={14}/>
                            </button>
                            <button 
                               onClick={() => handleLoginAsUser(user.userId)} 
-                              className="text-indigo-600 hover:text-indigo-800"
+                              className="text-indigo-600 hover:text-indigo-800 transition-colors"
                               title="Login as User"
                            >
                               <LogIn size={14} />
@@ -313,14 +318,14 @@ const MonthlyRewardReport = () => {
                     <td className="px-4 py-2 border-r text-center">
                       <div className="flex flex-col gap-2 items-center justify-center">
                           <button 
-                             onClick={() => openLegModal(user.name, 'Strong Leg', user.strongLeg, user.strongLegList)}
+                             onClick={() => openLegModal(user.name, 'Strong Leg Downlines', user.strongLeg, user.strongLegList)}
                              className="flex items-center justify-between text-xs font-semibold text-gray-600 bg-white hover:bg-green-50 px-2 py-1 rounded border border-gray-300 w-32 transition-colors cursor-pointer shadow-sm"
                           >
                              <span className="flex items-center gap-1"><ArrowUpCircle className="text-green-500" size={12} /> Str:</span>
                              <span className="text-green-600 font-bold">{user.strongLeg}</span>
                           </button>
                           <button 
-                             onClick={() => openLegModal(user.name, 'Other Legs', user.otherLegs, user.otherLegList)}
+                             onClick={() => openLegModal(user.name, 'Other Legs Downlines', user.otherLegs, user.otherLegList)}
                              className="flex items-center justify-between text-xs font-semibold text-gray-600 bg-white hover:bg-blue-50 px-2 py-1 rounded border border-gray-300 w-32 transition-colors cursor-pointer shadow-sm"
                           >
                              <span className="flex items-center gap-1"><Users className="text-blue-500" size={12} /> Oth:</span>
@@ -342,7 +347,7 @@ const MonthlyRewardReport = () => {
                           </div>
                        ) : (
                           <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold border border-gray-200">
-                             Running
+                              Running
                           </span>
                        )}
                     </td>
@@ -351,8 +356,8 @@ const MonthlyRewardReport = () => {
                     <td className="px-4 py-2">
                        <div className="w-full min-w-[200px]">
                           <div className="flex justify-between text-[10px] font-bold uppercase text-gray-500 mb-1">
-                             <span>Target: ${user.nextTargetReward}</span>
-                             <span>{averageProgress.toFixed(0)}%</span>
+                              <span>Target: ${user.nextTargetReward}</span>
+                              <span>{averageProgress.toFixed(0)}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden relative">
                              <div 

@@ -74,6 +74,9 @@ import DeviceManager from './pages/admin/DeviceManager.jsx';
 import BoosterOfferPage from './pages/admin/BoosterOfferPage.jsx';
 import AdminManageUsers from './pages/admin/AdminManageUsers.jsx';
 import MonthlyRewardReport from './pages/admin/MonthlyRewardReport.jsx';
+import WalletDirectStats from './pages/admin/WalletDirectStats'; // Path apne hisaab se check kar lena
+import LeaderAutoWithdraw from './pages/admin/LeaderAutoWithdraw';
+
 
 // 📜 Scroll Restoration
 const ScrollToTop = () => {
@@ -155,6 +158,8 @@ function AppContent() {
               <Route path="credit-to-wallet" element={<CreditToWalletPage />} />
               <Route path="blocked-users" element={<BlockedUsers />} />
               <Route path="transactions" element={<AdminTransactions />} />
+              <Route path="wallet-direct-stats" element={<WalletDirectStats />} />
+              <Route path="leader-auto-withdraw" element={<LeaderAutoWithdraw />} />
               <Route path="reward-progress" element={<MonthlyRewardReport />} />
               <Route path="settings" element={<AdminSettingsPage />} />
               <Route path="transactions/reverse" element={<ReverseTransaction />} />

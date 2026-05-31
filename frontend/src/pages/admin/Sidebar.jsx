@@ -5,7 +5,7 @@ import {
   FaSitemap, FaProjectDiagram, FaExchangeAlt, FaFileAlt, FaUserPlus, FaGift,
   FaArrowCircleUp, FaArrowCircleDown, FaBell, FaClipboardList, FaCoins,
   FaUserSlash, FaBars, FaTimes, FaHistory, FaShieldAlt, FaBan,
-  FaUserCog, FaYoutube, FaRocket, FaPiggyBank ,FaTrophy // 🔥 Ye do naye icons import kiye
+  FaUserCog, FaYoutube, FaRocket, FaPiggyBank, FaTrophy, FaChartPie, FaBolt // 🔥 'FaZap' ki jagah 'FaBolt' lagaya hai
 } from 'react-icons/fa';
 
 const Sidebar = () => {
@@ -100,6 +100,7 @@ const Sidebar = () => {
             <NavLink to={`${BASE_PATH}/users`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/users`)}>
               <FaUsers className="inline-block mr-2" /> All Users
             </NavLink>
+            
 
             <NavLink to={`${BASE_PATH}/manage-users`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/manage-users`)}>
               <FaUserCog className="inline-block mr-2 text-blue-500" /> Manage Roles & Leaders
@@ -145,17 +146,26 @@ const Sidebar = () => {
               <FaMoneyBill className="inline-block mr-2" /> Deposit Log
             </NavLink>
 
-            {/* 🔥 DO NAYE LINKS ADD KIYE HAIN 🔥 */}
             <NavLink to={`${BASE_PATH}/fast-track-report`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/fast-track-report`)}>
               <FaRocket className="inline-block mr-2 text-orange-500" /> Fast Track Report
             </NavLink>
+            
+            <NavLink to={`${BASE_PATH}/wallet-direct-stats`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/wallet-direct-stats`)}>
+              <FaChartPie className="inline-block mr-2 text-purple-500" /> Wallet & Directs
+            </NavLink>
+
             <NavLink to={`${BASE_PATH}/user-fund-overview`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/user-fund-overview`)}>
               <FaPiggyBank className="inline-block mr-2 text-pink-500" /> Fund Overview
             </NavLink>
 
             <NavLink to={`${BASE_PATH}/reward-progress`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/reward-progress`)}>
-  <FaTrophy className="inline-block mr-2 text-yellow-500" /> Reward Progress
-</NavLink>
+              <FaTrophy className="inline-block mr-2 text-yellow-500" /> Reward Progress
+            </NavLink>
+
+            {/* 🔥 YAHAN BHI 'FaBolt' LAGA DIYA HAI 🔥 */}
+            <NavLink to={`${BASE_PATH}/leader-auto-withdraw`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/leader-auto-withdraw`)}>
+              <FaBolt className="inline-block mr-2 text-yellow-500" /> Leader Auto-Withdraw
+            </NavLink>
 
             <NavLink to={`${BASE_PATH}/withdrawals/request`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/withdrawals/request`)}>
               <FaArrowCircleDown className="inline-block mr-2" /> Pending Withdrawals

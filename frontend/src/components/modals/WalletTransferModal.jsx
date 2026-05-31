@@ -3,7 +3,7 @@ import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext"; 
 import SuccessModal from "./SuccessModal";
 import MessageModal from "./MessageModal";
-import { Send, User, Lock, Wallet, ArrowRightLeft, X, XCircle, CheckCircle2 } from "lucide-react";
+import { Send, User, Lock, Wallet, ArrowRightLeft, X, XCircle, CheckCircle2, ShieldCheck } from "lucide-react";
 
 const WalletTransferModal = ({ onClose }) => {
   // --- STATE ---
@@ -20,6 +20,7 @@ const WalletTransferModal = ({ onClose }) => {
 
   // ✅ ROLE CHECK
   const isLeaderUser = loggedInUser?.role === "leader";
+  const isPromoUser = loggedInUser?.role === "promo"; // 🔥 Promo User check
 
   const showMessage = (title, message, type = "error") => 
     setMessageModal({ open: true, title, message, type });
@@ -29,7 +30,6 @@ const WalletTransferModal = ({ onClose }) => {
     if (!loggedInUser?.userId || !token) return;
     const fetchSenderBalance = async () => {
       try {
-        // 🔥 CACHE FIX
         const res = await api.get(`/user/${loggedInUser.userId}?t=${new Date().getTime()}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -42,15 +42,16 @@ const WalletTransferModal = ({ onClose }) => {
     fetchSenderBalance();
   }, [loggedInUser?.userId, token]);
 
-  // --- LOGIC: Fetch Recipient Name ---
+  // --- LOGIC: Fetch Recipient Name (For Normal Users) ---
   const fetchUserName = async (idToFetch) => {
+    if (isPromoUser) return; // Promo walo ko fetch nahi karna
+
     const trimmedId = (idToFetch || userId).trim();
     if (!trimmedId) {
         setUserName("");
         return;
     }
     try {
-      // 🔥 CACHE FIX
       const res = await api.get(`/user/${trimmedId}?t=${new Date().getTime()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -62,29 +63,51 @@ const WalletTransferModal = ({ onClose }) => {
 
   // --- LOGIC: Handle Transfer ---
   const handleTransfer = async () => {
-    const trimmedId = userId.trim();
     const amt = Number(amount);
 
-    if (!trimmedId || amt <= 0 || !userName || userName === "User not found")
-      return showMessage("Error", "Provide a valid recipient and amount.", "error");
+    // Common Checks
     if (!transactionPassword) return showMessage("Error", "Enter transaction password.", "error");
-    if (trimmedId === String(loggedInUser.userId))
-      return showMessage("Error", "You cannot transfer to yourself.", "error");
-    if (amt > senderBalance) return showMessage("Error", `Insufficient balance ($${senderBalance.toFixed(2)})`, "error");
+
+    // 🔥 PROMO USER VALIDATION
+    if (isPromoUser) {
+      if (amt < 10 || amt > 1000) {
+        return showMessage("Error", "Promo transfer amount must be between $10 and $1000.", "error");
+      }
+    } 
+    // 🛡️ NORMAL/LEADER USER VALIDATION
+    else {
+      const trimmedId = userId.trim();
+      if (!trimmedId || amt <= 0 || !userName || userName === "User not found")
+        return showMessage("Error", "Provide a valid recipient and amount.", "error");
+      if (trimmedId === String(loggedInUser.userId))
+        return showMessage("Error", "You cannot transfer to yourself.", "error");
+      if (amt > senderBalance) 
+        return showMessage("Error", `Insufficient balance ($${senderBalance.toFixed(2)})`, "error");
+    }
 
     setLoading(true);
     try {
       // 🔥 DYNAMIC ENDPOINT LOGIC
-      const endpoint = isLeaderUser ? "/wallet/leader-transfer" : "/wallet/transfer";
+      let endpoint = "/wallet/transfer";
+      let payload = { fromUserId: loggedInUser.userId, toUserId: userId.trim(), amount: amt, transactionPassword };
 
-      await api.post(
-        endpoint,
-        { fromUserId: loggedInUser.userId, toUserId: trimmedId, amount: amt, transactionPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      if (isPromoUser) {
+        endpoint = "/wallet/promo-transfer"; // Naya Backend Route
+        payload = { amount: amt, transactionPassword }; // Sirf amount jayega
+      } else if (isLeaderUser) {
+        endpoint = "/wallet/leader-transfer";
+      }
+
+      const res = await api.post(endpoint, payload, { headers: { Authorization: `Bearer ${token}` } });
+      
+      // Promo User ka response auto set karna Success modal ke liye
+      if (isPromoUser) {
+        setUserId(res.data.generatedId);
+        setUserName(res.data.name);
+      }
+
       setSuccessOpen(true);
     } catch (error) {
-      // ✅ Yahan maine saaf taur par backend se aane wali error nikaal li
       const errorMsg = error.response?.data?.message || "Transfer failed due to a server error.";
       showMessage("Transfer Failed", errorMsg, "error");
     } finally {
@@ -121,7 +144,7 @@ const WalletTransferModal = ({ onClose }) => {
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-100 blur-[60px] pointer-events-none rounded-full"></div>
 
             {/* Header */}
-            <div className="p-5 border-b border-slate-200 bg-slate-50 Backdrop-blur-md flex justify-between items-center relative z-10 shrink-0">
+            <div className="p-5 border-b border-slate-200 bg-slate-50 flex justify-between items-center relative z-10 shrink-0">
                <div className="flex items-center gap-3">
                   <div className="p-2 bg-green-50 rounded-xl border border-green-100 text-green-600">
                       <Send size={20} />
@@ -154,29 +177,37 @@ const WalletTransferModal = ({ onClose }) => {
                {/* Inputs */}
                <div className="space-y-4 mt-2">
                  
-                 {/* Recipient User ID */}
+                 {/* Recipient User ID (Logic for Promo/Normal) */}
                  <div>
                    <label className="block text-[10px] font-bold text-black mb-1.5 ml-1 uppercase tracking-wider">Recipient User ID</label>
                    <div className="relative group">
-                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                       <User className="h-4 w-4 text-slate-400 group-focus-within:text-green-600 transition-colors" />
-                     </div>
-                     <input 
-                       type="number" 
-                       placeholder="Enter User ID" 
-                       value={userId} 
-                       onChange={e => {
-                         setUserId(e.target.value);
-                         if(e.target.value.length >= 6) fetchUserName(e.target.value);
-                       }} 
-                       onBlur={() => fetchUserName()}
-                       className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-11 text-slate-800 text-sm focus:border-green-400 focus:ring-2 focus:ring-green-100 focus:outline-none transition-all font-bold tracking-wider shadow-inner placeholder-slate-400"
-                     />
+                     {isPromoUser ? (
+                        <div className="w-full bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-3 py-3.5 font-bold flex items-center justify-center gap-2 shadow-sm text-sm">
+                          <ShieldCheck size={18} /> System will Auto-Pick a Recipient
+                        </div>
+                     ) : (
+                       <>
+                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                           <User className="h-4 w-4 text-slate-400 group-focus-within:text-green-600 transition-colors" />
+                         </div>
+                         <input 
+                           type="number" 
+                           placeholder="Enter User ID" 
+                           value={userId} 
+                           onChange={e => {
+                             setUserId(e.target.value);
+                             if(e.target.value.length >= 6) fetchUserName(e.target.value);
+                           }} 
+                           onBlur={() => fetchUserName()}
+                           className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-11 text-slate-800 text-sm focus:border-green-400 focus:ring-2 focus:ring-green-100 focus:outline-none transition-all font-bold tracking-wider shadow-inner placeholder-slate-400"
+                         />
+                       </>
+                     )}
                    </div>
                  </div>
 
-                 {/* Recipient Name (Auto-fetched) */}
-                 {userName && (
+                 {/* Recipient Name (Auto-fetched for Normal Only) */}
+                 {!isPromoUser && userName && (
                     <div className={`p-3 rounded-xl border flex items-center gap-2 shadow-sm ${userName === 'User not found' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'}`}>
                         {userName === 'User not found' ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
                         <span className="text-xs font-black uppercase tracking-widest">
@@ -194,16 +225,18 @@ const WalletTransferModal = ({ onClose }) => {
                      </div>
                      <input 
                        type="number" 
-                       placeholder="0.00" 
+                       placeholder={isPromoUser ? "10 - 1000" : "0.00"} 
                        value={amount} 
                        onChange={e => setAmount(e.target.value)}
                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 pl-11 text-slate-800 text-sm md:text-lg focus:border-green-400 focus:ring-2 focus:ring-green-100 focus:outline-none transition-all font-black shadow-inner placeholder-slate-400"
                      />
-                     <button 
-                         onClick={() => setAmount(senderBalance)}
-                         disabled={!senderBalance}
-                         className="absolute right-3 top-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors border border-slate-200 disabled:opacity-50"
-                     >MAX</button>
+                     {!isPromoUser && (
+                       <button 
+                           onClick={() => setAmount(senderBalance)}
+                           disabled={!senderBalance}
+                           className="absolute right-3 top-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors border border-slate-200 disabled:opacity-50"
+                       >MAX</button>
+                     )}
                    </div>
                  </div>
 
@@ -249,7 +282,6 @@ const WalletTransferModal = ({ onClose }) => {
         </div>
       )}
 
-      {/* ✅ Yahan update kiya hai: userName={userName} add kiya hai */}
       <SuccessModal 
         isOpen={successOpen} 
         onClose={handleSuccessClose} 

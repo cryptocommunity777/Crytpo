@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from "../../api/axios";
 import Papa from 'papaparse';
 import { saveAs } from 'file-saver';
-import { Crown, User } from 'lucide-react';
+import { Crown, User, ArrowRightCircle } from 'lucide-react';
 
 const toNumber = (val) => {
   if (val == null) return 0;
@@ -20,13 +20,13 @@ const TotalTopUpPage = () => {
   const [loading, setLoading] = useState(true);
 
   const [searchId, setSearchId] = useState('');
-  const [selectedRole, setSelectedRole] = useState(''); // 🔥 Plan ki jagah Role filter
+  const [selectedRole, setSelectedRole] = useState(''); 
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20); // Default thoda zyada kar diya
+  const [itemsPerPage, setItemsPerPage] = useState(20); 
 
   // FETCH
   useEffect(() => {
@@ -57,7 +57,7 @@ const TotalTopUpPage = () => {
   useEffect(() => {
     const filtered = topupUsers.filter((user) => {
       const matchesId = searchId ? String(user.userId).includes(searchId) : true;
-      const matchesRole = selectedRole ? user.initiatorRole === selectedRole : true; // 🔥 Role Filter
+      const matchesRole = selectedRole ? user.initiatorRole === selectedRole : true; 
 
       const date = user.topUpDate ? new Date(user.topUpDate) : null;
       const matchesFrom = fromDate ? date && date >= new Date(fromDate) : true;
@@ -70,7 +70,7 @@ const TotalTopUpPage = () => {
     setCurrentPage(1);
   }, [searchId, selectedRole, fromDate, toDate, topupUsers]);
 
-  // 🔥 STATS CALCULATION (Leader vs Normal)
+  // STATS CALCULATION
   const today = new Date().toISOString().split('T')[0];
   
   let totalBusiness = 0;
@@ -112,7 +112,7 @@ const TotalTopUpPage = () => {
     setCurrentPage(1);
   };
 
-  // CSV EXPORT
+  // CSV EXPORT (🔥 Updated with Topped Up By)
   const exportToCSV = () => {
     const summary = [
       { Metric: 'Total TopUps', Value: filteredUsers.length },
@@ -130,8 +130,9 @@ const TotalTopUpPage = () => {
       UserID: u.userId,
       Name: u.name || '',
       Mobile: u.mobile || 'N/A',
-      Amount: u.topUpAmount,
       Type: u.initiatorRole === 'leader' ? 'Leader' : 'Normal',
+      ToppedUpBy: u.topUpBy || 'Self / System', // 🔥 NAYA FIELD CSV MEIN
+      Amount: u.topUpAmount,
       Date: u.topUpDate ? new Date(u.topUpDate).toLocaleString() : '',
     }));
 
@@ -151,14 +152,13 @@ const TotalTopUpPage = () => {
           placeholder="Search User ID"
           value={searchId}
           onChange={(e) => setSearchId(e.target.value)}
-          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm"
+          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm focus:ring-2 focus:ring-indigo-400 outline-none"
         />
 
-        {/* 🔥 ROLE FILTER ADDED */}
         <select
           value={selectedRole}
           onChange={(e) => setSelectedRole(e.target.value)}
-          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm"
+          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm outline-none"
         >
           <option value="">All Types</option>
           <option value="leader">Leader TopUps</option>
@@ -169,18 +169,18 @@ const TotalTopUpPage = () => {
           type="date"
           value={fromDate}
           onChange={(e) => setFromDate(e.target.value)}
-          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm"
+          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm outline-none"
         />
 
         <input
           type="date"
           value={toDate}
           onChange={(e) => setToDate(e.target.value)}
-          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm"
+          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm outline-none"
         />
 
         <select 
-          className="px-4 py-2 border rounded w-full md:w-32 shadow-sm bg-white"
+          className="px-4 py-2 border rounded w-full md:w-32 shadow-sm bg-white outline-none"
           value={itemsPerPage}
           onChange={handleEntriesChange}
         >
@@ -191,14 +191,12 @@ const TotalTopUpPage = () => {
         </select>
       </div>
 
-      {/* SUMMARY CARDS (Leader vs Normal Logic) */}
+      {/* SUMMARY CARDS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
         <SummaryCard label="Total Business" value={`$${totalBusiness}`} color="bg-green-100 border-green-200" />
         <SummaryCard label="Today Business" value={`$${todayBusiness}`} color="bg-teal-100 border-teal-200" />
-        
         <SummaryCard label="Leader Business" value={`$${leaderBusiness}`} color="bg-yellow-100 border-yellow-300" />
         <SummaryCard label="Leader Count" value={leaderCount} color="bg-orange-100 border-orange-300" />
-        
         <SummaryCard label="Normal Business" value={`$${normalBusiness}`} color="bg-indigo-100 border-indigo-200" />
         <SummaryCard label="Normal Count" value={normalCount} color="bg-blue-100 border-blue-200" />
       </div>
@@ -216,7 +214,7 @@ const TotalTopUpPage = () => {
 
       {/* TABLE */}
       {loading ? (
-        <div className="text-center p-10 text-gray-500 font-semibold text-lg">Loading Data...</div>
+        <div className="text-center p-10 text-gray-500 font-semibold text-lg animate-pulse">⏳ Loading Data...</div>
       ) : (
         <div className="overflow-auto border rounded-lg shadow-md bg-white">
           <table className="min-w-full text-sm text-left">
@@ -225,8 +223,8 @@ const TotalTopUpPage = () => {
                 <th className="px-4 py-3 font-semibold text-gray-700">#</th>
                 <th className="px-4 py-3 font-semibold text-gray-700">User ID</th>
                 <th className="px-4 py-3 font-semibold text-gray-700">Name</th>
-                <th className="px-4 py-3 font-semibold text-gray-700">Mobile</th>
-                <th className="px-4 py-3 font-semibold text-gray-700">Type</th> {/* 🔥 NAYA COLUMN */}
+                <th className="px-4 py-3 font-semibold text-gray-700">Type</th>
+                <th className="px-4 py-3 font-semibold text-gray-700 whitespace-nowrap">Topped Up By</th> {/* 🔥 NAYA COLUMN HEADER */}
                 <th className="px-4 py-3 font-semibold text-gray-700">Amount</th>
                 <th className="px-4 py-3 font-semibold text-gray-700">Date</th>
               </tr>
@@ -234,17 +232,16 @@ const TotalTopUpPage = () => {
             <tbody>
               {paginatedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-6 text-gray-500">No records found</td>
+                  <td colSpan="7" className="text-center py-6 text-gray-500 font-semibold">No records found</td>
                 </tr>
               ) : (
                 paginatedUsers.map((u, i) => (
                   <tr key={u._id || i} className="border-b hover:bg-gray-50 transition">
                     <td className="px-4 py-3 text-gray-600 font-medium">{startIndex + i + 1}</td>
-                    <td className="px-4 py-3 font-bold text-indigo-600">{u.userId}</td>
-                    <td className="px-4 py-3 text-gray-800">{u.name}</td>
-                    <td className="px-4 py-3 text-gray-600 font-medium">{u.mobile || 'N/A'}</td>
+                    <td className="px-4 py-3 font-bold text-indigo-600">#{u.userId}</td>
+                    <td className="px-4 py-3 text-gray-800 capitalize font-medium">{u.name}</td>
                     
-                    {/* 🔥 ROLE BADGE */}
+                    {/* ROLE BADGE */}
                     <td className="px-4 py-3">
                       {u.initiatorRole === 'leader' ? (
                         <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 border border-yellow-300 px-2 py-0.5 rounded text-xs font-bold uppercase">
@@ -257,8 +254,20 @@ const TotalTopUpPage = () => {
                       )}
                     </td>
 
-                    <td className="px-4 py-3 text-green-600 font-bold">${u.topUpAmount}</td>
-                    <td className="px-4 py-3 text-gray-500">{new Date(u.topUpDate).toLocaleString()}</td>
+                    {/* 🔥 NAYA COLUMN BODY (Kisne Top-up kiya) */}
+                    <td className="px-4 py-3 text-gray-600 font-medium">
+                       {u.topUpBy ? (
+                         <div className="flex items-center gap-1.5 bg-gray-100 px-2 py-1 rounded border border-gray-200 w-max">
+                           <ArrowRightCircle size={14} className="text-gray-400" />
+                           <span className="text-xs font-bold text-gray-700">{u.topUpBy}</span>
+                         </div>
+                       ) : (
+                         <span className="text-xs italic text-gray-400 font-semibold">Self / System</span>
+                       )}
+                    </td>
+
+                    <td className="px-4 py-3 text-green-600 font-black">${u.topUpAmount}</td>
+                    <td className="px-4 py-3 text-gray-500 font-medium">{new Date(u.topUpDate).toLocaleString('en-GB')}</td>
                   </tr>
                 ))
               )}
@@ -273,15 +282,15 @@ const TotalTopUpPage = () => {
           <button 
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className={`px-4 py-2 rounded font-semibold ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+            className={`px-5 py-2 rounded shadow-sm font-semibold transition-colors ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
           >
             Previous
           </button>
-          <span className="flex items-center font-bold text-gray-700">Page {currentPage} of {totalPages}</span>
+          <span className="flex items-center font-bold text-gray-700 px-3">Page {currentPage} of {totalPages}</span>
           <button 
             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
-            className={`px-4 py-2 rounded font-semibold ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+            className={`px-5 py-2 rounded shadow-sm font-semibold transition-colors ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed border' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
           >
             Next
           </button>
@@ -292,8 +301,8 @@ const TotalTopUpPage = () => {
 };
 
 const SummaryCard = ({ label, value, color }) => (
-  <div className={`${color} p-4 rounded-lg shadow-sm border`}>
-    <h4 className="text-gray-600 text-xs font-bold uppercase mb-1">{label}</h4>
+  <div className={`${color} p-4 rounded-xl shadow-sm border flex flex-col justify-center`}>
+    <h4 className="text-gray-600 text-[11px] font-black uppercase tracking-widest mb-1">{label}</h4>
     <p className="text-2xl font-black text-gray-800">{value}</p>
   </div>
 );

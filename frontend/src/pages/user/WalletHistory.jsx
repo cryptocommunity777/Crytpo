@@ -16,19 +16,31 @@ const WalletHistory = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  // ✅ Ye array backend se saara data lane ke liye hai (isme hidden types bhi hain)
   const allTypes = [
     "deposit",
     "credit_to_wallet",
     "credit", 
     "transfer",
     "topup",
-    "debit_topup",
+    "debit_topup", // Hidden in UI but required for data
     "withdrawal",
-    "manual_credit",
-    "manual_debit",
+    "manual_credit", // Hidden in UI but required for data
+    "manual_debit", // Hidden in UI but required for data
     "fast_track" 
   ];
-  const types = ["all", ...allTypes];
+
+  // ✅ Ye naya array sirf UI Dropdown me dikhane ke liye hai
+  const dropdownTypes = [
+    "all",
+    "deposit",
+    "credit_to_wallet",
+    "credit", 
+    "transfer",
+    "topup",
+    "withdrawal",
+    "fast_track" 
+  ];
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -61,7 +73,7 @@ const WalletHistory = () => {
     }
 
     const formattedHistory = txns
-      .filter(t => allTypes.includes(t.type))
+      .filter(t => allTypes.includes(t.type)) // Data saara aayega
       .filter(t => {
         const desc = (t.description || "").toLowerCase();
         
@@ -318,12 +330,13 @@ const WalletHistory = () => {
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Filter:</span>
+           {/* ✅ DROPDOWN MEIN AB NAYA ARRAY USE HO RAHA HAI */}
            <select
              value={typeFilter}
              onChange={(e) => setTypeFilter(e.target.value)}
              className="w-full sm:w-auto bg-white border border-slate-200 text-slate-900 text-sm font-bold rounded-xl px-4 py-3 focus:border-green-500 focus:outline-none transition-all appearance-none cursor-pointer uppercase"
            >
-             {types.map((type) => (
+             {dropdownTypes.map((type) => (
                <option key={type} value={type}>
                  {type === "all" ? "All Types" : type.replace(/_/g, " ")}
                </option>

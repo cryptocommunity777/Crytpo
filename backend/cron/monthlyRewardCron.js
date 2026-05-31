@@ -14,36 +14,41 @@ const REWARD_MILESTONES = [
   { target: 21750, strongLeg: 10875, otherLegs: 10875, reward: 3000, title: "Target 8 (21750 Points)" }
 ];
 
-// 🔥 Sirf un IDs ko count karega jo "Pichle Mahine" top-up hui hain! (Naya hisaab)
+// 🔥 Naya Hisaab: Sirf Direct ke neeche ki team (downline) count hogi!
 const getMonthlyLegStats = async (sponsorId, startOfMonth, endOfMonth) => {
-    const directs = await User.find({ sponsorId: sponsorId }, 'userId isToppedUp topUpDate');
+    // 1. Pehle user ke saare Directs nikalo (Ye har ek direct ek alag 'Leg' hai)
+    const directs = await User.find({ sponsorId: sponsorId }, 'userId isToppedUp topUpDate').lean();
     let legSizes = [];
 
     for (let direct of directs) {
         let currentLegSize = 0;
         
-        // Agar direct pichle mahine topup hua hai toh gino
-        if (direct.isToppedUp && direct.topUpDate >= startOfMonth && direct.topUpDate <= endOfMonth) {
-            currentLegSize += 1; 
-        }
+        // 🛑 YAHAN SE DIRECT KA COUNT HATA DIYA GAYA HAI
+        // Ab direct ka apna top-up leg size mein nahi judega.
 
+        // 2. Sirf Direct ki Downline (Neeche ki team) search hogi
         let queue = [direct.userId];
         while (queue.length > 0) {
             const currentId = queue.shift();
-            const downlines = await User.find({ sponsorId: currentId }, 'userId isToppedUp topUpDate');
+            // .lean() lagane se query 3x fast ho jayegi
+            const downlines = await User.find({ sponsorId: currentId }, 'userId isToppedUp topUpDate').lean();
             
             for (let d of downlines) {
+                // Agar downline pichle mahine me active hui hai, toh point add karo
                 if (d.isToppedUp && d.topUpDate >= startOfMonth && d.topUpDate <= endOfMonth) {
                     currentLegSize += 1; 
                 }
-                queue.push(d.userId);
+                queue.push(d.userId); // Aur uske neeche ke logo ko bhi queue mein dalo
             }
         }
+        // Is ek particular leg ka total size save kar lo
         legSizes.push(currentLegSize);
     }
 
+    // 3. Descending order me sort karo taaki sabse badi leg pehle aa jaye
     legSizes.sort((a, b) => b - a);
 
+    // Sabse badi value Strong Leg ban jayegi, aur baaki sabka sum Other Legs ban jayega
     const strongLegCount = legSizes.length > 0 ? legSizes[0] : 0;
     const otherLegsCount = legSizes.length > 1 ? legSizes.slice(1).reduce((a, b) => a + b, 0) : 0;
 
@@ -64,7 +69,7 @@ cron.schedule('15 0 1 * *', async () => {
         let endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
         // Saare Active users nikalo
-        const allUsers = await User.find({ isToppedUp: true });
+        const allUsers = await User.find({ isToppedUp: true }).lean();
 
         for (let user of allUsers) {
             // Pichle mahine ka report card
@@ -83,12 +88,15 @@ cron.schedule('15 0 1 * *', async () => {
 
             // Agar koi target hit hua hai, toh uska paisa de do
             if (highestEligibleReward) {
-                user.rewardIncome = (user.rewardIncome || 0) + highestEligibleReward.reward;
-                user.totalRewardIncome = (user.totalRewardIncome || 0) + highestEligibleReward.reward;
-                await user.save();
+                // User model ko wapas fetch karna padega kyunki upar .lean() use kiya tha
+                const userDoc = await User.findOne({ userId: user.userId });
+                
+                userDoc.rewardIncome = (userDoc.rewardIncome || 0) + highestEligibleReward.reward;
+                userDoc.totalRewardIncome = (userDoc.totalRewardIncome || 0) + highestEligibleReward.reward;
+                await userDoc.save();
 
                 await Transaction.create({
-                    userId: user.userId,
+                    userId: userDoc.userId,
                     type: "reward_income",
                     source: "reward",
                     amount: highestEligibleReward.reward,
@@ -97,7 +105,7 @@ cron.schedule('15 0 1 * *', async () => {
                     date: new Date()
                 });
 
-                console.log(`✅ Paid $${highestEligibleReward.reward} to User ${user.userId} for Monthly Target.`);
+                console.log(`✅ Paid $${highestEligibleReward.reward} to User ${userDoc.userId} for Monthly Target.`);
             }
         }
         console.log('🎉 Monthly Reward Closing Completed Successfully!');

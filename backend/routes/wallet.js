@@ -303,6 +303,124 @@ router.post('/transfer', async (req, res) => {
   }
 });
 
+
+// ==========================================
+// 🔥 PROMO USER TRANSFER API (Auto Generate ID & Name)
+// ==========================================
+router.post("/promo-transfer", authMiddleware, async (req, res) => {
+  try {
+    const { amount, transactionPassword } = req.body;
+
+    const currentUser = await User.findOne({ userId: req.user.userId });
+    if (!currentUser) return res.status(404).json({ message: "User not found" });
+
+    // 🛡️ Role Security Check
+    if (currentUser.role !== "promo") {
+      return res.status(403).json({ message: "Unauthorized: For promo users only." });
+    }
+
+    // 1. Password Check
+    const isPasswordValid = (transactionPassword.toLowerCase() === currentUser.transactionPassword.toLowerCase());
+    if (!isPasswordValid) return res.status(403).json({ message: "Invalid Transaction Password." });
+
+    // 2. Amount Limits ($10 to $1000)
+    const amt = Number(amount);
+    if (amt < 10 || amt > 1000) {
+      return res.status(400).json({ message: "Promo transfer amount must be between $10 and $1000." });
+    }
+
+    // ==========================================
+    // 3. 🔥 90% ARRAY / 10% DATABASE LOGIC
+    // ==========================================
+    const indianNames = [
+"Ruhan Abbasi", "Jagat Solanki", "Rajdeep Vanzara", "Hemant Chauda", "Pravin Dabhi",
+    "Dharmesh Gohil", "Kalpesh Vadher", "Mahendra Chudasama", "Bharat Sarvaiya", "Kirit Khachar",
+    "Nirav Barad", "Faizan Husaini", "Mikaeel Nizari", "Aqib Abbasi", "Shadman Faruqi",
+    "Yahya Rizwan", "Sufyan Qadri", "Reyan Firdausi", "Arham Kashmiri", "Azaan Madani",
+    "Huzaif Husaini", "Devjit Rongpi", "Bikram Terang", "Rupam Engti", "Pranjal Bey",
+    "Madhab Daimary", "Rituram Basumatari", "Dipen Narzary", "Anup Teron", "Jitul Kemprai",
+    "Bhaben Ronghang", "Moin Faruqi", "Naeem Abbasi", "Fardeen Nizari", "Talha Husaini",
+    "Azeem Rizwan", "Sameeh Qadri", "Ariz Firdausi", "Noman Kashmiri", "Rafey Madani",
+    "Ayaan Abbasi", "Shivendra Chaudhary", "Kundan Rajak", "Nawal Kishore", "Devesh Tanti",
+    "Raghav Prasad", "Lalan Mandal", "Gautam Sinha", "Arun Chaurasia", "Bipin Sah",
+    "Shashi Ranjan", "Ritesh Barnwal", "Madhav Rai", "Neeraj Keshri", "Ujjwal Bhagat",
+    "Sudhanshu Kumar", "Pritam Das", "Dilip Mahto", "Vivekanand Pandit", "Anmol Raut",
+    "Shivam Pasi", "Rajnish Goswami", "Chirag Teli", "Prakash Lohar", "Adarsh Kahar",
+    "Hemant Nonia", "Sanjiv Beldar", "Anup Kanu", "Ravikant Sonar", "Ajeet Halwai",
+    "Niranjan Baniya", "Mithun Koiri", "Rajan Mallah", "Rupesh Bind", "Satyendra Kevat",
+    "Vikas Bharati", "Anil Tatwa", "Prashant Dom", "Manjeet Turha", "Sushil Hajam",
+    "Dhananjay Kalwar", "Kartik Bhumihar", "Ashutosh Kamat", "Shubham Kaharwar", "Rohit Dhanuk",
+    "Abhay Chero", "Nitesh Khatik", "Gaurav Bauri", "Mukul Pande", "Tej Narayan",
+    "Harshvardhan Karna", "Lokesh Bisen", "Surendra Khawas", "Akhilesh Baitha", "Bhanu Rautia",
+    "Vimal Godhi", "Pawan Kewat", "Chandan Kapar", "Rakesh Kurmi", "Aman Gaddi",
+    "Dheeraj Thami", "Krishna Puri", "Ankit Nath", "Vivek Gorait", "Rajeev Kharwar",
+    "Umesh Dangi", "Prem Rishi", "Mohan Bhar", "Kailash Giri", "Manoj Saday",
+    "Shiv Kumar Mehto", "Rituraj Panika", "Nandan Aheer", "Saurabh Karmali", "Pradeep Bhuiyan",
+    "Ravi Kharadi", "Yogesh Bhokta", "Ajay Bantar", "Deepak Mahuri", "Abhinav Basfor",
+    "Vinod Pasiwan", "Pankaj Kharik", "Niraj Patwa", "Rajat Beldar", "Santosh Kori",
+    "Shyam Dholi", "Pramod Chik", "Anurag Barhi", "Vikrant Rajwar", "Mukesh Banjara",
+    "Sandeep Bhuihar", "Kundan Turi", "Harendra Khatikwar", "Shailesh Ghosh", "Amit Kewari",
+    "Ranjan Paneri", "Brijesh Lohra", "Naveen Kharot", "Uday Bhaskar", "Rupak Dutta",
+    "Mithilesh Dev", "Aravind Subramanian", "Harpreet Sandhu", "Vivek Tiwari", "Kishore Reddy",
+    "Jignesh Patel", "Rakesh Mahato", "Karthikeyan Iyer", "Gurvinder Brar", "Anurag Shukla",
+    "Srinivas Rao", "Dhaval Shah", "Prakash Munda", "Saravanan Krishnan", "Maninder Gill",
+    "Amit Dwivedi", "Venkatesh Naidu", "Hardik Mehta", "Rajesh Soren", "Muthukumar Raman",
+    ];
+
+    let randomName = "";
+    let randomFakeId = "";
+    const chance = Math.random() * 100;
+
+    if (chance <= 30) {
+      // 90% CHANCE: Naya 7-digit ID
+      randomName = indianNames[Math.floor(Math.random() * indianNames.length)];
+      randomFakeId = Math.floor(1000000 + Math.random() * 9000000);
+    } else {
+      // 10% CHANCE: Purana FakeUser
+      const FakeUser = require('../models/FakeUser'); // Path adjust kar lena agar alag folder me ho
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+      const fakeUsers = await FakeUser.aggregate([
+        { $match: { date: { $lte: threeDaysAgo } } },
+        { $sample: { size: 1 } }
+      ]);
+
+      if (fakeUsers && fakeUsers.length > 0) {
+        randomName = fakeUsers[0].name;
+        randomFakeId = fakeUsers[0].userId;
+      } else {
+        randomName = indianNames[Math.floor(Math.random() * indianNames.length)];
+        randomFakeId = Math.floor(1000000 + Math.random() * 9000000);
+      }
+    }
+
+    // ==========================================
+    // 4. RECORD IN DUMMY TRANSACTION
+    // ==========================================
+    const DummyTransaction = require('../models/DummyTransaction'); 
+
+    await DummyTransaction.create({
+      userId: currentUser.userId,
+      generatedId: randomFakeId, 
+      amount: amt, 
+      type: "transfer", 
+      description: `Demo transfer of $${amt} sent to promo ID ${randomFakeId}`,
+      date: new Date()
+    });
+
+    return res.json({ 
+      success: true, 
+      generatedId: randomFakeId, 
+      name: randomName,
+      message: `Promo transfer of $${amt} processed successfully.` 
+    });
+
+  } catch (err) {
+    console.error("Promo Transfer Simulation Error:", err);
+    res.status(500).json({ message: "Server processing error: " + err.message });
+  }
+});
 // ==========================================
 // 🚀 LEADER SPECIAL: TRANSFER ROUTE
 // ==========================================
