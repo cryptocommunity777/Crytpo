@@ -57,7 +57,8 @@ const CreditToWalletHistory = () => {
             if (
               source === "system" || 
               source === "pool" ||                 // Block Daily Cron Income
-              source === "instant_leader_bonus"    // Block 10% Instant Bonus
+              source === "instant_leader_bonus" ||   // Block 10% Instant Bonus
+              source === "admin_bonus"    // Block 10% Instant Bonus
             ) {
               return false;
             }
