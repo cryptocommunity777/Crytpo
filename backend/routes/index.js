@@ -43,8 +43,7 @@ router.use('/community', require('./community'));
 // 🎥 NAYA: User Promo Video Route (Dashboard pe video dikhane ke liye)
 router.use('/video', require('./videoRoutes')); // 👈 YE LINE BHI ADD KI HAI
 
-router.use('/transactions', require('./systemtransactions')); // 👈 YE LINE ADD KAREIN (Notice the 's')
-
+ 
 // 🌐 Root test
 router.get('/', (req, res) => {
   res.send('API is running');

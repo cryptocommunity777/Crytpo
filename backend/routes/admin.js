@@ -1677,6 +1677,56 @@ router.get('/check-live-balance/:userId', verifyAdmin, async (req, res) => {
 
 
 
+
+
+const SystemStat = require('../models/SystemStat');
+// Aapka jo bhi verifyAdmin middleware hai, use yahan check kar lena
+// const { verifyAdmin } = require('../middleware/auth'); 
+
+// ==========================================
+// 1. GET CURRENT INDIA BOOST TARGET
+// ==========================================
+router.get('/system-settings', verifyAdmin, async (req, res) => {
+    try {
+        const stat = await SystemStat.findOne({});
+        res.json({ 
+            success: true, 
+            extraIndiaDailyTarget: stat?.extraIndiaDailyTarget || 0 
+        });
+    } catch (error) {
+        console.error("Error fetching system settings:", error);
+        res.status(500).json({ success: false, message: "Server error fetching settings." });
+    }
+});
+
+// ==========================================
+// 2. UPDATE INDIA BOOST TARGET
+// ==========================================
+router.post('/update-india-boost', verifyAdmin, async (req, res) => {
+    try {
+        const { target } = req.body;
+
+        if (target === undefined || isNaN(target) || Number(target) < 0) {
+            return res.status(400).json({ success: false, message: "Invalid target number." });
+        }
+
+        // Database mein single document ko update ya create (upsert) karega
+        await SystemStat.findOneAndUpdate(
+            {},
+            { $set: { extraIndiaDailyTarget: Number(target) } },
+            { upsert: true }
+        );
+
+        res.json({ 
+            success: true, 
+            message: `Daily India Extra Boost target successfully set to ${target} users.` 
+        });
+    } catch (error) {
+        console.error("Error updating India boost target:", error);
+        res.status(500).json({ success: false, message: "Server error updating settings." });
+    }
+});
+
 router.get('/direct-income', verifyAdmin, async (req, res) => {
   try {
     const { userId, fromDate, toDate } = req.query;

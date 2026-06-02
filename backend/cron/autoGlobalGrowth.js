@@ -21,111 +21,139 @@ const GLOBAL_POOLS = [
     { level: 12, globalTeam: 10000, reqDirects: 18, daily: 10, days: 500 }  
 ];
 
-// 🔥 Exact India (IST) ki Date nikalne ka function
 const getISTDateStr = () => {
     const d = new Date();
     const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
-    const istDate = new Date(utc + (3600000 * 5.5)); // India is +5:30
+    const istDate = new Date(utc + (3600000 * 5.5)); 
     return istDate.toISOString().split('T')[0];
 };
 
 const startGlobalGrowthCron = () => {
 
+    // 🔥 1. HELPER FUNCTION (Sab kuch same hai, bas Code yahan nikal liya)
+    const processFakeGrowth = async (forcedCountry = null) => {
+        const todayStr = getISTDateStr();
+        const activeUsers = await User.find({ isToppedUp: true })
+            .select('_id globalTeamCount directCount todayGlobalTeamAdded lastGlobalTeamAddDate');
+
+        const bulkOps = [];
+
+        for (const user of activeUsers) {
+            const team = user.globalTeamCount || 0;
+            const directs = user.directCount || 0;
+            let isLocked = false;
+            
+            if (team >= 2360 && team < 4360 && directs < 6) isLocked = true;
+            else if (team >= 4360 && team < 7360 && directs < 8) isLocked = true;
+            else if (team >= 7360 && team < 11360 && directs < 10) isLocked = true;
+            else if (team >= 11360 && team < 16360 && directs < 12) isLocked = true;
+            else if (team >= 16360 && team < 23860 && directs < 14) isLocked = true;
+            else if (team >= 23860 && team < 33860 && directs < 16) isLocked = true;
+            else if (team >= 33860 && directs < 18) isLocked = true;
+
+            if (isLocked) continue;
+
+            if (user.lastGlobalTeamAddDate !== todayStr) {
+                bulkOps.push({
+                    updateOne: {
+                        filter: { _id: user._id },
+                        update: {
+                            $inc: { globalTeamCount: 1 },
+                            $set: { todayGlobalTeamAdded: 1, lastGlobalTeamAddDate: todayStr }
+                        }
+                    }
+                });
+            } else {
+                bulkOps.push({
+                    updateOne: {
+                        filter: { _id: user._id },
+                        update: {
+                            $inc: { globalTeamCount: 1, todayGlobalTeamAdded: 1 },
+                            $set: { lastGlobalTeamAddDate: todayStr }
+                        }
+                    }
+                });
+            }
+        }
+
+        if (bulkOps.length > 0) {
+            await User.bulkWrite(bulkOps);
+        }
+
+        await SystemStat.findOneAndUpdate(
+            {}, 
+            { $inc: { globalFakeCount: 1 } }, 
+            { upsert: true, returnDocument: 'after' }
+        );            
+        
+        const randomId = Math.floor(1000000 + Math.random() * 9000000); 
+        const isRealUser = await User.exists({ userId: randomId });
+        const isFakeUser = await FakeUser.exists({ userId: randomId });
+
+        if (!isRealUser && !isFakeUser) {
+            // 🔥 Country Logic Update
+            let randomCountry = "IN";
+            if (forcedCountry) {
+                randomCountry = forcedCountry; // Admin ne 'IN' bheja toh IN hi rahega
+            } else if (typeof countriesProbability !== 'undefined' && countriesProbability?.length > 0) {
+                randomCountry = countriesProbability[Math.floor(Math.random() * countriesProbability.length)];
+            }
+
+            let randomName = "Crypto User";
+            if (typeof countryNames !== 'undefined') {
+                const namePool = countryNames[randomCountry] || countryNames["IN"];
+                if (namePool && namePool.length > 0) {
+                    randomName = namePool[Math.floor(Math.random() * namePool.length)];
+                }
+            }
+
+            await FakeUser.create({
+                userId: randomId,
+                name: randomName,
+                country: randomCountry,
+                isToppedUp: true,
+                topUpAmount: 30,
+                date: new Date()
+            });
+        } 
+    };
+
     // =========================================================================
-    // 1. HAR 1 MINUTE WALI CRON (Growth + INSTANT Pool Unlock Logic)
+    // HAR 1 MINUTE WALI CRON
     // =========================================================================
     cron.schedule('* * * * *', async () => {
         try {
-            // 🔥 1. FAKE/SYSTEM GROWTH LOGIC (LIVE MODE: 100 Users/Day)
+            // 🔥 PART A: Aapka purana 100 users wala normal system (Mixed Countries)
             const shouldAddFakeUser = Math.random() < (100 / 1440); 
-            const todayStr = getISTDateStr();
-             
             if (shouldAddFakeUser) {
-                const activeUsers = await User.find({ isToppedUp: true })
-                    .select('_id globalTeamCount directCount todayGlobalTeamAdded lastGlobalTeamAddDate');
+                await processFakeGrowth(); // Bina kisi condition ke
+            }
 
-                const bulkOps = [];
-
-                for (const user of activeUsers) {
-                    const team = user.globalTeamCount || 0;
-                    const directs = user.directCount || 0;
-                    
-                  let isLocked = false;
-                    
-                    // 🔥 Exact match (===) hata kar Range (>= aur <) laga diya hai
-                    if (team >= 2360 && team < 4360 && directs < 6) isLocked = true;
-                    else if (team >= 4360 && team < 7360 && directs < 8) isLocked = true;
-                    else if (team >= 7360 && team < 11360 && directs < 10) isLocked = true;
-                    else if (team >= 11360 && team < 16360 && directs < 12) isLocked = true;
-                    else if (team >= 16360 && team < 23860 && directs < 14) isLocked = true;
-                    else if (team >= 23860 && team < 33860 && directs < 16) isLocked = true;
-                    else if (team >= 33860 && directs < 18) isLocked = true;
-
-                    if (isLocked) continue;
-
-                    if (user.lastGlobalTeamAddDate !== todayStr) {
-                        bulkOps.push({
-                            updateOne: {
-                                filter: { _id: user._id },
-                                update: {
-                                    $inc: { globalTeamCount: 1 },
-                                    $set: { todayGlobalTeamAdded: 1, lastGlobalTeamAddDate: todayStr }
-                                }
-                            }
-                        });
-                    } else {
-                        bulkOps.push({
-                            updateOne: {
-                                filter: { _id: user._id },
-                                update: {
-                                    $inc: { globalTeamCount: 1, todayGlobalTeamAdded: 1 },
-                                    $set: { lastGlobalTeamAddDate: todayStr }
-                                }
-                            }
-                        });
-                    }
-                }
-
-                if (bulkOps.length > 0) {
-                    await User.bulkWrite(bulkOps);
-                }
-
-                await SystemStat.findOneAndUpdate(
-                    {}, 
-                    { $inc: { globalFakeCount: 1 } }, 
-                    { upsert: true, returnDocument: 'after' }
-                );            
+            // 🔥 PART B: Admin ka "India Boost" system
+           // 🔥 PART B: Admin ka "India Boost" system (Supercharged for >1440 targets)
+            const stat = await SystemStat.findOne({});
+            const extraIndiaTarget = stat?.extraIndiaDailyTarget || 0; 
+            
+            if (extraIndiaTarget > 0) {
+                // Per minute kitne users chahiye?
+                const usersPerMinute = extraIndiaTarget / 1440; 
                 
-                const randomId = Math.floor(1000000 + Math.random() * 9000000); 
-                const isRealUser = await User.exists({ userId: randomId });
-                const isFakeUser = await FakeUser.exists({ userId: randomId });
+                // Fix users per minute
+                let usersToAddThisMinute = Math.floor(usersPerMinute); 
+                
+                // Bacha hua fraction chance
+                const fractionalChance = usersPerMinute - usersToAddThisMinute; 
+                if (Math.random() < fractionalChance) {
+                    usersToAddThisMinute += 1; 
+                }
 
-                if (!isRealUser && !isFakeUser) {
-                    let randomCountry = "IN";
-                    if (typeof countriesProbability !== 'undefined' && countriesProbability?.length > 0) {
-                        randomCountry = countriesProbability[Math.floor(Math.random() * countriesProbability.length)];
-                    }
-
-                    let randomName = "Crypto User";
-                    if (typeof countryNames !== 'undefined') {
-                        const namePool = countryNames[randomCountry] || countryNames["IN"];
-                        if (namePool && namePool.length > 0) {
-                            randomName = namePool[Math.floor(Math.random() * namePool.length)];
-                        }
-                    }
-
-                    await FakeUser.create({
-                        userId: randomId,
-                        name: randomName,
-                        country: randomCountry,
-                        isToppedUp: true,
-                        topUpAmount: 30,
-                        date: new Date()
-                    });
-                } 
+                // Jitne users require hain, utni baar 'IN' user banayega
+                for (let i = 0; i < usersToAddThisMinute; i++) {
+                    await processFakeGrowth("IN"); // 🔥 Sirf India
+                }
             }
             
-            // 🔥 2. POOL UNLOCK DISTRIBUTION LOGIC (INSTANT PAYOUT ADDED)
+            // 🔥 2. POOL UNLOCK DISTRIBUTION LOGIC (Same as before)
             const eligibleUsers = await User.find({ directCount: { $gte: 1 }, isToppedUp: true });
             const currentTodayStr = getISTDateStr();
 
@@ -142,13 +170,12 @@ const startGlobalGrowthCron = () => {
                         if (!existingPool) {
                             if (!user.activePools) user.activePools = [];
                             
-                            // 🚀 NAYA LOGIC: Naya pool unlock hote hi aaj ka din aur paisa de do
                             user.activePools.push({
                                 level: lvl.level,
                                 dailyAmount: lvl.daily,
                                 totalDays: lvl.days,
-                                daysPaid: 1,               // 🔥 Day 1
-                                lastPaidDate: currentTodayStr,    // 🔥 Aaj ki date
+                                daysPaid: 1,               
+                                lastPaidDate: currentTodayStr,    
                                 status: 'ACTIVE'
                             });
 
@@ -167,7 +194,6 @@ const startGlobalGrowthCron = () => {
                          }
                     }
                 }
-                
                 if (isUpdated) await user.save();
             }
         } catch (err) {
@@ -176,9 +202,8 @@ const startGlobalGrowthCron = () => {
     });
 
     // =========================================================================
-    // 2. DAILY MIDNIGHT CRON (Set to 11:30 AM temporarily for testing)
+    // DAILY MIDNIGHT CRON
     // =========================================================================
-    // 🔥 Puraane users ko abhi 11:30 par paisa chala jayega
     cron.schedule('0 0 * * *', async () => {
         try {
             const users = await User.find({ "activePools.status": "ACTIVE" });
@@ -190,15 +215,12 @@ const startGlobalGrowthCron = () => {
                 for (let pool of user.activePools) {
                     if (pool.status === 'ACTIVE' && pool.daysPaid < pool.totalDays) {
                         
-                        // Agar usko aaj paisa mil gaya hai, toh rok do
                         if (pool.lastPaidDate === todayStr) {
                             continue; 
                         }
 
-                        // Paise add karo
                         user.poolIncome = (user.poolIncome || 0) + pool.dailyAmount; 
                         
-                        // Transaction history banao
                         await Transaction.create({
                             userId: user.userId,
                             type: 'credit',
@@ -208,12 +230,10 @@ const startGlobalGrowthCron = () => {
                             status: 'success'
                         });
 
-                        // Day count aage badhao aur aaj ki date daal do
                         pool.daysPaid += 1;
                         pool.lastPaidDate = todayStr; 
                         isUpdated = true;
 
-                        // Agar limits puri ho gayi toh pool Complete kardo
                         if (pool.daysPaid >= pool.totalDays) {
                             pool.status = 'COMPLETED';
                         }
@@ -227,7 +247,7 @@ const startGlobalGrowthCron = () => {
         }
     }, {
         scheduled: true,
-        timezone: "Asia/Kolkata" // India Time
+        timezone: "Asia/Kolkata" 
     });
 };
 

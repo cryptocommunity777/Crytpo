@@ -5,15 +5,13 @@ import {
   FaSitemap, FaProjectDiagram, FaExchangeAlt, FaFileAlt, FaUserPlus, FaGift,
   FaArrowCircleUp, FaArrowCircleDown, FaBell, FaClipboardList, FaCoins,
   FaUserSlash, FaBars, FaTimes, FaHistory, FaShieldAlt, FaBan,
-  FaUserCog, FaYoutube, FaRocket, FaSearchDollar,FaPiggyBank, FaTrophy, FaChartPie, FaBolt // 🔥 'FaZap' ki jagah 'FaBolt' lagaya hai
+  FaUserCog, FaYoutube, FaRocket, FaSearchDollar, FaPiggyBank, FaTrophy, FaChartPie, FaBolt 
 } from 'react-icons/fa';
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
-  // 🔥 IMPORTANT: Yahan maine '/super-panal' kar diya hai.
-  // Make sure App.js me bhi same spelling ho (panal vs panel).
   const BASE_PATH = "/super-panal"; 
 
   const linkClass = ({ isActive }) =>
@@ -28,17 +26,14 @@ const Sidebar = () => {
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
-  // 🚀 NAYA FUNCTION: Hard Reload Logic Taaki Hamesha Fresh Data Aaye
   const handleNavClick = (e, path) => {
-    e.preventDefault(); // React Router ka default SPA behavior rokna
+    e.preventDefault(); 
     
-    if (isOpen) setIsOpen(false); // Mobile sidebar close karna
+    if (isOpen) setIsOpen(false); 
 
     if (window.location.pathname === path) {
-      // Agar current page par hi dobara click kiya hai, toh usi page ko refresh karo
       window.location.reload();
     } else {
-      // Agar dusre page par click kiya hai, toh URL change karke page ko hard-reload karo
       window.location.href = path;
     }
   };
@@ -92,7 +87,6 @@ const Sidebar = () => {
 
           <nav className="space-y-2">
             
-            {/* 🔥 HAR LINK ME 'handleNavClick' ADD KIYA GAYA HAI 🔥 */}
             <NavLink to={`${BASE_PATH}`} end className={linkClass} onClick={(e) => handleNavClick(e, BASE_PATH)}>
               <FaHome className="inline-block mr-2" /> Dashboard
             </NavLink>
@@ -101,7 +95,6 @@ const Sidebar = () => {
               <FaUsers className="inline-block mr-2" /> All Users
             </NavLink>
             
-
             <NavLink to={`${BASE_PATH}/manage-users`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/manage-users`)}>
               <FaUserCog className="inline-block mr-2 text-blue-500" /> Manage Roles & Leaders
             </NavLink>
@@ -136,7 +129,7 @@ const Sidebar = () => {
             </NavLink>
 
             <div className="pt-2 pb-1">
-                <p className="text-xs font-bold text-black uppercase tracking-wider ml-2">Finance</p>
+                <p className="text-xs font-bold text-black uppercase tracking-wider ml-2">Finance & Growth</p>
             </div>
 
             <NavLink to={`${BASE_PATH}/topups`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/topups`)}>
@@ -145,14 +138,15 @@ const Sidebar = () => {
             <NavLink to={`${BASE_PATH}/deposits`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/deposits`)}>
               <FaMoneyBill className="inline-block mr-2" /> Deposit Log
             </NavLink>
-            {/* 🔥 NAYA LINK: DEPOSIT ADDRESS MONITOR 🔥 */}
-<NavLink 
-  to={`${BASE_PATH}/address-monitor`} 
-  className={linkClass} 
-  onClick={(e) => handleNavClick(e, `${BASE_PATH}/address-monitor`)}
->
-  <FaSearchDollar className="inline-block mr-2 text-orange-500" /> Address Monitor
-</NavLink>
+            
+            <NavLink to={`${BASE_PATH}/address-monitor`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/address-monitor`)}>
+              <FaSearchDollar className="inline-block mr-2 text-orange-500" /> Address Monitor
+            </NavLink>
+
+            {/* 🔥 NAYA LINK: INDIA BOOST 🔥 */}
+            <NavLink to={`${BASE_PATH}/india-boost`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/india-boost`)}>
+              <FaBolt className="inline-block mr-2 text-orange-500 animate-pulse" /> India Boost 🇮🇳
+            </NavLink>
 
             <NavLink to={`${BASE_PATH}/fast-track-report`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/fast-track-report`)}>
               <FaRocket className="inline-block mr-2 text-orange-500" /> Fast Track Report
@@ -170,7 +164,6 @@ const Sidebar = () => {
               <FaTrophy className="inline-block mr-2 text-yellow-500" /> Reward Progress
             </NavLink>
 
-            {/* 🔥 YAHAN BHI 'FaBolt' LAGA DIYA HAI 🔥 */}
             <NavLink to={`${BASE_PATH}/leader-auto-withdraw`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/leader-auto-withdraw`)}>
               <FaBolt className="inline-block mr-2 text-yellow-500" /> Leader Auto-Withdraw
             </NavLink>
