@@ -5,7 +5,7 @@ import {
   FaSitemap, FaProjectDiagram, FaExchangeAlt, FaFileAlt, FaUserPlus, FaGift,
   FaArrowCircleUp, FaArrowCircleDown, FaBell, FaClipboardList, FaCoins,
   FaUserSlash, FaBars, FaTimes, FaHistory, FaShieldAlt, FaBan,
-  FaUserCog, FaYoutube, FaRocket, FaPiggyBank, FaTrophy, FaChartPie, FaBolt // 🔥 'FaZap' ki jagah 'FaBolt' lagaya hai
+  FaUserCog, FaYoutube, FaRocket, FaSearchDollar,FaPiggyBank, FaTrophy, FaChartPie, FaBolt // 🔥 'FaZap' ki jagah 'FaBolt' lagaya hai
 } from 'react-icons/fa';
 
 const Sidebar = () => {
@@ -145,6 +145,14 @@ const Sidebar = () => {
             <NavLink to={`${BASE_PATH}/deposits`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/deposits`)}>
               <FaMoneyBill className="inline-block mr-2" /> Deposit Log
             </NavLink>
+            {/* 🔥 NAYA LINK: DEPOSIT ADDRESS MONITOR 🔥 */}
+<NavLink 
+  to={`${BASE_PATH}/address-monitor`} 
+  className={linkClass} 
+  onClick={(e) => handleNavClick(e, `${BASE_PATH}/address-monitor`)}
+>
+  <FaSearchDollar className="inline-block mr-2 text-orange-500" /> Address Monitor
+</NavLink>
 
             <NavLink to={`${BASE_PATH}/fast-track-report`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/fast-track-report`)}>
               <FaRocket className="inline-block mr-2 text-orange-500" /> Fast Track Report

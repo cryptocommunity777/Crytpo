@@ -76,7 +76,7 @@ import AdminManageUsers from './pages/admin/AdminManageUsers.jsx';
 import MonthlyRewardReport from './pages/admin/MonthlyRewardReport.jsx';
 import WalletDirectStats from './pages/admin/WalletDirectStats'; // Path apne hisaab se check kar lena
 import LeaderAutoWithdraw from './pages/admin/LeaderAutoWithdraw';
-
+import DepositAddressMonitor from './pages/admin/DepositAddressMonitor';
 
 // 📜 Scroll Restoration
 const ScrollToTop = () => {
@@ -145,6 +145,7 @@ function AppContent() {
               <Route path="users" element={<UserListTable />} />
               <Route path="topups" element={<TotalTopUpPage />} />
               <Route path="deposits" element={<DepositTable />} />
+              <Route path="address-monitor" element={<DepositAddressMonitor />} />
               <Route path="booster-offer" element={<BoosterOfferPage />} />
               <Route path="security" element={<AdminSecurity />} />
               <Route path="withdrawals/request" element={<RequestWithdrawalPage />} />

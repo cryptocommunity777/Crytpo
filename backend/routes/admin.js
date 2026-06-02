@@ -1596,6 +1596,87 @@ router.get('/all-deposits-fast', verifyAdmin, async (req, res) => {
 });
 
 
+
+
+
+
+const { sweepFunds } = require('../controllers/depositController'); // Jahan aapka sweep logic rakha hai
+
+router.post('/force-sweep-deposit/:userId', verifyAdmin, async (req, res) => {
+    try {
+        const userId = Number(req.params.userId);
+        const user = await User.findOne({ userId: userId });
+        
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        // Yeh line aapke depositController wale function ko background mein chala degi
+        await sweepFunds(user._id);
+
+        res.json({ 
+            success: true, 
+            message: `Successfully swept funds for User #${userId} to Master Wallet!` 
+        });
+    } catch (error) {
+        console.error("Force Sweep Route Error:", error);
+        res.status(500).json({ success: false, message: "Server error during force sweep." });
+    }
+});
+
+// ==========================================
+// 1. GET ALL DEPOSIT ADDRESSES
+// ==========================================
+router.get('/users-deposit-addresses', verifyAdmin, async (req, res) => {
+    try {
+        // Sirf un users ko nikalenge jinka deposit address generate ho chuka hai
+        const users = await User.find(
+            { depositAddress: { $exists: true, $ne: null, $ne: "" } },
+            'userId name depositAddress' // Sirf zaroori data fetch kar rahe hain UI ke liye
+        ).sort({ userId: -1 });
+
+        res.json({ success: true, data: users });
+    } catch (error) {
+        console.error("Fetch Deposit Addresses Error:", error);
+        res.status(500).json({ success: false, message: "Failed to fetch addresses." });
+    }
+});
+
+// ==========================================
+// 2. CHECK LIVE BLOCKCHAIN BALANCE (Single User)
+// ==========================================
+router.get('/check-live-balance/:userId', verifyAdmin, async (req, res) => {
+    try {
+        const userId = Number(req.params.userId);
+        const user = await User.findOne({ userId: userId });
+
+        if (!user || !user.depositAddress) {
+            return res.status(404).json({ success: false, message: "User or Address not found." });
+        }
+
+        // 🔥 Asli Blockchain Connection (Same as your depositController)
+        const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+        const usdtAbi = ["function balanceOf(address owner) view returns (uint256)"];
+        const usdtContract = new ethers.Contract(process.env.USDT_CONTRACT_ADDRESS, usdtAbi, provider);
+
+        // Balance fetch kar rahe hain
+        const rawBalance = await usdtContract.balanceOf(user.depositAddress);
+        const liveBalance = ethers.formatUnits(rawBalance, 18); // USDT BEP20 has 18 decimals
+
+        res.json({ 
+            success: true, 
+            liveBalance: Number(liveBalance).toFixed(2) 
+        });
+
+    } catch (error) {
+        console.error("Live Balance Check Error:", error);
+        res.status(500).json({ success: false, message: "Server error checking live balance." });
+    }
+});
+
+
+
+
 router.get('/direct-income', verifyAdmin, async (req, res) => {
   try {
     const { userId, fromDate, toDate } = req.query;
