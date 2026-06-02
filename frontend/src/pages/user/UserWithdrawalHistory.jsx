@@ -20,6 +20,9 @@ function UserWithdrawalHistory() {
 
   const user = JSON.parse(localStorage.getItem("user"));
   const userId = Number(user?.userId);
+  
+  // 🔥 Check if user is a Leader
+  const isLeader = user?.role?.toLowerCase() === "leader";
 
   useEffect(() => {
     const fetchWithdrawals = async () => {
@@ -42,7 +45,7 @@ function UserWithdrawalHistory() {
     else setLoading(false);
   }, [userId]);
 
-  // GROUP ENTRIES
+  // 🔥 GROUP & ADJUST ENTRIES
   const groupWithdrawals = (list) => {
     const sorted = [...list].sort(
       (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
@@ -65,10 +68,10 @@ function UserWithdrawalHistory() {
       ) {
         lastGroup.entries.push(item);
 
-        lastGroup.totalGross += Number(item.grossAmount || 0) * 2;
-        lastGroup.totalFee += Number(item.fee || 0) * 2;
-        lastGroup.totalCryptoNet += Number(item.netAmount || 0);
-        lastGroup.totalTopupNet += Number(item.netAmount || 0);
+        lastGroup.rawGross += Number(item.grossAmount || 0) * 2;
+        lastGroup.rawFee += Number(item.fee || 0) * 2;
+        lastGroup.rawCryptoNet += Number(item.netAmount || 0);
+        lastGroup.rawTopupNet += Number(item.netAmount || 0);
 
         if (item.status?.toLowerCase() === "pending")
           lastGroup.status = "pending";
@@ -82,25 +85,42 @@ function UserWithdrawalHistory() {
           _id: item._id,
           createdAt: item.createdAt,
           entries: [item],
-          totalGross: Number(item.grossAmount || 0) * 2,
-          totalFee: Number(item.fee || 0) * 2,
-          totalCryptoNet: Number(item.netAmount || 0),
-          totalTopupNet: Number(item.netAmount || 0),
+          rawGross: Number(item.grossAmount || 0) * 2,
+          rawFee: Number(item.fee || 0) * 2,
+          rawCryptoNet: Number(item.netAmount || 0),
+          rawTopupNet: Number(item.netAmount || 0),
           walletAddress: item.walletAddress,
           status: item.status || "pending",
         });
       }
     }
 
+    // 🔥 LEADER ADJUSTMENT LOGIC (Format into multiples of 10)
+    groups.forEach(g => {
+        if (isLeader) {
+            // Agar Leader hai, toh raw amount ko 10 ke multiple mein round down kar do (e.g. 105 -> 100)
+            const roundedGross = Math.floor(g.rawGross / 10) * 10;
+            
+            g.totalGross = roundedGross;
+            g.totalFee = roundedGross * 0.10; // 10% Fee
+            g.totalCryptoNet = roundedGross * 0.45; // 45% USDT
+            g.totalTopupNet = roundedGross * 0.45; // 45% TopUp
+        } else {
+            // Normal user ke liye as it is rakho
+            g.totalGross = g.rawGross;
+            g.totalFee = g.rawFee;
+            g.totalCryptoNet = g.rawCryptoNet;
+            g.totalTopupNet = g.rawTopupNet;
+        }
+    });
+
     return groups;
   };
 
   const grouped = groupWithdrawals(withdrawals);
 
-  const totalAmount = withdrawals.reduce(
-    (sum, w) => sum + Number(w.grossAmount || 0) * 2,
-    0
-  );
+  // 🔥 Total Amount widget ko ab is adjusted (grouped) list se lenge taaki dono match karein
+  const totalAmount = grouped.reduce((sum, g) => sum + g.totalGross, 0);
 
   const filtered = grouped.filter((g) => {
     const searchLower = search.toLowerCase();
@@ -141,7 +161,6 @@ function UserWithdrawalHistory() {
   const getStatusDetails = (group) => {
     const s = group.status?.toLowerCase();
 
-    // ✅ Approved wala style change karke green kar diya gaya hai
     if (s === "approved" || s === "success") {
       return {
         label: group.status,
@@ -273,13 +292,13 @@ function UserWithdrawalHistory() {
                 <th className="p-4 font-black">Fee</th>
                 <th className="p-4 font-black">
                   <div className="flex items-center gap-1">
-                     USDT 
+                      USDT 
                   </div>
                 </th>
 
                 <th className="p-4 font-black">
                   <div className="flex items-center gap-1">
-                     TopUp Wallet
+                      TopUp Wallet
                   </div>
                 </th>
 
@@ -292,7 +311,6 @@ function UserWithdrawalHistory() {
 
               {loading ? (
                 <tr>
-                  {/* ✅ colSpan 8 kar diya hai kyunki 2 columns hat gaye hain */}
                   <td colSpan="8" className="text-center py-10">
                     <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
                       Loading History...
@@ -314,7 +332,7 @@ function UserWithdrawalHistory() {
                   return (
                     <tr
                       key={group._id}
-                      className="border-b border-slate-100 bg-white"
+                      className="border-b border-slate-100 bg-white hover:bg-slate-50/50"
                     >
                       <td className="p-4 font-bold text-slate-500 text-center">
                         {startIdx + idx + 1}
@@ -344,7 +362,7 @@ function UserWithdrawalHistory() {
 
                       <td className="p-4 text-slate-700 font-mono text-[10px] sm:text-xs">
                         {group.walletAddress ? (
-                          <span className="px-2 py-1 rounded border border-slate-200">
+                          <span className="px-2 py-1 rounded border border-slate-200 bg-slate-50">
                             {group.walletAddress}
                           </span>
                         ) : (
