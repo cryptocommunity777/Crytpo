@@ -38,6 +38,11 @@ const WalletDirectStats = () => {
     fetchStats();
   }, []);
 
+  // 🔥 TOTAL MARKET WALLET CALCULATION 🔥
+  const totalMarketWallet = useMemo(() => {
+    return users.reduce((total, user) => total + (Number(user.walletBalance) || 0), 0);
+  }, [users]);
+
   // 🔥 SORTING LOGIC: Header click karne pe
   const handleSort = (key) => {
     let direction = 'desc';
@@ -65,7 +70,6 @@ const WalletDirectStats = () => {
       let aValue = a[sortConfig.key];
       let bValue = b[sortConfig.key];
 
-      // Strings (Name) ke liye case insensitive sort
       if (typeof aValue === 'string') aValue = aValue.toLowerCase();
       if (typeof bValue === 'string') bValue = bValue.toLowerCase();
 
@@ -129,7 +133,6 @@ const WalletDirectStats = () => {
     alert(`Copied ID: ${text}`); 
   };
 
-  // UI Component for Sortable Header
   const SortableHeader = ({ label, sortKey, align = "text-center" }) => {
     const isActive = sortConfig.key === sortKey;
     return (
@@ -154,7 +157,7 @@ const WalletDirectStats = () => {
           💰 Wallet & Paid Directs Stats
         </h2>
         <p className="text-gray-500 text-sm mt-1">
-          Showing users who have Wallet Balance {'>'} 0 OR Paid Directs {'>'} 0. Click headers to sort.
+          Showing users who have Wallet Balance {'>'} 0 OR Paid Directs {'>'} 0.
         </p>
       </div>
 
@@ -186,7 +189,6 @@ const WalletDirectStats = () => {
         </button>
       </div>
 
-      {/* 🔥 MOBILE RESPONSIVE TABLE WRAPPER 🔥 */}
       <div className="border border-gray-200 rounded-xl shadow-sm bg-white overflow-hidden">
         <div className="overflow-x-auto custom-scroll w-full">
           <table className="w-full text-sm text-left">
@@ -243,6 +245,22 @@ const WalletDirectStats = () => {
                 ))
               )}
             </tbody>
+
+            {/* 🔥 TABLE FOOTER: TOTAL WALLET BALANCE YAHAN DIKHEGA 🔥 */}
+            {!loading && users.length > 0 && (
+              <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                <tr>
+                  <td colSpan="4" className="px-4 py-4 text-right font-black text-slate-700 uppercase tracking-widest text-sm">
+                    Total Market Wallet Balance :
+                  </td>
+                  <td className="px-4 py-4 text-center whitespace-nowrap bg-indigo-50/50">
+                    <span className="text-indigo-700 font-black text-lg">
+                      ${totalMarketWallet.toFixed(2)}
+                    </span>
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>
