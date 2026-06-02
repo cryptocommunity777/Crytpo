@@ -87,7 +87,7 @@ const AdminWithdrawalTable = () => {
       if (chainId !== 56) {
         const switchNet = await Swal.fire({
           title: 'Wrong Network',
-          text: 'Aapka wallet BSC par nahi hai. Switch karein?',
+          text: 'your wallet is not on BNB Network please Switch to BNB Network ?',
           icon: 'warning',
           showCancelButton: true,
           confirmButtonText: 'Switch to BSC'
@@ -127,14 +127,14 @@ const AdminWithdrawalTable = () => {
       // --- Show Loading Spinner ---
       Swal.fire({
         title: 'Processing...',
-        text: 'Wallet popup mein transaction confirm karein.',
+        text: 'confirm transaction in popup Wallet.',
         allowOutsideClick: false,
         didOpen: () => { Swal.showLoading(); }
       });
 
       const tx = await contract.transfer(item.walletAddress, amountInWei);
       
-      Swal.update({ text: 'Blockchain confirmation ka intezar hai...' });
+      Swal.update({ text: 'Conforming on Blockchain please wait...' });
       
       const receipt = await tx.wait(); 
 
@@ -157,8 +157,8 @@ const AdminWithdrawalTable = () => {
     } catch (err) {
       console.error(err);
       let msg = err.reason || err.message;
-      if (err.code === 4001) msg = "Transaction cancel kar di gayi.";
-      if (msg.includes("insufficient funds")) msg = "Fees (BNB) ke liye balance kam hai!";
+      if (err.code === 4001) msg = "Transaction cancel .";
+      if (msg.includes("insufficient funds")) msg = "Fees (BNB) is insufficient!";
       
       Swal.fire('Failed', msg, 'error');
     }

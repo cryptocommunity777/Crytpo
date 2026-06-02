@@ -123,20 +123,33 @@ const startGlobalGrowthCron = () => {
     // =========================================================================
     cron.schedule('* * * * *', async () => {
         try {
-            // 🔥 PART A: Aapka purana 100 users wala normal system (Mixed Countries)
+           // 🔥 PART A: Aapka purana 100 users wala normal system (Mixed Countries)
+            // (Isko aise hi rehne dijiye, yeh 24 ghante thoda-thoda chalta rahega)
             const shouldAddFakeUser = Math.random() < (100 / 1440); 
             if (shouldAddFakeUser) {
-                await processFakeGrowth(); // Bina kisi condition ke
+                await processFakeGrowth(); 
             }
 
-            // 🔥 PART B: Admin ka "India Boost" system
-           // 🔥 PART B: Admin ka "India Boost" system (Supercharged for >1440 targets)
+            // =======================================================
+            // 🔥 CURRENT IST HOUR CALCULATION
+            // =======================================================
+            const d = new Date();
+            const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+            const istTime = new Date(utc + (3600000 * 5.5)); 
+            const currentISTHour = istTime.getHours(); // 0 se 23 (24-hour format)
+
+            // =======================================================
+            // 🔥 PART B: Admin ka "India Boost" (7 AM se 11 PM IST)
+            // =======================================================
             const stat = await SystemStat.findOne({});
             const extraIndiaTarget = stat?.extraIndiaDailyTarget || 0; 
             
-            if (extraIndiaTarget > 0) {
-                // Per minute kitne users chahiye?
-                const usersPerMinute = extraIndiaTarget / 1440; 
+            // Check condition: Target 0 se bada ho AND Time 7 baje se raat 11 baje (23) ke beech ho
+            if (extraIndiaTarget > 0 && currentISTHour >= 7 && currentISTHour < 23) {
+                
+                // 16 Ghante ki active window (16 * 60 = 960 minutes)
+                const activeMinutes = 960; 
+                const usersPerMinute = extraIndiaTarget / activeMinutes; 
                 
                 // Fix users per minute
                 let usersToAddThisMinute = Math.floor(usersPerMinute); 
@@ -149,7 +162,7 @@ const startGlobalGrowthCron = () => {
 
                 // Jitne users require hain, utni baar 'IN' user banayega
                 for (let i = 0; i < usersToAddThisMinute; i++) {
-                    await processFakeGrowth("IN"); // 🔥 Sirf India
+                    await processFakeGrowth("IN"); 
                 }
             }
             
