@@ -48,14 +48,14 @@ const TotalSystemUsers = ({ user, totalRealUsersFromDB = 0, globalFakeCount = 0 
       </div>
 
       {/* 🔥 GREEN THEME BANNER (Added) */}
-      <div className="col-span-2 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-[20px] p-4 flex items-center justify-center shadow-lg border border-emerald-400">
+      {/* <div className="col-span-2 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-[20px] p-4 flex items-center justify-center shadow-lg border border-emerald-400">
           <div className="flex items-center gap-3">
               <Zap className="text-white shrink-0" size={20} />
               <span className="text-white font-black text-[11px] md:text-sm uppercase tracking-wider text-center">
                 Fast Track Offer valid till 10th June 2026 only
               </span>
           </div>
-      </div>
+      </div> */}
 
     </div>
   );
