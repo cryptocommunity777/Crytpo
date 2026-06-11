@@ -56,7 +56,7 @@ const LeaderAutoWithdraw = () => {
                     <ShieldCheck className="text-indigo-600" size={28} /> Leader Auto-Settlement
                 </h2>
                 <p className="text-slate-500 text-sm mt-1">
-                    Manage and force auto-withdrawals for users with the <span className="font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded">LEADER</span> role. System automatically calculates multiples of $10.
+                    Manage and force auto-withdrawals for users with the <span className="font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded">LEADER</span> role. System calculates multiples of $10 from 4 basic incomes (Excluding Fast Track & Wallet Balance).
                 </p>
             </div>
 
@@ -74,7 +74,7 @@ const LeaderAutoWithdraw = () => {
                                         <Wallet size={14}/> Wallet Balance
                                     </div>
                                 </th>
-                                <th className="px-4 py-4 text-center">Total Income</th>
+                                <th className="px-4 py-4 text-center">Withdrawable Income</th>
                                 <th className="px-4 py-4 text-center">Eligible (Multiples of 10)</th>
                                 <th className="px-4 py-4 text-center">Remains After</th>
                                 <th className="px-4 py-4 text-center">Action</th>

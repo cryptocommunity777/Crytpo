@@ -2,7 +2,24 @@ import React, { useEffect, useState } from 'react';
 import api from "../../api/axios";
 import Papa from 'papaparse';
 import { saveAs } from 'file-saver';
-import { Crown, User, ArrowRightCircle } from 'lucide-react';
+import Swal from 'sweetalert2'; // 🔥 NAYA IMPORT
+import { Crown, User, ArrowRightCircle, ExternalLink } from 'lucide-react'; // 🔥 ExternalLink add kiya
+
+// 🔥 HELPER: Hamesha Indian Standard Time (IST) Date dega (YYYY-MM-DD format mein)
+const getISTDateStr = (dateObj = new Date()) => {
+  const utc = dateObj.getTime() + (dateObj.getTimezoneOffset() * 60000);
+  const istDate = new Date(utc + (3600000 * 5.5));
+  return istDate.toISOString().split('T')[0]; 
+};
+
+// 🔥 HELPER: Table me dikhane ke liye IST String (DD/MM/YYYY HH:MM)
+const getISTDateTimeString = (dateString) => {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+  const istDate = new Date(utc + (3600000 * 5.5));
+  return istDate.toLocaleString('en-GB'); 
+};
 
 const toNumber = (val) => {
   if (val == null) return 0;
@@ -27,6 +44,65 @@ const TotalTopUpPage = () => {
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20); 
+
+  // ----------------- 🔥 IMPERSONATE (LOGIN) LOGIC -----------------
+  const handleImpersonate = async (targetId) => {
+    // Agar text mein 'System' hai ya ID khali hai toh return kardo
+    if (!targetId || String(targetId).toLowerCase().includes("system")) return;
+
+    // String mein se sirf number (ID) nikalne ki Ninja Technique
+    const match = String(targetId).match(/\d+/);
+    const cleanUserId = match ? match[0] : targetId;
+
+    const result = await Swal.fire({
+      title: 'Login as User?',
+      text: `Do you want to log in to the account with User ID: #${cleanUserId}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Login'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      Swal.fire({ title: 'Logging in...', didOpen: () => { Swal.showLoading(); } });
+      const token = localStorage.getItem('adminToken');
+      
+      const res = await api.post('/admin/impersonate', { userId: cleanUserId }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.data.token) {
+        Swal.close();
+        
+        const { token: userToken, user: impersonatedUser } = res.data;
+        const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
+
+        let targetBaseUrl = "";
+        const currentHost = window.location.hostname;
+
+        if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
+          targetBaseUrl = "http://localhost:5173"; 
+        } else {
+          targetBaseUrl = "https://cryptocommunity.live"; 
+        }
+
+        const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
+
+        const link = document.createElement('a');
+        link.href = mainWebsiteUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer'; 
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error("Impersonation error:", error);
+      Swal.fire('Error', error.response?.data?.message || "Failed to impersonate user", 'error');
+    }
+  };
+  // --------------------------------------------------------------
 
   // FETCH
   useEffect(() => {
@@ -53,15 +129,16 @@ const TotalTopUpPage = () => {
     fetchTopupUsers();
   }, []);
 
-  // FILTER LOGIC
+  // FILTER LOGIC (IST Based)
   useEffect(() => {
     const filtered = topupUsers.filter((user) => {
       const matchesId = searchId ? String(user.userId).includes(searchId) : true;
       const matchesRole = selectedRole ? user.initiatorRole === selectedRole : true; 
 
-      const date = user.topUpDate ? new Date(user.topUpDate) : null;
-      const matchesFrom = fromDate ? date && date >= new Date(fromDate) : true;
-      const matchesTo = toDate ? date && date <= new Date(toDate) : true;
+      const dateStr = user.topUpDate ? getISTDateStr(new Date(user.topUpDate)) : null;
+      
+      const matchesFrom = fromDate ? dateStr && dateStr >= fromDate : true;
+      const matchesTo = toDate ? dateStr && dateStr <= toDate : true;
 
       return matchesId && matchesRole && matchesFrom && matchesTo;
     });
@@ -70,8 +147,8 @@ const TotalTopUpPage = () => {
     setCurrentPage(1);
   }, [searchId, selectedRole, fromDate, toDate, topupUsers]);
 
-  // STATS CALCULATION
-  const today = new Date().toISOString().split('T')[0];
+  // STATS CALCULATION (IST Based)
+  const todayIST = getISTDateStr();
   
   let totalBusiness = 0;
   let todayBusiness = 0;
@@ -84,8 +161,8 @@ const TotalTopUpPage = () => {
 
   filteredUsers.forEach(u => {
       const amt = u.topUpAmount;
-      const dateStr = u.topUpDate ? new Date(u.topUpDate).toISOString().split('T')[0] : null;
-      const isToday = dateStr === today;
+      const dateStr = u.topUpDate ? getISTDateStr(new Date(u.topUpDate)) : null;
+      const isToday = dateStr === todayIST;
 
       totalBusiness += amt;
       if (isToday) {
@@ -112,7 +189,7 @@ const TotalTopUpPage = () => {
     setCurrentPage(1);
   };
 
-  // CSV EXPORT (🔥 Updated with Topped Up By)
+  // CSV EXPORT (IST Dates)
   const exportToCSV = () => {
     const summary = [
       { Metric: 'Total TopUps', Value: filteredUsers.length },
@@ -131,14 +208,14 @@ const TotalTopUpPage = () => {
       Name: u.name || '',
       Mobile: u.mobile || 'N/A',
       Type: u.initiatorRole === 'leader' ? 'Leader' : 'Normal',
-      ToppedUpBy: u.topUpBy || 'Self / System', // 🔥 NAYA FIELD CSV MEIN
+      ToppedUpBy: u.topUpBy || 'Self / System',
       Amount: u.topUpAmount,
-      Date: u.topUpDate ? new Date(u.topUpDate).toLocaleString() : '',
+      Date: getISTDateTimeString(u.topUpDate),
     }));
 
     const csv = Papa.unparse(summary) + '\n\n' + Papa.unparse(table);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    saveAs(blob, `topup-report-${Date.now()}.csv`);
+    saveAs(blob, `topup-report-IST-${Date.now()}.csv`);
   };
 
   return (
@@ -146,41 +223,47 @@ const TotalTopUpPage = () => {
       <h2 className="text-3xl font-bold text-indigo-700 mb-6">💰 Detailed Top-Up Report</h2>
 
       {/* FILTERS */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6 flex-wrap">
+      <div className="flex flex-col md:flex-row gap-4 mb-6 flex-wrap bg-slate-50 p-4 rounded-xl border border-slate-200">
         <input
           type="text"
           placeholder="Search User ID"
           value={searchId}
           onChange={(e) => setSearchId(e.target.value)}
-          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm focus:ring-2 focus:ring-indigo-400 outline-none"
+          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm focus:ring-2 focus:ring-indigo-400 outline-none font-semibold"
         />
 
         <select
           value={selectedRole}
           onChange={(e) => setSelectedRole(e.target.value)}
-          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm outline-none"
+          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm outline-none font-semibold text-slate-700"
         >
           <option value="">All Types</option>
           <option value="leader">Leader TopUps</option>
           <option value="normal">Normal TopUps</option>
         </select>
 
-        <input
-          type="date"
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm outline-none"
-        />
+        <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">From:</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm outline-none font-semibold"
+            />
+        </div>
 
-        <input
-          type="date"
-          value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-          className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm outline-none"
-        />
+        <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">To:</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm outline-none font-semibold"
+            />
+        </div>
 
         <select 
-          className="px-4 py-2 border rounded w-full md:w-32 shadow-sm bg-white outline-none"
+          className="px-4 py-2 border rounded w-full md:w-32 shadow-sm bg-white outline-none font-semibold"
           value={itemsPerPage}
           onChange={handleEntriesChange}
         >
@@ -189,6 +272,13 @@ const TotalTopUpPage = () => {
           <option value={50}>Show 50</option>
           <option value={100}>Show 100</option>
         </select>
+        
+        <button 
+           onClick={() => { setFromDate(''); setToDate(''); }} 
+           className="bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded hover:bg-gray-300 transition shadow-sm text-xs w-full md:w-auto"
+        >
+           Clear Dates
+        </button>
       </div>
 
       {/* SUMMARY CARDS */}
@@ -203,10 +293,10 @@ const TotalTopUpPage = () => {
 
       {/* EXPORT BUTTON */}
       <div className="flex justify-between items-center mb-4">
-        <p className="text-sm text-gray-500 font-semibold">Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredUsers.length)} of {filteredUsers.length} entries</p>
+        <p className="text-sm text-gray-500 font-bold uppercase tracking-widest">Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredUsers.length)} of {filteredUsers.length} entries</p>
         <button
           onClick={exportToCSV}
-          className="bg-green-600 hover:bg-green-700 transition text-white px-5 py-2 rounded shadow font-semibold"
+          className="bg-green-600 hover:bg-green-700 transition text-white px-5 py-2 rounded shadow-sm font-black uppercase tracking-wider text-[11px]"
         >
           Export CSV
         </button>
@@ -214,60 +304,79 @@ const TotalTopUpPage = () => {
 
       {/* TABLE */}
       {loading ? (
-        <div className="text-center p-10 text-gray-500 font-semibold text-lg animate-pulse">⏳ Loading Data...</div>
+        <div className="text-center p-10 text-gray-500 font-bold tracking-widest uppercase text-lg animate-pulse">⏳ Loading Data...</div>
       ) : (
-        <div className="overflow-auto border rounded-lg shadow-md bg-white">
+        <div className="overflow-auto border rounded-lg shadow-sm bg-white">
           <table className="min-w-full text-sm text-left">
-            <thead className="bg-gray-200 border-b">
+            <thead className="bg-slate-100 border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3 font-semibold text-gray-700">#</th>
-                <th className="px-4 py-3 font-semibold text-gray-700">User ID</th>
-                <th className="px-4 py-3 font-semibold text-gray-700">Name</th>
-                <th className="px-4 py-3 font-semibold text-gray-700">Type</th>
-                <th className="px-4 py-3 font-semibold text-gray-700 whitespace-nowrap">Topped Up By</th> {/* 🔥 NAYA COLUMN HEADER */}
-                <th className="px-4 py-3 font-semibold text-gray-700">Amount</th>
-                <th className="px-4 py-3 font-semibold text-gray-700">Date</th>
+                <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px]">#</th>
+                <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px]">User ID</th>
+                <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px]">Name</th>
+                <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px]">Type</th>
+                <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px] whitespace-nowrap">Topped Up By</th>
+                <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px]">Amount</th>
+                <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px]">Date (IST)</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {paginatedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-6 text-gray-500 font-semibold">No records found</td>
+                  <td colSpan="7" className="text-center py-10 text-gray-400 font-bold uppercase tracking-widest">No records found</td>
                 </tr>
               ) : (
                 paginatedUsers.map((u, i) => (
-                  <tr key={u._id || i} className="border-b hover:bg-gray-50 transition">
-                    <td className="px-4 py-3 text-gray-600 font-medium">{startIndex + i + 1}</td>
-                    <td className="px-4 py-3 font-bold text-indigo-600">#{u.userId}</td>
-                    <td className="px-4 py-3 text-gray-800 capitalize font-medium">{u.name}</td>
+                  <tr key={u._id || i} className="hover:bg-indigo-50/30 transition-colors">
+                    <td className="px-4 py-3 text-gray-500 font-bold">{startIndex + i + 1}</td>
+                    
+                    {/* 🔥 Clickable Receiver User ID */}
+                    <td className="px-4 py-3 font-black text-indigo-600">
+                      <button
+                        onClick={() => handleImpersonate(u.userId)}
+                        className="flex items-center gap-1 hover:text-indigo-800 hover:underline transition-all"
+                        title="Login as this User"
+                      >
+                        #{u.userId}
+                        <ExternalLink size={12} className="opacity-70" />
+                      </button>
+                    </td>
+
+                    <td className="px-4 py-3 text-gray-800 capitalize font-bold">{u.name}</td>
                     
                     {/* ROLE BADGE */}
                     <td className="px-4 py-3">
                       {u.initiatorRole === 'leader' ? (
-                        <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 border border-yellow-300 px-2 py-0.5 rounded text-xs font-bold uppercase">
+                        <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 border border-yellow-300 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">
                           <Crown size={12} /> Leader
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 border border-blue-300 px-2 py-0.5 rounded text-xs font-bold uppercase">
+                        <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">
                           <User size={12} /> Normal
                         </span>
                       )}
                     </td>
 
-                    {/* 🔥 NAYA COLUMN BODY (Kisne Top-up kiya) */}
+                    {/* 🔥 Clickable Sender User ID (Topped Up By) */}
                     <td className="px-4 py-3 text-gray-600 font-medium">
                        {u.topUpBy ? (
-                         <div className="flex items-center gap-1.5 bg-gray-100 px-2 py-1 rounded border border-gray-200 w-max">
+                         <button 
+                           onClick={() => handleImpersonate(u.topUpBy)}
+                           className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded border border-gray-200 w-max hover:bg-gray-100 hover:text-indigo-600 transition-all"
+                           title="Login as Sender"
+                         >
                            <ArrowRightCircle size={14} className="text-gray-400" />
-                           <span className="text-xs font-bold text-gray-700">{u.topUpBy}</span>
-                         </div>
+                           <span className="text-xs font-bold text-gray-700 hover:text-indigo-600 transition-colors">{u.topUpBy}</span>
+                           <ExternalLink size={12} className="opacity-70 text-indigo-600" />
+                         </button>
                        ) : (
-                         <span className="text-xs italic text-gray-400 font-semibold">Self / System</span>
+                         <span className="text-[10px] bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-500 font-black uppercase tracking-widest">Self / System</span>
                        )}
                     </td>
 
-                    <td className="px-4 py-3 text-green-600 font-black">${u.topUpAmount}</td>
-                    <td className="px-4 py-3 text-gray-500 font-medium">{new Date(u.topUpDate).toLocaleString('en-GB')}</td>
+                    <td className="px-4 py-3 text-emerald-600 font-black text-base">${u.topUpAmount}</td>
+                    <td className="px-4 py-3 text-slate-500 font-bold text-[11px] md:text-xs">
+                        {getISTDateTimeString(u.topUpDate)}
+                    </td>
                   </tr>
                 ))
               )}
@@ -282,15 +391,15 @@ const TotalTopUpPage = () => {
           <button 
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className={`px-5 py-2 rounded shadow-sm font-semibold transition-colors ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+            className={`px-5 py-2 rounded shadow-sm font-black uppercase tracking-widest text-xs transition-colors ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
           >
             Previous
           </button>
-          <span className="flex items-center font-bold text-gray-700 px-3">Page {currentPage} of {totalPages}</span>
+          <span className="flex items-center font-black text-slate-500 px-3 uppercase tracking-widest text-xs">Page {currentPage} of {totalPages}</span>
           <button 
             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
-            className={`px-5 py-2 rounded shadow-sm font-semibold transition-colors ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed border' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+            className={`px-5 py-2 rounded shadow-sm font-black uppercase tracking-widest text-xs transition-colors ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed border' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
           >
             Next
           </button>
@@ -301,9 +410,9 @@ const TotalTopUpPage = () => {
 };
 
 const SummaryCard = ({ label, value, color }) => (
-  <div className={`${color} p-4 rounded-xl shadow-sm border flex flex-col justify-center`}>
-    <h4 className="text-gray-600 text-[11px] font-black uppercase tracking-widest mb-1">{label}</h4>
-    <p className="text-2xl font-black text-gray-800">{value}</p>
+  <div className={`${color} p-4 rounded-xl shadow-sm border flex flex-col justify-center transform hover:scale-[1.02] transition-transform`}>
+    <h4 className="text-slate-600 text-[10px] sm:text-[11px] font-black uppercase tracking-widest mb-1.5 leading-tight">{label}</h4>
+    <p className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">{value}</p>
   </div>
 );
 

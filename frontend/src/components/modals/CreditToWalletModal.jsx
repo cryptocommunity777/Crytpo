@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import api from "../../api/axios"; 
 import SuccessModal from "./SuccessModal";
 import MessageModal from "./MessageModal";
 import { useAuth } from "../../context/AuthContext";
-import { Zap, Users, Trophy, Layers, ArrowRightLeft, X } from "lucide-react";
+import { Zap, Users, Trophy, Layers, ArrowRightLeft, X, Eye, EyeOff } from "lucide-react"; // 🔥 Eye, EyeOff import kiya
 
-// ✅ GLOBAL POOL CONFIG — same as WithdrawalModal
+// ✅ GLOBAL POOL CONFIG
 const GLOBAL_POOLS = [
   { level: 1,  globalTeam: 20,    reqDirects: 1,  earning: 10   },
   { level: 2,  globalTeam: 40,    reqDirects: 2,  earning: 20   },
@@ -52,6 +52,7 @@ const MainIncomeBox = React.memo(({ title, icon: Icon, iconColor, source, balanc
 
 const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // 🔥 Password toggle ke liye state
   
   const [balances, setBalances] = useState({
     walletBalance: 0,
@@ -84,7 +85,6 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
   const showMessage = (title, message, type = "error") =>
     setMessageModal({ open: true, title, message, type });
 
-  // ✅ SAME FETCH LOGIC AS WithdrawalModal — backend tracker se exact available
   const fetchData = useCallback(async () => {
     try {
       const res = await api.get(`/wallet/withdrawable/${userId}`, {
@@ -112,7 +112,6 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
         let cumulativeGlobal = 0;
         let unlockedLevelsTemp = [];
 
-        // ✅ Same unlock logic as WithdrawalModal
         for (const lvl of GLOBAL_POOLS) {
             cumulativeGlobal += lvl.globalTeam;
             if (userGlobal >= cumulativeGlobal) {
@@ -126,7 +125,6 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
             }
         }
 
-        // ✅ Same available calculation as WithdrawalModal (backend tracker se exact)
         let boxData = unlockedLevelsTemp.map(lvl => {
             const p = activePoolsData.find(ap => Number(ap.level) === Number(lvl.level));
             
@@ -155,7 +153,6 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
     fetchData();
   }, [fetchData]);
 
-  // ✅ Same total calculation as WithdrawalModal
   const totalCommunityAvailable = unlockedLevels.reduce((sum, lvl) => {
     if (lvl.isDirectMet) return sum + lvl.available;
     return sum;
@@ -164,6 +161,20 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
   const totalAvailableToWithdraw = balances.direct + balances.level + balances.reward + totalCommunityAvailable;
 
   const hasMainIncome = balances.direct > 0 || balances.level > 0 || balances.reward > 0 || totalCommunityAvailable > 0;
+
+  // 🔥 TOTAL ENTERED AMOUNT CALCULATION 🔥
+  const totalEnteredAmount = useMemo(() => {
+    let sum = 0;
+    sum += Number(credits.direct) || 0;
+    sum += Number(credits.level) || 0;
+    sum += Number(credits.reward) || 0;
+    Object.keys(credits).forEach(key => {
+      if (key.startsWith('pool_')) {
+        sum += Number(credits[key]) || 0;
+      }
+    });
+    return sum;
+  }, [credits]);
 
   const handleInputChange = useCallback((e, source) => {
     const value = e.target.value;
@@ -195,7 +206,6 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
       checkAndPush("level", credits.level, balances.level, "Level Income");
       checkAndPush("reward", credits.reward, balances.reward, "Team Reward");
 
-      // ✅ Same pool logic as WithdrawalModal — level-wise pool_1, pool_2 etc.
       unlockedLevels.forEach(lvl => {
         const amt = Number(credits[`pool_${lvl.level}`] || 0);
         if (amt > 0) {
@@ -204,14 +214,12 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
             }
             if (amt > lvl.available) throw new Error(`Insufficient funds in Level ${lvl.level} Pool.`);
             
-            // ✅ Same as WithdrawalModal — exact source string
             items.push({ source: `pool_${lvl.level}`, amount: amt });
             totalRequested += amt;
             poolRequestedTotal += amt;
         }
       });
 
-      // Master Pool limit check — same as WithdrawalModal
       if (poolRequestedTotal > 0 && poolRequestedTotal > balances.pool) {
           return showMessage("Insufficient Funds", "Total community Income requested exceeds available balance.");
       }
@@ -308,7 +316,7 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
                   </div>
               )}
 
-              {/* ✅ COMMUNITY POOL BOXES — Same layout as WithdrawalModal (4-box) */}
+              {/* COMMUNITY POOL BOXES */}
               <div className="flex flex-col gap-3 mt-2">
                 {unlockedLevels.length > 0 && (
                   <div className="flex justify-between items-center px-1 mt-1">
@@ -328,26 +336,21 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
                             </h3>
                         </div>
 
-                        {/* ✅ 4-BOX LAYOUT — same as WithdrawalModal */}
                         <div className="flex flex-row gap-1.5 items-stretch">
-                            {/* 1. Total Limit */}
                             <div className="w-[22%] bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
                                 <span className="text-[11px] font-black text-emerald-600">${lvl.earning}</span>
                             </div>
                             
-                            {/* 2. Earned So Far */}
                             <div className="w-[22%] bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
                                 <span className="text-[11px] font-black text-purple-500">${lvl.generated.toFixed(2)}</span>
                             </div>
                             
-                            {/* 3. Available (locked if directs not met) */}
                             <div className={`w-[22%] bg-white p-1 rounded-lg border shadow-sm flex flex-col justify-center items-center ${!lvl.isDirectMet ? 'border-red-200 bg-red-50' : 'border-slate-200'}`}>
                                 <span className={`text-[11px] font-black ${!lvl.isDirectMet ? 'text-red-400 line-through decoration-red-400/50' : 'text-blue-500'}`}>
                                     ${lvl.available.toFixed(2)}
                                 </span>
                             </div>
                             
-                            {/* 4. Input */}
                             <div className={`w-[34%] flex items-center gap-1 bg-white p-1 rounded-lg border shadow-inner ${!lvl.isDirectMet ? 'border-red-200 opacity-60 bg-slate-100' : 'border-slate-200'}`}>
                                 <span className="text-emerald-500 font-bold text-sm pl-2">$</span>
                                 <input 
@@ -366,7 +369,13 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
                 ))}
               </div>
 
-              {/* SECURITY */}
+              {/* 🔥 TOTAL ENTERED AMOUNT BOX 🔥 */}
+              <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-xl flex items-center justify-between mt-2 shadow-sm">
+                 <p className="text-[10px] text-indigo-800 font-black uppercase tracking-widest m-0">Total Entered Amount</p>
+                 <h3 className="text-lg font-black text-indigo-600 m-0">${totalEnteredAmount.toFixed(2)}</h3>
+              </div>
+
+              {/* 🔥 SECURITY PASSWORD (WITH EYE ICON) 🔥 */}
               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mt-1 relative">
                   <label className="text-[9px] text-black block mb-1 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
                   
@@ -375,17 +384,25 @@ const CreditToWalletModal = ({ userId, onClose, onSuccess }) => {
                       <input type="password" name="dummy_password_trap" tabIndex="-1" autoComplete="current-password" />
                   </div>
 
-                  <input 
-                    type="text" 
-                    onFocus={(e) => e.target.type = 'password'}
-                    autoComplete="new-password"
-                    data-lpignore="true"
-                    placeholder="Enter Transaction Password" 
-                    className="w-full bg-white border border-slate-200 text-slate-800 p-2.5 rounded-lg outline-none font-mono text-xs transition-all shadow-inner focus:border-green-400 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
-                    value={transactionPassword} 
-                    onChange={e => setTransactionPassword(e.target.value)} 
-                    disabled={isLeader} 
-                  />
+                  <div className="relative">
+                      <input 
+                        type={showPassword ? "text" : "password"} 
+                        autoComplete="new-password"
+                        data-lpignore="true"
+                        placeholder="Enter Transaction Password" 
+                        className="w-full bg-white border border-slate-200 text-slate-800 p-2.5 pr-10 rounded-lg outline-none font-mono text-xs transition-all shadow-inner focus:border-green-400 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
+                        value={transactionPassword} 
+                        onChange={e => setTransactionPassword(e.target.value)} 
+                        disabled={isLeader} 
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                  </div>
               </div>
 
             </div>

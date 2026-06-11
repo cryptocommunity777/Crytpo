@@ -24,19 +24,29 @@ const TopupDetails = () => {
 
       try {
         setLoading(true);
-        // 🔥 CACHE FIX: Added ?t=${new Date().getTime()}
+        // 🔥 CACHE FIX: Real-time data fetch karne ke liye timestamp add kiya
         const res = await api.get(`/wallet/topup-history/${user.userId}?t=${new Date().getTime()}`);
         
         if (Array.isArray(res.data)) {
-          const userTopups = res.data
-            .filter((t) => t.type === "topup" || t.type === "debit_topup") // Ensuring all topup types are caught
-            .filter((t) => !t.description?.toUpperCase().includes("PROMOTION"));
+          // Naya filter logic jo backend se aane wale har topup record ko scan karega
+          const userTopups = res.data.filter((t) => {
+            const typeStr = (t.type || "").toLowerCase();
+            const sourceStr = (t.source || "").toLowerCase();
+            const descStr = (t.description || "").toUpperCase();
+            
+            // Check if transaction is related to topup/activation
+            const isTopupRelated = typeStr.includes("topup") || sourceStr.includes("topup") || typeStr === "activation";
+            const isNotPromo = !descStr.includes("PROMOTION");
+            
+            return isTopupRelated && isNotPromo;
+          });
 
+          // Duplicate entries ko remove karne ka filter
           const uniqueTopups = Array.from(
             new Map(userTopups.map((t) => [`${t._id}-${t.createdAt}`, t])).values()
           );
 
-          // Sorting by latest first
+          // Latest entries sabse upar dikhane ke liye sort
           uniqueTopups.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
 
           setTopups(uniqueTopups);
@@ -64,7 +74,7 @@ const TopupDetails = () => {
     const senderIdStr = (t.fromUserId || t.userId || "").toString().toLowerCase();
     const receiverIdStr = (t.toUserId || t.userId || "").toString().toLowerCase();
     const descStr = (t.description || "").toLowerCase();
-    const amountStr = (t.amount || "").toString().toLowerCase();
+    const amountStr = (t.amount || t.grossAmount || "").toString().toLowerCase();
 
     return (
       senderIdStr.includes(searchLower) ||
@@ -168,22 +178,35 @@ const TopupDetails = () => {
               ) : (
                 currentRows.map((t, idx) => {
                   
-                  // 🔥 LOGIC TO FIND EXACT SENDER AND RECEIVER
-                  // Agar 'fromUserId' nahi hai (yani user ne khud kiya), toh userId hi sender hai.
-                  // Agar 'toUserId' nahi hai (yani kiske liye hua explicitly nahi diya), toh userId hi receiver hai.
-                  const senderId = String(t.fromUserId || t.userId);
-                  const receiverId = String(t.toUserId || t.userId);
-                  const currentUserId = String(user?.userId);
+                  // 🔥 SMART SENDER / RECEIVER IDENTIFICATION LOGIC
+                  const currentUserId = String(user?.userId || "");
+                  let senderId = t.fromUserId ? String(t.fromUserId) : String(t.userId);
+                  let receiverId = t.toUserId ? String(t.toUserId) : String(t.userId);
+
+                  const isDebitTransaction = t.type?.toLowerCase().includes("debit") || Number(t.amount) < 0;
+
+                  // Agar aapke wallet se amount cut hua hai (Debit), iska matlab aapne topup kiya hai (Sender = YOU)
+                  if (isDebitTransaction && !t.toUserId) {
+                      senderId = currentUserId; 
+                      
+                      // 🚀 SMART SCANNER: Description se receiver ki ID nikalna (e.g., "Topup for User #123456")
+                      const descMatch = t.description?.match(/(?:for|user|to|#|-)\s*([0-9]{4,10})/i);
+                      if (descMatch && descMatch[1]) {
+                          receiverId = descMatch[1];
+                      } else {
+                          receiverId = "Team Member"; // Agar id na mile toh default naam
+                      }
+                  }
 
                   let tagDetails = { icon: null, text: "", style: "" };
 
-                  // Determine relation to the current user
-                  if (senderId === receiverId) {
+                  // Relation aur Action Type Set Karna
+                  if (senderId === currentUserId && receiverId === currentUserId) {
                     tagDetails = { icon: <CheckCircle2 size={12}/>, text: "SELF ACTIVATION", style: "bg-emerald-50 text-emerald-600 border-emerald-200" };
-                  } else if (receiverId === currentUserId) {
-                    tagDetails = { icon: <ArrowDownLeft size={12}/>, text: "ACTIVATED BY UPLINE", style: "bg-blue-50 text-blue-600 border-blue-200" };
-                  } else if (senderId === currentUserId) {
+                  } else if (senderId === currentUserId && receiverId !== currentUserId) {
                     tagDetails = { icon: <ArrowUpRight size={12}/>, text: "ACTIVATED FOR TEAM", style: "bg-amber-50 text-amber-600 border-amber-200" };
+                  } else if (receiverId === currentUserId && senderId !== currentUserId) {
+                    tagDetails = { icon: <ArrowDownLeft size={12}/>, text: "ACTIVATED BY UPLINE", style: "bg-blue-50 text-blue-600 border-blue-200" };
                   } else {
                     tagDetails = { icon: <CheckCircle2 size={12}/>, text: "ACTIVATED", style: "bg-slate-100 text-slate-600 border-slate-200" };
                   }
@@ -217,7 +240,7 @@ const TopupDetails = () => {
                            {senderId === currentUserId ? (
                              <span className="text-indigo-600 font-black">#{senderId} <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded ml-1">YOU</span></span>
                            ) : (
-                             <span>#{senderId}</span>
+                             <span>{senderId.includes("Team") ? senderId : `#${senderId}`}</span>
                            )}
                         </div>
                       </td>
@@ -229,13 +252,13 @@ const TopupDetails = () => {
                            {receiverId === currentUserId ? (
                              <span className="text-indigo-600 font-black">#{receiverId} <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded ml-1">YOU</span></span>
                            ) : (
-                             <span>#{receiverId}</span>
+                             <span>{receiverId.includes("Team") ? receiverId : `#${receiverId}`}</span>
                            )}
                         </div>
                       </td>
 
                       <td className="p-4 font-black text-center">
-                         <span className="text-green-600 bg-green-50 border border-green-100 px-3 py-1 rounded-lg text-sm">${t.amount || t.grossAmount}</span>
+                         <span className="text-green-600 bg-green-50 border border-green-100 px-3 py-1 rounded-lg text-sm">${Math.abs(t.amount || t.grossAmount)}</span>
                       </td>
 
                       <td className="p-4 text-slate-600 text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={t.description || "Top-up package"}>

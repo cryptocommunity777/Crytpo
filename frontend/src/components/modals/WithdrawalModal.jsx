@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import api from "../../api/axios"; 
 import SuccessModal from "./SuccessModal";
 import MessageModal from "./MessageModal";
 import { useAuth } from "../../context/AuthContext";
-import { Wallet, Zap, Layers, Users, Trophy, X, UserCog } from "lucide-react";
+import { Wallet, Zap, Layers, Users, Trophy, X, UserCog, Eye, EyeOff } from "lucide-react"; // 🔥 Eye aur EyeOff add kiya
 import { Link } from "react-router-dom"; 
 
 // ✅ GLOBAL POOL CONFIG
@@ -24,6 +24,7 @@ const GLOBAL_POOLS = [
 
 const WithdrawalModal = ({ userId, onClose }) => {
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // 🔥 Password toggle ke liye state
   
   const [balances, setBalances] = useState({
     walletBalance: 0,
@@ -102,15 +103,14 @@ const WithdrawalModal = ({ userId, onClose }) => {
             }
         }
 
-        // 🔥 NAYA SIMPLE MATH (Backend tracking ke hisaab se)
         let boxData = unlockedLevelsTemp.map(lvl => {
             const p = activePoolsData.find(ap => Number(ap.level) === Number(lvl.level));
             
             const generated = p ? (Number(p.daysPaid) || 0) * (Number(p.dailyAmount) || 0) : 0;
-            const withdrawnAmt = p ? (Number(p.withdrawnAmount) || 0) : 0; // Backend se aaya exact deduction
+            const withdrawnAmt = p ? (Number(p.withdrawnAmount) || 0) : 0; 
             
             let available = generated - withdrawnAmt;
-            available = available > 0.01 ? available : 0; // Minus se bachne ke liye
+            available = available > 0.01 ? available : 0; 
 
             return { 
                 ...lvl, 
@@ -133,17 +133,28 @@ const WithdrawalModal = ({ userId, onClose }) => {
 
   // Total Available for Header
   const totalCommunityAvailable = unlockedLevels.reduce((sum, lvl) => {
-      // Sirf un boxes ka total jinki direct condition poori hai
       if (lvl.isDirectMet || isPromo) return sum + lvl.available;
       return sum;
   }, 0);
 
   const totalAvailableToWithdraw = balances.direct + balances.level + balances.reward + totalCommunityAvailable;
   
-  // Total Community Income Earned So Far (Badge ke liye)
   const totalCommunityEarned = unlockedLevels.reduce((sum, lvl) => sum + (lvl.generated || 0), 0);
-
   const hasMainIncome = balances.direct > 0 || balances.level > 0 || balances.reward > 0 || totalCommunityAvailable > 0;
+
+  // 🔥 USER NE TOTAL KITNA AMOUNT ENTER KIYA HAI (Dynamic Calculation)
+  const totalEnteredAmount = useMemo(() => {
+    let sum = 0;
+    sum += Number(withdrawals.direct) || 0;
+    sum += Number(withdrawals.level) || 0;
+    sum += Number(withdrawals.reward) || 0;
+    Object.keys(withdrawals).forEach(key => {
+      if (key.startsWith('pool_')) {
+        sum += Number(withdrawals[key]) || 0;
+      }
+    });
+    return sum;
+  }, [withdrawals]);
 
   const handleInputChange = (e, source) => {
     const value = e.target.value;
@@ -185,7 +196,6 @@ const WithdrawalModal = ({ userId, onClose }) => {
       checkAndPush("level", withdrawals.level, balances.level, "Level Income");
       checkAndPush("reward", withdrawals.reward, balances.reward, "Team Reward");
 
-      // 🔥 Level-wise Pool Request
       unlockedLevels.forEach(lvl => {
         const amt = Number(withdrawals[`pool_${lvl.level}`] || 0);
         if (amt > 0) {
@@ -194,18 +204,12 @@ const WithdrawalModal = ({ userId, onClose }) => {
             }
             if (!isPromo && amt > lvl.available) throw new Error(`Insufficient funds in Level ${lvl.level} Pool.`);
             
-            // Backend ko EXACT source bhejna jaise "pool_1", "pool_2"
             items.push({ source: `pool_${lvl.level}`, amount: amt }); 
             totalRequested += amt;
             poolRequestedTotal += amt;
             successMessages.push(` Lvl ${lvl.level}`);
         }
       });
-
-      // Master Pool limit check
-      // if (poolRequestedTotal > 0 && !isPromo && poolRequestedTotal > balances.pool) {
-      //     return showMessage("Insufficient Funds", "Total community income requested exceeds available master balance.");
-      // }
 
       if (totalRequested === 0) return showMessage("Warning", "Enter amount to withdraw.");
       if (!isPromo && totalRequested < 10) return showMessage("Warning", "Minimum total withdrawal amount is $10.");
@@ -413,9 +417,8 @@ const WithdrawalModal = ({ userId, onClose }) => {
                   </div>
               )}
 
-              {/* 🔥 AUTO-POOL BOXES (4-BOX LAYOUT) 🔥 */}
+              {/* AUTO-POOL BOXES (4-BOX LAYOUT) */}
               <div className="flex flex-col gap-3 mt-2">
-                 {/* Total Badge */}
                  {unlockedLevels.length > 0 && (
                     <div className="flex justify-between items-center px-1 mt-1">
                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Community Levels</span>
@@ -434,26 +437,21 @@ const WithdrawalModal = ({ userId, onClose }) => {
                             </h3>
                         </div>
 
-                        {/* 🔥 4-BOX LAYOUT SHURU 🔥 */}
                         <div className="flex flex-row gap-1.5 items-stretch">
-                            {/* 1. Total Limit Box */}
                             <div className="w-[22%] bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
                                 <span className="text-[11px] font-black text-emerald-600">${lvl.earning}</span>
                             </div>
                             
-                            {/* 2. Earned So Far Box */}
                             <div className="w-[22%] bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
                                 <span className="text-[11px] font-black text-purple-500">${lvl.generated.toFixed(2)}</span>
                             </div>
                             
-                            {/* 3. Available Box (Directly connected to backend tracker) */}
                             <div className={`w-[22%] bg-white p-1 rounded-lg border shadow-sm flex flex-col justify-center items-center ${!lvl.isDirectMet && !isPromo ? 'border-red-200 bg-red-50' : 'border-slate-200'}`}>
                                 <span className={`text-[11px] font-black ${!lvl.isDirectMet && !isPromo ? 'text-red-400 line-through decoration-red-400/50' : 'text-blue-500'}`}>
                                     ${lvl.available.toFixed(2)}
                                 </span>
                             </div>
                             
-                            {/* 4. Input Box */}
                             <div className={`w-[34%] flex items-center gap-1 bg-white p-1 rounded-lg border shadow-inner ${!lvl.isDirectMet && !isPromo ? 'border-red-200 opacity-60 bg-slate-100' : 'border-slate-200'}`}>
                                 <span className="text-emerald-500 font-bold text-sm pl-2">$</span>
                                 <input 
@@ -470,7 +468,13 @@ const WithdrawalModal = ({ userId, onClose }) => {
                  ))}
               </div>
 
-              {/* SECURITY */}
+              {/* 🔥 TOTAL ENTERED AMOUNT BOX 🔥 */}
+              <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-xl flex items-center justify-between mt-2 shadow-sm">
+                 <p className="text-[10px] text-indigo-800 font-black uppercase tracking-widest m-0">Total Entered Amount</p>
+                 <h3 className="text-lg font-black text-indigo-600 m-0">${totalEnteredAmount.toFixed(2)}</h3>
+              </div>
+
+              {/* 🔥 SECURITY PASSWORD (WITH EYE ICON) 🔥 */}
               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mt-1 relative">
                   <label className="text-[9px] text-black block mb-1 font-bold uppercase tracking-widest ml-1">SECURITY PASSWORD</label>
                   
@@ -479,15 +483,24 @@ const WithdrawalModal = ({ userId, onClose }) => {
                       <input type="password" name="hidden_password" tabIndex="-1" autoComplete="current-password" />
                   </div>
 
-                  <input 
-                    type="password" 
-                    autoComplete="new-password"
-                    placeholder="Enter Transaction Password" 
-                    className="w-full bg-white border border-slate-200 text-slate-800 p-2.5 rounded-lg outline-none font-mono text-xs transition-all shadow-inner focus:border-green-400 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
-                    value={transactionPassword} 
-                    onChange={e => setTransactionPassword(e.target.value)} 
-                    disabled={isLeader} 
-                  />
+                  <div className="relative">
+                      <input 
+                        type={showPassword ? "text" : "password"} 
+                        autoComplete="new-password"
+                        placeholder="Enter Transaction Password" 
+                        className="w-full bg-white border border-slate-200 text-slate-800 p-2.5 pr-10 rounded-lg outline-none font-mono text-xs transition-all shadow-inner focus:border-green-400 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
+                        value={transactionPassword} 
+                        onChange={e => setTransactionPassword(e.target.value)} 
+                        disabled={isLeader} 
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                  </div>
               </div>
 
             </div>

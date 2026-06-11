@@ -2263,19 +2263,28 @@ router.put('/withdrawals/reject/:id', verifyAdmin, async (req, res) => {
 // C:\Users\HP\Desktop\Cryptocommunity\backend\routes\admin.js
 
 // 1. 🔥 LEADER LIST FETCH KARNE KI API
+// 1. 🔥 LEADER LIST FETCH KARNE KI API
+// 1. 🔥 LEADER LIST FETCH KARNE KI API
 router.get('/leader-withdrawal-list', verifyAdmin, async (req, res) => {
     try {
-        // 🔥 UPDATE 1: 'walletBalance' ko find query mein add kiya
-        const leaders = await User.find({ role: 'leader' }, 'userId name walletBalance directIncome levelIncome rewardIncome poolIncome walletAddress').lean();
+        const leaders = await User.find(
+            { role: 'leader' }, 
+            'userId name walletBalance directIncome levelIncome rewardIncome poolIncome walletAddress activePools'
+        ).lean();
         
         const leaderData = leaders.map(user => {
-            const totalIncome = (user.directIncome || 0) + (user.levelIncome || 0) + (user.rewardIncome || 0) + (user.poolIncome || 0);
+            // 🔥 RULE: Fast Track aur Wallet Balance isme JUDEGA NAHI
+            const totalIncome = 
+                (user.directIncome || 0) + 
+                (user.levelIncome || 0) + 
+                (user.rewardIncome || 0) + 
+                (user.poolIncome || 0);
+            
             const eligibleWithdrawal = Math.floor(totalIncome / 10) * 10; // Sirf 10 ke multiples
             
             return {
                 userId: user.userId,
                 name: user.name,
-                // 🔥 UPDATE 2: Yahan Frontend ke liye walletBalance bhej diya
                 walletBalance: user.walletBalance || 0,
                 totalIncome: totalIncome,
                 eligibleWithdrawal: eligibleWithdrawal,
@@ -2295,7 +2304,7 @@ router.get('/leader-withdrawal-list', verifyAdmin, async (req, res) => {
 });
 
 
-// 2. 🔥 LEADER AUTO-WITHDRAWAL EXECUTE KARNE KI API (10 ke Multiples mein)
+// 2. 🔥 LEADER AUTO-WITHDRAWAL EXECUTE KARNE KI API
 router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) => {
     try {
         const leaderId = Number(req.params.userId);
@@ -2303,7 +2312,7 @@ router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) 
 
         if (!user) return res.status(404).json({ success: false, message: "Leader not found." });
 
-        // 🔥 SIRF INCOME SOURCES KA TOTAL (Wallet Balance excluded)
+        // 🔥 RULE: SIRF 4 INCOMES KA TOTAL (Wallet Balance & Fast Track excluded)
         const dInc = user.directIncome || 0;
         const lInc = user.levelIncome || 0;
         const rInc = user.rewardIncome || 0;
@@ -2319,7 +2328,7 @@ router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) 
         let remainingToDeduct = eligibleAmt;
         const deductions = { direct: 0, level: 0, reward: 0, pool: 0 };
 
-        // 🧠 Logic: Income boxes se deduction
+        // 🧠 Logic: Income boxes se deduction (Fast Track is completely ignored)
         if (user.directIncome > 0 && remainingToDeduct > 0) {
             let amt = Math.min(user.directIncome, remainingToDeduct);
             deductions.direct = amt;
@@ -2343,6 +2352,23 @@ router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) 
             deductions.pool = amt;
             user.poolIncome -= amt;
             remainingToDeduct -= amt;
+
+            // 🔥 PRO-LOGIC: Active Pools ke andar `withdrawnAmount` set karna
+            let poolAmtToDistribute = amt;
+            if (user.activePools && user.activePools.length > 0) {
+                for (let pool of user.activePools) {
+                    if (poolAmtToDistribute <= 0) break;
+                    
+                    let earnedInThisPool = (pool.daysPaid || 0) * (pool.dailyAmount || 0);
+                    let availableInThisPool = earnedInThisPool - (pool.withdrawnAmount || 0);
+
+                    if (availableInThisPool > 0) {
+                        let deductFromPool = Math.min(availableInThisPool, poolAmtToDistribute);
+                        pool.withdrawnAmount = (pool.withdrawnAmount || 0) + deductFromPool;
+                        poolAmtToDistribute -= deductFromPool;
+                    }
+                }
+            }
         }
 
         const incomeSources = [
@@ -2356,8 +2382,6 @@ router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) 
 
         for (let src of incomeSources) {
             if (src.amt > 0) {
-                // 50-50 Split aur 10% Fee logic
-                // Yahan hum sirf withdrawal record bana rahe hain
                 const withdrawShare = src.amt * 0.50;     
                 const withdrawFee = withdrawShare * 0.10; 
                 const netWithdrawAmount = withdrawShare - withdrawFee;
@@ -2380,13 +2404,12 @@ router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) 
                     userId: user.userId, type: "withdrawal", source: src.name, amount: withdrawShare,
                     description: `Leader Settlement: Withdrawal from ${src.name.toUpperCase()}`, status: "approved"
                 });
-                
              }
         }
 
         await user.save();
 
-        res.json({ success: true, message: `Successfully settled $${eligibleAmt} for Leader ${user.userId}` });
+        res.json({ success: true, message: `Successfully settled $${eligibleAmt} for Leader #${user.userId}` });
     } catch (error) {
         console.error("Execute Leader Withdraw Error:", error);
         res.status(500).json({ success: false, message: "Server error during withdrawal." });

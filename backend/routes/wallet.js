@@ -1360,13 +1360,28 @@ router.get("/topup-history/:userId", async (req, res) => {
   try {
     const userId = Number(req.params.userId); // ensure numeric
 
-    // Fetch only actual top-ups for the user
+    // 🔥 SUPER SCANNER: Yeh har top-up transaction ko dhoondh nikalega
     const topups = await Transaction.find({ 
-      userId, 
-      type: "topup" // updated to match new schema
+      $and: [
+        // 1. User chahe sender ho, receiver ho ya main userId ho
+        {
+          $or: [
+            { userId: userId },
+            { fromUserId: userId },
+            { toUserId: userId }
+          ]
+        },
+        // 2. Transaction ka type "topup", "debit_topup", "activation" jaisa kuch bhi ho
+        {
+          $or: [
+            { type: { $regex: /topup|activation/i } },
+            { source: { $regex: /topup/i } }
+          ]
+        }
+      ]
     }).sort({ createdAt: -1 }); // latest first
 
-    res.json(topups); // return array of top-up transactions
+    res.json(topups); 
   } catch (err) {
     console.error("Top-up history error:", err);
     res.status(500).json({ message: "Failed to fetch top-up history" });
