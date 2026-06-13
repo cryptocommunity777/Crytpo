@@ -14,7 +14,7 @@ import SpinnerOverlay from "../../components/common/SpinnerOverlay";
 import SuccessModal from "../../components/modals/SuccessModal";
 import TelegramPopup from "../../components/TelegramPopup";
 import PromoVideoBox from "../../components/dashboard/PromoVideoBox"; 
-import MonthlyRewardBox from "../../components/MonthlyRewardBox";
+//import MonthlyRewardBox from "../../components/MonthlyRewardBox";
 // 🔥 WALLET POPUP IMPORT
 import WalletPopup from "../../components/WalletPopup";
 
@@ -192,9 +192,9 @@ const Dashboard = ({ setModalState }) => {
     </div>
 
     {/* 2. Monthly Reward Box (Income Summary ke theek niche) */}
-    <div>
+    {/* <div>
         <MonthlyRewardBox />
-    </div>
+    </div> */}
 </div>
 
         
