@@ -124,6 +124,12 @@ const userSchema = new mongoose.Schema({
     }
   ],
 
+  // 🔥 Ye lines User schema mein hona zaroori hain
+  editProfileOtp: { type: String },
+  editProfileOtpExpiry: { type: Date },
+  profileEditAccessExpiry: { type: Date },
+  
+
   // ==========================================
   // 🔹 ROLE & STATUS
   // ==========================================

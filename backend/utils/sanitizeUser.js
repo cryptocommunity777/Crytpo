@@ -15,6 +15,10 @@ module.exports = function sanitizeUser(user) {
     walletAddress: user.walletAddress || "", 
     walletAddressChangeCount: user.walletAddressChangeCount || 0,
     walletAddressChangeWindowStart: user.walletAddressChangeWindowStart,
+    
+    // 🔥 YAHI MISSING THA: Frontend pe history isiliye gayab ho rahi thi 🔥
+    walletAddressHistory: user.walletAddressHistory || [], 
+    
     pendingWithdrawals: user.pendingWithdrawals || 0,
 
     // 💰 WALLET BALANCES

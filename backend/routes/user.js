@@ -1,17 +1,37 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer'); // 🔥 Naya OTP ke liye
+
+// Models
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const Setting = require('../models/Setting');
-const bcrypt = require('bcryptjs');
-const authMiddleware = require('../middleware/authMiddleware');
- const TopUp = require('../models/TopUp'); 
- const DummyTransaction = require('../models/DummyTransaction');
-const DummyUser = require('../models/DummyUser.js'); // 🔥 Naya model
-const { bot } = require('../utils/telegramBot');
+const TopUp = require('../models/TopUp'); 
+const DummyTransaction = require('../models/DummyTransaction');
+const DummyUser = require('../models/DummyUser.js'); 
 const FastTrack = require('../models/FastTrack');
- const checkFeature = require("../middleware/checkFeatureEnabled");
- const FakeUser = require('../models/FakeUser'); // Sahi path ke hisaab se check kar lena
+const FakeUser = require('../models/FakeUser');
+
+// Middleware & Utils
+const authMiddleware = require('../middleware/authMiddleware');
+const checkFeature = require("../middleware/checkFeatureEnabled");
+const { bot } = require('../utils/telegramBot');
+
+// ==========================================
+// 🔥 SMTP Transporter Setup (OTP ke liye)
+// ==========================================
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'mail.privateemail.com',
+    port: process.env.SMTP_PORT || 587,
+    secure: false, 
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
+
+// 👇 ISKE NICHE AAPKE SAARE ROUTES (API) AAYENGE 👇
 // Controllers
 // Controllers ko import kiya
 const {
@@ -97,6 +117,10 @@ const processGlobalTeamGrowth = async (excludeUserId) => {
         await User.bulkWrite(bulkOps);
     }
 };
+
+
+
+
 
 
 
@@ -204,6 +228,153 @@ router.get('/system-settings', async (req, res) => {
 // Express yahan tabhi aayega agar path 'system-settings' nahi hoga
 router.get('/:userId', getUserById); 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+// 1. Send OTP to Email
+router.post('/send-edit-otp', /* verifyToken, */ async (req, res) => {
+    try {
+        const user = await User.findOne({ userId: req.body.userId }); // ya req.user.userId agar middleware use kar rahe hain
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        // Generate 6 digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        user.editProfileOtp = otp;
+        user.editProfileOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+        await user.save();
+
+        const mailOptions = {
+            from: `"${process.env.APP_NAME}" <${process.env.EMAIL_USER}>`,
+            to: user.email,
+            subject: 'OTP for Profile Update',
+            html: `<h3>Your Profile Edit OTP</h3>
+                   <p>Your OTP to unlock profile editing is: <b style="font-size:20px; color:green;">${otp}</b></p>
+                   <p>This OTP is valid for 10 minutes. Do not share it with anyone.</p>`
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.json({ success: true, message: "OTP sent to your registered email." });
+    } catch (error) {
+        console.error("OTP Error:", error);
+        res.status(500).json({ success: false, message: "Failed to send OTP." });
+    }
+});
+
+// 2. Verify OTP
+// 2. Verify OTP
+router.post('/verify-edit-otp', async (req, res) => {
+    try {
+        const { userId, otp } = req.body;
+        const user = await User.findOne({ userId });
+
+        // 🔥 Backend terminal mein check karne ke liye logs
+        console.log("Frontend se aaya OTP:", otp);
+        console.log("Database mein saved OTP:", user?.editProfileOtp);
+
+        if (!user) {
+            return res.status(400).json({ success: false, message: "User not found." });
+        }
+
+        // 🔥 Strict String comparison taaki type mismatch na ho
+        if (String(user.editProfileOtp) !== String(otp)) {
+            return res.status(400).json({ success: false, message: "Invalid OTP." });
+        }
+
+        if (user.editProfileOtpExpiry < Date.now()) {
+            return res.status(400).json({ success: false, message: "OTP has expired." });
+        }
+
+        // OTP Sahi hai! Clear OTP and give 15 mins access window
+        user.editProfileOtp = undefined;
+        user.editProfileOtpExpiry = undefined;
+        user.profileEditAccessExpiry = Date.now() + 15 * 60 * 1000; // 15 mins window to edit
+        await user.save();
+
+        res.json({ success: true, message: "OTP Verified. Profile unlocked for 15 minutes." });
+    } catch (error) {
+        console.error("OTP Verify Error:", error);
+        res.status(500).json({ success: false, message: "Verification failed." });
+    }
+});
+
+// 3. Update Profile & Wallet
+// 3. Update Profile & Wallet
+// 3. Update Profile & Wallet (Now with Email Update)
+router.put('/update-profile-secure', async (req, res) => {
+    try {
+        const { userId, name, mobile, email, newWalletAddress } = req.body; // 🔥 email ko req.body me add kiya
+        const user = await User.findOne({ userId });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        // Check if user has verified OTP recently (within 15 mins)
+        if (!user.profileEditAccessExpiry || user.profileEditAccessExpiry < Date.now()) {
+            return res.status(403).json({ success: false, message: "Session expired. Please verify OTP again." });
+        }
+
+        // 🔥 Email Change Logic (Check if email is already taken by someone else)
+        if (email && email.trim() !== '' && email !== user.email) {
+            const emailExists = await User.findOne({ email: email.trim() });
+            if (emailExists) {
+                return res.status(400).json({ success: false, message: "This email is already used by another account." });
+            }
+            user.email = email.trim(); // Update the email
+        }
+
+        // Basic Profile Update
+        user.name = name || user.name;
+        user.mobile = mobile || user.mobile;
+
+        // 🔥 Safe checks ke saath Wallet Logic
+        const currentWallet = user.walletAddress || ""; 
+        const newWallet = newWalletAddress ? newWalletAddress.trim() : "";
+
+        if (newWallet !== "" && newWallet !== currentWallet) {
+            const currentCount = user.walletAddressChangeCount || 0;
+            if (currentCount >= 3) {
+                return res.status(400).json({ success: false, message: "Wallet address change limit (3 times) exceeded." });
+            }
+
+            if (currentWallet !== '') {
+                if (!user.walletAddressHistory) {
+                    user.walletAddressHistory = [];
+                }
+                user.walletAddressHistory.push({ address: currentWallet, changedAt: new Date() });
+            }
+
+            user.walletAddress = newWallet;
+            user.walletAddressChangeCount = currentCount + 1; 
+            
+            if (user.walletAddressChangeCount === 1) {
+                user.walletAddressChangeWindowStart = new Date();
+            }
+        }
+
+        // Lock profile again after successful update
+        user.profileEditAccessExpiry = undefined;
+        await user.save();
+
+        res.json({ success: true, message: "Profile updated successfully!", user });
+    } catch (error) {
+        console.error("Profile Update Error:", error);
+        res.status(500).json({ success: false, message: "Profile update failed. Check backend console." });
+    }
+});
   // ---------------------------
 // 1. UPDATED: Direct Team Route
 // ---------------------------
@@ -473,56 +644,62 @@ router.get('/fix-missed-rewards', async (req, res) => {
 
 
 
-// // C:\Users\HP\Desktop\Cryptocommunity\backend\routes\user.js (Ya jahan aapki user APIs hain)
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\user.js (Ya jahan aapki user APIs hain)
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\user.js
 
-// const { getMonthlyLegStats } = require('../cron/monthlyRewardCron'); // Import the function from your cron file
-// const REWARD_MILESTONES = [
-//   { target: 50, strongLeg: 25, otherLegs: 25, reward: 30, title: "Target 1" },
-//   { target: 250, strongLeg: 125, otherLegs: 125, reward: 100, title: "Target 2" },
-//   { target: 750, strongLeg: 375, otherLegs: 375, reward: 200, title: "Target 3" },
-//   { target: 1750, strongLeg: 875, otherLegs: 875, reward: 300, title: "Target 4" },
-//   { target: 3750, strongLeg: 1875, otherLegs: 1875, reward: 500, title: "Target 5" },
-//   { target: 6750, strongLeg: 3375, otherLegs: 3375, reward: 1000, title: "Target 6" },
-//   { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7" },
-//   { target: 21750, strongLeg: 10875, otherLegs: 10875, reward: 3000, title: "Target 8" }
-// ];
+const { getMonthlyLegStats } = require('../cron/monthlyRewardCron'); // Import the function from your cron file
 
-// router.get('/monthly-reward-stats/:userId', async (req, res) => {
-//     try {
-//         const userId = Number(req.params.userId);
-//         const now = new Date();
+const REWARD_MILESTONES = [
+  { target: 50, strongLeg: 25, otherLegs: 25, reward: 30, title: "Target 1" },
+  { target: 250, strongLeg: 125, otherLegs: 125, reward: 100, title: "Target 2" },
+  { target: 750, strongLeg: 375, otherLegs: 375, reward: 200, title: "Target 3" },
+  { target: 1750, strongLeg: 875, otherLegs: 875, reward: 300, title: "Target 4" },
+  { target: 3750, strongLeg: 1875, otherLegs: 1875, reward: 500, title: "Target 5" },
+  { target: 6750, strongLeg: 3375, otherLegs: 3375, reward: 1000, title: "Target 6" },
+  { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7" },
+  { target: 21750, strongLeg: 10875, otherLegs: 10875, reward: 3000, title: "Target 8" }
+];
+
+router.get('/monthly-reward-stats/:userId', async (req, res) => {
+    try {
+        const userId = Number(req.params.userId); // ID fetch
+        const now = new Date();
         
-//         // CURRENT MONTH ki start aur end date
-//         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-//         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        // CURRENT MONTH ki start aur end date
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-//         const legStats = await getMonthlyLegStats(userId, startOfMonth, endOfMonth);
+        // 🔥 Cron file se getMonthlyLegStats call kar rahe hain
+        const legStats = await getMonthlyLegStats(userId, startOfMonth, endOfMonth);
         
-//         // Find current and next target
-//         let achievedTargets = [];
-//         let nextTarget = REWARD_MILESTONES[0];
+        // Find current and next target
+        let achievedTargets = [];
+        let nextTarget = REWARD_MILESTONES[0];
 
-//         for (let milestone of REWARD_MILESTONES) {
-//             if (legStats.strongLeg >= milestone.strongLeg && legStats.otherLegs >= milestone.otherLegs) {
-//                 achievedTargets.push(milestone);
-//             } else {
-//                 nextTarget = milestone;
-//                 break;
-//             }
-//         }
+        for (let milestone of REWARD_MILESTONES) {
+            if (legStats.strongLeg >= milestone.strongLeg && legStats.otherLegs >= milestone.otherLegs) {
+                achievedTargets.push(milestone);
+            } else {
+                nextTarget = milestone;
+                break;
+            }
+        }
 
-//         res.json({
-//             success: true,
-//             strongLeg: legStats.strongLeg,
-//             otherLegs: legStats.otherLegs,
-//             milestones: REWARD_MILESTONES,
-//             nextTarget: nextTarget
-//         });
-//     } catch (error) {
-//         console.error("Reward Stats Error:", error);
-//         res.status(500).json({ success: false, message: "Failed to fetch reward stats." });
-//     }
-// });
+        // 🔥 Frontend ko data bhej rahe hain (Updated with ID & Name)
+        res.json({
+            success: true,
+            strongLeg: legStats.strongLeg,
+            otherLegs: legStats.otherLegs,
+            strongLegId: legStats.strongLegId,     // 👉 NAYA: Strong Leg wale ka ID
+            strongLegName: legStats.strongLegName, // 👉 NAYA: Strong Leg wale ka Name
+            milestones: REWARD_MILESTONES,
+            nextTarget: nextTarget
+        });
+    } catch (error) {
+        console.error("Reward Stats Error:", error);
+        res.status(500).json({ success: false, message: "Failed to fetch reward stats." });
+    }
+});
 // ---------------------------
 // (Yahan se aapka aage ka code start hoga, jaise Top-up Route wagarah...)
  
@@ -1827,8 +2004,8 @@ router.put('/:userId', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       message: 'Profile updated successfully',
-      user: sanitizeUser(user) // Ensure sanitizeUser function available ho
-    });
+      user: user // 🔥 sanitizeUser hata diya taaki history frontend tak ja sake  
+        });
 
   } catch (err) {
     console.error('Profile Update Error:', err);

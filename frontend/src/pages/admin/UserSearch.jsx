@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import api from "../../api/axios"; 
-import { Search, Ban, CheckCircle, Save, LogIn, Eye, EyeOff, Copy, RefreshCw, ShieldCheck } from "lucide-react"; 
+import { Search, Ban, CheckCircle, Save, LogIn, Eye, EyeOff, Copy, RefreshCw, ShieldCheck, Clock } from "lucide-react"; // 🔥 Clock add kiya
 
 function UserSearch() {
   const [searchId, setSearchId] = useState("");
@@ -62,10 +62,6 @@ function UserSearch() {
     }
   };
 
-  // 🔥 UPDATED: SMART IMPERSONATE LOGIC 🔥
-  // ================= IMPERSONATE USER =================
- // ================= IMPERSONATE USER =================
-// ================= IMPERSONATE USER =================
   const handleImpersonate = async () => {
     const token = getAdminToken();
     if (!token) return setMessage("Admin not authenticated");
@@ -75,15 +71,13 @@ function UserSearch() {
       const { token: userToken, user: impersonatedUser } = res.data;
       const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
 
-      // 🔥 FIXED LOGIC: Subdomain ('good.') ko ignore karne ke liye 🔥
       let targetBaseUrl = "";
-      const currentHost = window.location.hostname; // Ye dega "good.localhost"
+      const currentHost = window.location.hostname;
 
-      // Agar link me 'localhost' ya '127.0.0.1' aata hai (chahe kuch bhi aage laga ho)
       if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
-        targetBaseUrl = "http://localhost:5173"; // Seedha normal localhost pe bhejo
+        targetBaseUrl = "http://localhost:5173"; 
       } else {
-        targetBaseUrl = "https://cryptocommunity.live"; // Live site ke liye
+        targetBaseUrl = "https://cryptocommunity.live"; 
       }
 
       const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
@@ -128,10 +122,9 @@ function UserSearch() {
   };
 
   return (
-    // ... UI is exactly the same as yours (omitted for brevity, keep your return block exactly as it was)
     <div className="bg-white rounded-2xl p-5 shadow-md">
        <h2 className="text-xl font-semibold mb-4 text-indigo-600">🔍 Search User</h2>
-       {/* ... Baaki UI ka code waise ka waisa hi rahega ... */}
+       
        <div className="flex gap-3 mb-4">
         <input
           type="number"
@@ -142,7 +135,7 @@ function UserSearch() {
         />
         <button
           onClick={handleSearch}
-          className="bg-indigo-600 hover:bg-indigo-700 text-slate-900 px-4 py-2 rounded transition-colors"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded transition-colors"
         >
           <Search size={18} />
         </button>
@@ -151,7 +144,6 @@ function UserSearch() {
       {user && (
         <div className="bg-gray-50 p-4 rounded border space-y-3">
           
-          {/* ✅ ADDED: Sponsor Info (Read-Only) */}
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="font-semibold text-indigo-700">Sponsor ID</label>
@@ -173,7 +165,6 @@ function UserSearch() {
             </div>
           </div>
 
-          {/* Normal Text Fields */}
           {["name", "email", "mobile", "country"].map((field) => (
             <div key={field}>
               <label className="font-semibold capitalize">{field}</label>
@@ -186,7 +177,6 @@ function UserSearch() {
             </div>
           ))}
 
-          {/* Password Fields with Toggle Visibility */}
           <div>
             <label className="font-semibold">Password</label>
             <div className="relative flex items-center">
@@ -196,10 +186,7 @@ function UserSearch() {
                 onChange={(e) => handleInputChange("password", e.target.value)}
                 className="block border rounded px-3 py-1 mt-1 w-full pr-10"
               />
-              <button 
-                onClick={() => setShowPassword(!showPassword)} 
-                className="absolute right-2 top-2 text-gray-500"
-              >
+              <button onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-2 text-gray-500">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
@@ -214,16 +201,12 @@ function UserSearch() {
                 onChange={(e) => handleInputChange("transactionPassword", e.target.value)}
                 className="block border rounded px-3 py-1 mt-1 w-full pr-10"
               />
-              <button 
-                onClick={() => setShowTxnPassword(!showTxnPassword)} 
-                className="absolute right-2 top-2 text-gray-500"
-              >
+              <button onClick={() => setShowTxnPassword(!showTxnPassword)} className="absolute right-2 top-2 text-gray-500">
                 {showTxnPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
 
-          {/* Balances & Address */}
           <div>
             <label className="font-semibold">Wallet Balance</label>
             <input
@@ -244,7 +227,25 @@ function UserSearch() {
             />
           </div>
 
-          {/* Deposit Address Field (Read-Only with Copy Button) */}
+          {/* 🔥 WALLET HISTORY Dikhane ke liye naya section */}
+          {user.walletAddressHistory && user.walletAddressHistory.length > 0 && (
+            <div className="mt-3 p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
+               <label className="font-bold text-slate-700 flex items-center gap-2 mb-3 text-sm">
+                  <Clock size={16} className="text-blue-500" /> Previous Wallet Addresses
+               </label>
+               <div className="space-y-2 max-h-40 overflow-y-auto custom-scroll pr-1">
+                  {[...user.walletAddressHistory].reverse().map((history, idx) => (
+                     <div key={idx} className="bg-slate-50 border border-slate-200 p-2.5 rounded-md flex justify-between items-center text-sm">
+                        <span className="font-mono text-slate-600 break-all mr-2">{history.address}</span>
+                        <span className="text-slate-400 bg-white px-2 py-1 rounded border border-slate-100 text-xs whitespace-nowrap font-semibold">
+                          {new Date(history.changedAt).toLocaleDateString()}
+                        </span>
+                     </div>
+                  ))}
+               </div>
+            </div>
+          )}
+
           <div>
             <label className="font-semibold">Deposit Address</label>
             <div className="flex items-center gap-2 mt-1">
@@ -266,7 +267,6 @@ function UserSearch() {
             </div>
           </div>
 
-          {/* ✅ Simple Status & Telegram Info */}
           <div className="bg-white p-3 rounded border mt-3">
             <p>
               <strong>Status:</strong>{" "}
@@ -285,21 +285,17 @@ function UserSearch() {
                   value={formData.telegramId || "N/A"}
                   className="border rounded px-2 py-1 bg-gray-50 text-sm w-48"
                 />
-                <button
-                  onClick={() => handleCopy(formData.telegramId)}
-                  className="p-1 bg-gray-200 rounded"
-                >
+                <button onClick={() => handleCopy(formData.telegramId)} className="p-1 bg-gray-200 rounded">
                   <Copy size={14} />
                 </button>
               </div>
             )}
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap mt-3 pt-3 border-t">
             <button
               onClick={handleBlockToggle}
-              className={`px-4 py-2 rounded text-slate-900 flex items-center font-medium shadow-sm transition-colors ${
+              className={`px-4 py-2 rounded text-white flex items-center font-medium shadow-sm transition-colors ${
                 user.isBlocked ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
               }`}
             >
@@ -309,7 +305,7 @@ function UserSearch() {
 
             <button
               onClick={handleSave}
-              className="bg-blue-600 hover:bg-blue-700 text-slate-900 px-4 py-2 rounded flex items-center font-medium shadow-sm transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center font-medium shadow-sm transition-colors"
             >
               <Save size={16} className="inline mr-1" />
               Save Changes
@@ -317,17 +313,16 @@ function UserSearch() {
 
             <button
               onClick={handleImpersonate}
-              className="bg-purple-600 hover:bg-purple-700 text-slate-900 px-4 py-2 rounded flex items-center font-medium shadow-sm transition-colors"
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded flex items-center font-medium shadow-sm transition-colors"
             >
               <LogIn size={16} className="inline mr-1" />
               Login as User
             </button>
 
-            {/* ✅ FIXED BUTTONS (Using Safe Colors) */}
             {user.isTelegramJoined ? (
               <button
                 onClick={handleResetTelegram}
-                className="bg-gray-800 hover:bg-gray-900 text-slate-900 px-4 py-2 rounded flex items-center font-medium shadow-sm transition-colors"
+                className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded flex items-center font-medium shadow-sm transition-colors"
                 title="Unlink this user's Telegram account"
               >
                 <RefreshCw size={16} className="inline mr-1" />
@@ -336,7 +331,7 @@ function UserSearch() {
             ) : (
               <button
                 onClick={handleManualVerify}
-                className="bg-green-600 hover:bg-green-700 text-slate-900 px-4 py-2 rounded flex items-center font-medium shadow-sm transition-colors"
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center font-medium shadow-sm transition-colors"
                 title="Manually verify without Telegram"
               >
                 <ShieldCheck size={16} className="inline mr-1" />
@@ -348,7 +343,7 @@ function UserSearch() {
       )}
 
       {message && (
-        <p className={`text-sm mt-3 p-2 rounded ${message.includes("✅") || message.includes("successfully") ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+        <p className={`text-sm mt-3 p-2 rounded font-semibold ${message.includes("✅") || message.includes("successfully") ? "bg-green-100 text-green-800 border border-green-200" : "bg-red-100 text-red-800 border border-red-200"}`}>
           {message}
         </p>
       )}

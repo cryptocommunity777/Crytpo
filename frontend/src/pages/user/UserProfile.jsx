@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from "../../api/axios";
 import { 
   ArrowLeft, Save, Lock, User, Mail, Smartphone, 
-  Wallet, Key, ShieldCheck, BadgeInfo, Settings
+  Wallet, Key, ShieldCheck, BadgeInfo, Settings, Edit3, Clock
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import MessageModal from '../../components/modals/MessageModal';
@@ -13,7 +13,7 @@ function UserProfile() {
   const { user, updateUser, token } = useAuth();
 
   /* ================= TABS STATE ================= */
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' or 'security'
+  const [activeTab, setActiveTab] = useState('profile'); 
 
   /* ================= STATES ================= */
   const [formData, setFormData] = useState({
@@ -23,11 +23,21 @@ function UserProfile() {
     walletAddress: user?.walletAddress || '',
   });
 
-  const [profileTxnPassword, setProfileTxnPassword] = useState('');
+  // 🔥 Sync data whenever user object changes from backend/context
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        mobile: user.mobile || '',
+        walletAddress: user.walletAddress || '',
+      });
+    }
+  }, [user]);
 
+  const [profileTxnPassword, setProfileTxnPassword] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [newLoginPassword, setNewLoginPassword] = useState('');
-
   const [currentTxnPassword, setCurrentTxnPassword] = useState('');
   const [newTxnPassword, setNewTxnPassword] = useState('');
 
@@ -45,11 +55,9 @@ function UserProfile() {
   const walletLockReason = useMemo(() => {
     if (!user) return null;
     
-    // 🔥 NEW RULE: Agar wallet address ek baar set ho gaya, toh permanently lock!
     if (user.walletAddress && user.walletAddress.trim() !== '') {
-      return 'Wallet address is permanently locked once set. For changes, contact support.';
+      return 'Wallet address is permanently locked once set. For changes, use Edit Profile.';
     }
-
     return null;
   }, [user]);
 
@@ -76,7 +84,14 @@ function UserProfile() {
     try {
       const payload = { ...formData, oldTxnPassword: profileTxnPassword };
       const res = await api.put(`/user/${user.userId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
-      updateUser(res.data.user || res.data);
+      
+      // Update Context
+      if (res.data && res.data.user) {
+        updateUser(res.data.user);
+      } else {
+        updateUser(res.data);
+      }
+      
       setProfileTxnPassword('');
       showMessage('Profile Updated Successfully ✅', 'Your wallet address has been saved permanently.', 'success');
     } catch (err) {
@@ -124,16 +139,22 @@ function UserProfile() {
       <div className="max-w-3xl mx-auto px-4 md:px-6">
           
           {/* Header & Back Button */}
-          <div className="flex items-center gap-4 mb-6">
-             <button onClick={() => navigate('/dashboard')} className="p-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-green-600 transition-all shadow-sm">
-                <ArrowLeft size={20} />
+          <div className="flex items-center justify-between mb-6">
+             <div className="flex items-center gap-4">
+                 <button onClick={() => navigate('/dashboard')} className="p-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-green-600 transition-all shadow-sm">
+                    <ArrowLeft size={20} />
+                 </button>
+                 <h1 className="text-xl md:text-2xl font-black text-slate-800 uppercase tracking-wide">
+                    Account Settings
+                 </h1>
+             </div>
+             
+             <button onClick={() => navigate('/edit-profile')} className="px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 border border-blue-200 shadow-sm">
+                <Edit3 size={14} /> Edit
              </button>
-             <h1 className="text-xl md:text-2xl font-black text-slate-800 uppercase tracking-wide">
-                Account Settings
-             </h1>
           </div>
 
-          {/* User Basic Info Card (Always Visible) */}
+          {/* User Basic Info Card */}
           <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center sm:items-start gap-4 md:gap-6 mb-6">
              <div className="w-20 h-20 shrink-0 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-3xl font-black text-white shadow-md border-4 border-white">
                 {user.name?.charAt(0).toUpperCase() || "U"}
@@ -229,7 +250,28 @@ function UserProfile() {
                       )}
                    </div>
 
-                   {/* Save Section (Sirf tab dikhega jab Wallet Locked NAHI hoga) */}
+                   {/* 🔥 WALLET HISTORY SECTION */}
+                   {user.walletAddressHistory && user.walletAddressHistory.length > 0 && (
+                      <div className="pt-4 border-t border-slate-100">
+                         <label className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-3">
+                            <Clock size={14} /> Previous Wallet Addresses
+                         </label>
+                         <div className="space-y-2">
+                            {[...user.walletAddressHistory].reverse().map((history, idx) => (
+                               <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                  <span className="text-xs font-mono font-bold text-slate-600 break-all">
+                                     {history.address}
+                                  </span>
+                                  <span className="text-[10px] font-bold text-slate-400 shrink-0 bg-white px-2 py-1 rounded border border-slate-100">
+                                     {new Date(history.changedAt).toLocaleDateString()}
+                                  </span>
+                               </div>
+                            ))}
+                         </div>
+                      </div>
+                   )}
+
+                   {/* Save Section */}
                    {!isWalletLocked && (
                      <div className="pt-4 border-t border-slate-100">
                         <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Transaction Password to Save</label>
@@ -293,7 +335,6 @@ function UserProfile() {
 
       </div>
 
-      {/* Message Modal */}
       <MessageModal
         isOpen={messageModal.open}
         onClose={() => setMessageModal({ ...messageModal, open: false })}

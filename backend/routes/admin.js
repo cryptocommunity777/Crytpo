@@ -1217,8 +1217,7 @@ const REWARD_MILESTONES = [
   { target: 3750, strongLeg: 1875, otherLegs: 1875, reward: 500, title: "Target 5 (3750 Points)" },
   { target: 6750, strongLeg: 3375, otherLegs: 3375, reward: 1000, title: "Target 6 (6750 Points)" },
   { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7 (11750 Points)" },
-  { target: 21750, strongLeg: 10875, otherLegs: 10875, reward: 3000, title: "Target 8 (21750 Points)" }
-];
+ ];
 
 // 🔥 Helper Function: Ab ID ke sath Name bhi return karega
 const getMonthlyLegStatsForAdmin = async (sponsorId, startOfMonth, endOfMonth) => {
@@ -2495,32 +2494,60 @@ router.get('/search-user/:userId', verifyAdmin, async (req, res) => {
 // ✅ Admin update user + update ONLY pending withdrawals wallet address
 // 🔐 Admin update user (FINAL)
 // 🔐 Admin update user (FINAL - Updated to Plain Text Password)
-router.put('/:userId', verifyAdmin, async (req, res) => {
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\admin.js
+
+router.put('/:userId', async (req, res) => { // Agar verifyAdmin middleware hai toh wo laga lena
   try {
-    const { password, transactionPassword, walletAddress, ...otherFields } = req.body;
-    const updateData = { ...otherFields };
-
-    if (walletAddress) updateData.walletAddress = walletAddress;
+    // 🔥 FRONTEND SE AANE WALE 'HISTORY' FIELDS KO ALAG NIKAL LIYA TAARI OVERWRITE NA HO 🔥
+    const { 
+        password, 
+        transactionPassword, 
+        walletAddress, 
+        walletAddressHistory, // 👈 Isko alag nikal liya
+        walletAddressChangeCount, // 👈 Isko bhi alag nikal liya
+        walletAddressChangeWindowStart,
+        _id, 
+        __v, 
+        ...otherFields 
+    } = req.body;
     
-    // ✅ Yahan se bcrypt hata diya hai. Seedha save hoga.
-    if (password) updateData.password = password;
-    if (transactionPassword) updateData.transactionPassword = transactionPassword;
-
-    const updatedUser = await User.findOneAndUpdate(
-      { userId: Number(req.params.userId) },
-      updateData,
-      { new: true }
-    );
-
-    if (!updatedUser) {
+    // 1. Pehle user ko fetch karo
+    const user = await User.findOne({ userId: Number(req.params.userId) });
+    
+    if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    // 2. Baaki normal fields update karo (Ab History overwrite nahi hogi)
+    Object.assign(user, otherFields);
+
+    if (password) user.password = password;
+    if (transactionPassword) user.transactionPassword = transactionPassword;
+
+    // 🔥 3. WALLET HISTORY LOGIC 🔥
+    if (walletAddress && walletAddress.trim() !== user.walletAddress) {
+      // Agar purana address exist karta tha, toh usko history mein daalo
+      if (user.walletAddress && user.walletAddress.trim() !== "") {
+          if (!user.walletAddressHistory) {
+             user.walletAddressHistory = [];
+          }
+          user.walletAddressHistory.push({
+              address: user.walletAddress,
+              changedAt: new Date()
+          });
+      }
+      // Naya address set karo
+      user.walletAddress = walletAddress.trim();
+    }
+
+    // User ko save kar do
+    const updatedUser = await user.save();
 
     // 🔥 ONLY PENDING WITHDRAWALS UPDATE
     if (walletAddress) {
       await Withdrawal.updateMany(
         { userId: Number(req.params.userId), status: "pending" },
-        { $set: { walletAddress } }
+        { $set: { walletAddress: walletAddress.trim() } }
       );
       await Withdrawal.updateMany(
         {
@@ -2528,7 +2555,7 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
           "schedule.status": "pending"
         },
         {
-          $set: { "schedule.$[elem].walletAddress": walletAddress }
+          $set: { "schedule.$[elem].walletAddress": walletAddress.trim() }
         },
         {
           arrayFilters: [{ "elem.status": "pending" }]
@@ -2546,7 +2573,6 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
     res.status(500).json({ message: "Update failed" });
   }
 });
-
 
 
 module.exports = router;

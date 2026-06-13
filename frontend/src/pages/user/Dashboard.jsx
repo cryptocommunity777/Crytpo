@@ -14,7 +14,7 @@ import SpinnerOverlay from "../../components/common/SpinnerOverlay";
 import SuccessModal from "../../components/modals/SuccessModal";
 import TelegramPopup from "../../components/TelegramPopup";
 import PromoVideoBox from "../../components/dashboard/PromoVideoBox"; 
-
+import MonthlyRewardBox from "../../components/MonthlyRewardBox";
 // 🔥 WALLET POPUP IMPORT
 import WalletPopup from "../../components/WalletPopup";
 
@@ -185,11 +185,19 @@ const Dashboard = ({ setModalState }) => {
              <ReferralLink link={referralLink} />
         </div>
         
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-           <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
-             <IncomeSummary income={income} user={user} />
-           </div>
-        </div>
+       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    {/* 1. Income Summary Box */}
+    <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
+        <IncomeSummary income={income} user={user} />
+    </div>
+
+    {/* 2. Monthly Reward Box (Income Summary ke theek niche) */}
+    <div>
+        <MonthlyRewardBox />
+    </div>
+</div>
+
+        
 
         <section className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
             <DailyROIPlan dailyROI={user.dailyROI || []} onClaim={claimDailyROI} />
