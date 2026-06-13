@@ -42,7 +42,7 @@ import DownlineBusiness from './pages/user/DownlineBusiness.jsx';
 import CreditToWallet from './pages/user/CreditToWallet.jsx';
 import Notifications from "./pages/user/Notifications.jsx";
 import UserLayout from "./components/layout/UserLayout.jsx";
-
+ 
  import GlobalTeam from './pages/user/GlobalTeam';
 // 🔹 Admin Pages
 import AdminLogin from './pages/admin/AdminLogin.jsx';
@@ -204,6 +204,7 @@ function AppContent() {
         </RequireUserAuth>
     } 
 />
+ 
 <Route path="/community-income" element={<RequireUserAuth><UserLayout><CommunityEarning /></UserLayout></RequireUserAuth>} />
              <Route path="/direct-income" element={<RequireUserAuth><UserLayout><DirectIncome /></UserLayout></RequireUserAuth>} />
 <Route path="/level-income" element={<RequireUserAuth><UserLayout><LevelIncome /></UserLayout></RequireUserAuth>} />

@@ -470,6 +470,59 @@ router.get('/fix-missed-rewards', async (req, res) => {
     }
 });
 
+
+
+
+// // C:\Users\HP\Desktop\Cryptocommunity\backend\routes\user.js (Ya jahan aapki user APIs hain)
+
+// const { getMonthlyLegStats } = require('../cron/monthlyRewardCron'); // Import the function from your cron file
+// const REWARD_MILESTONES = [
+//   { target: 50, strongLeg: 25, otherLegs: 25, reward: 30, title: "Target 1" },
+//   { target: 250, strongLeg: 125, otherLegs: 125, reward: 100, title: "Target 2" },
+//   { target: 750, strongLeg: 375, otherLegs: 375, reward: 200, title: "Target 3" },
+//   { target: 1750, strongLeg: 875, otherLegs: 875, reward: 300, title: "Target 4" },
+//   { target: 3750, strongLeg: 1875, otherLegs: 1875, reward: 500, title: "Target 5" },
+//   { target: 6750, strongLeg: 3375, otherLegs: 3375, reward: 1000, title: "Target 6" },
+//   { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7" },
+//   { target: 21750, strongLeg: 10875, otherLegs: 10875, reward: 3000, title: "Target 8" }
+// ];
+
+// router.get('/monthly-reward-stats/:userId', async (req, res) => {
+//     try {
+//         const userId = Number(req.params.userId);
+//         const now = new Date();
+        
+//         // CURRENT MONTH ki start aur end date
+//         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+//         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+//         const legStats = await getMonthlyLegStats(userId, startOfMonth, endOfMonth);
+        
+//         // Find current and next target
+//         let achievedTargets = [];
+//         let nextTarget = REWARD_MILESTONES[0];
+
+//         for (let milestone of REWARD_MILESTONES) {
+//             if (legStats.strongLeg >= milestone.strongLeg && legStats.otherLegs >= milestone.otherLegs) {
+//                 achievedTargets.push(milestone);
+//             } else {
+//                 nextTarget = milestone;
+//                 break;
+//             }
+//         }
+
+//         res.json({
+//             success: true,
+//             strongLeg: legStats.strongLeg,
+//             otherLegs: legStats.otherLegs,
+//             milestones: REWARD_MILESTONES,
+//             nextTarget: nextTarget
+//         });
+//     } catch (error) {
+//         console.error("Reward Stats Error:", error);
+//         res.status(500).json({ success: false, message: "Failed to fetch reward stats." });
+//     }
+// });
 // ---------------------------
 // (Yahan se aapka aage ka code start hoga, jaise Top-up Route wagarah...)
  
