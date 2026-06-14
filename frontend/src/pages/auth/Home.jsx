@@ -318,29 +318,29 @@ const Home = () => {
         </section>
 
         {/* --- 3. FAST TRACK BONUS (ENHANCED) --- */}
-        <section className="py-20 px-6 bg-gradient-to-br from-green-600 to-emerald-900 text-white relative overflow-hidden">
+      <section className="py-20 px-6 bg-gradient-to-br from-green-600 to-emerald-900 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-white/5 blur-[100px] rounded-full pointer-events-none"></div>
           
           <div className="max-w-6xl mx-auto relative z-10">
             <div className="flex flex-col lg:flex-row items-center gap-12">
               <div className="flex-1 text-center lg:text-left">
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-green-300 text-xs font-black tracking-widest mb-6">
-                  <Timer size={16} /> LIMITED TIME OFFER
+                  <Timer size={16} /> FAST TRACK ADD-ON OFFER
                 </div>
                 <h2 className="text-4xl md:text-6xl font-black mb-6 leading-tight">
                   Fast Track <br /> <span className="text-green-400">Direct Bonus</span>
                 </h2>
                 <p className="text-green-100 text-lg mb-8 leading-relaxed max-w-xl">
-                  Boost your earnings in the first month! Bring any direct $30 top-up within 30 days of your registration and unlock a special daily reward.
+                  Boost your earnings instantly! Complete a minimum of <strong className="text-white">6 Directs within 6 Days</strong> of your ID activation and unlock a special daily reward for EVERY direct you bring!
                 </p>
                 <div className="flex flex-col sm:flex-row gap-6 items-center lg:items-start">
                   <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-3xl text-center min-w-[200px]">
-                    <span className="block text-green-300 text-xs font-bold uppercase mb-2">Daily Extra</span>
-                    <span className="text-4xl font-black">$1.00</span>
+                    <span className="block text-green-300 text-xs font-bold uppercase mb-2">Reward Per Direct</span>
+                    <span className="text-4xl font-black">$1.00 <span className="text-xl">/Day</span></span>
                   </div>
-                  <ArrowRight className="hidden sm:block text-white/30" size={32} />
+                  <ArrowRight className="hidden sm:block text-white/30 mt-8" size={32} />
                   <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-3xl text-center min-w-[200px]">
-                    <span className="block text-green-300 text-xs font-bold uppercase mb-2">For Total</span>
+                    <span className="block text-green-300 text-xs font-bold uppercase mb-2">Duration</span>
                     <span className="text-4xl font-black">10 Days</span>
                   </div>
                 </div>
@@ -359,16 +359,16 @@ const Home = () => {
                     </div>
                     <div className="flex gap-4">
                       <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-black shrink-0">2</div>
-                      <p className="text-slate-600 text-sm font-medium">Refer a direct member with $30 within your first 30 days.</p>
+                      <p className="text-slate-600 text-sm font-medium">Refer a <strong className="text-slate-800">minimum of 6 direct members</strong> within exactly <strong className="text-slate-800">144 Hours (6 Days)</strong>.</p>
                     </div>
                     <div className="flex gap-4">
                       <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-black shrink-0">3</div>
-                      <p className="text-slate-600 text-sm font-medium">System starts paying you <span className="text-green-600 font-bold">$1 extra daily</span> for 10 days straight!</p>
+                      <p className="text-slate-600 text-sm font-medium">Earn <span className="text-green-600 font-bold">$1 extra daily for EACH direct</span> for 10 days straight (e.g., 8 Directs = $8/day)!</p>
                     </div>
                   </div>
                   <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Total Benefit per Direct</p>
-                    <p className="text-3xl font-black text-slate-900">$10.00 <span className="text-green-600">+ Commissions</span></p>
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Minimum Bonus (For 6 Directs)</p>
+                    <p className="text-3xl font-black text-slate-900">$60.00  </p>
                   </div>
                 </div>
               </div>

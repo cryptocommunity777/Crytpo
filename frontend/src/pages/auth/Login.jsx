@@ -26,7 +26,7 @@ const ShinyDownloadButton = () => (
     `}</style>
 
     <Download size={18} strokeWidth={3} className="relative z-10 animate-bounce" /> 
-    <span className="relative z-10 drop-shadow-md">DOWNLOAD BUSINESS OPPORTUNITY</span>
+    <span className="relative z-10 drop-shadow-md">DOWNLOAD BUSINESS PDF</span>
   </a>
 );
 
