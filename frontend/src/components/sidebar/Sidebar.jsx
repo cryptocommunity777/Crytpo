@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { useNavigate, useLocation, Link } from "react-router-dom"; 
-import { Home, Wallet, Banknote, History, Users, UserCircle2, HelpCircle, BadgeDollarSign, BarChart, Globe, Zap } from "lucide-react";
+import { Home, Wallet, Banknote, History, Users, UserCircle2, HelpCircle, BadgeDollarSign, BarChart, Globe, Zap, FileQuestion } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const SidebarItem = ({ label, icon: Icon, active, onClick, badge, path }) => {
@@ -62,9 +62,9 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
     { label: "Downline Team", icon: Users, path: "/all-team" },
     { label: "Top-Up History", icon: BarChart, path: "/topup-details" },
     { label: "Deposit History", icon: History, path: "/deposit-history" },
-    { label: "Fast Track Income", icon: Zap, path: "/fast-track-income" }, // 🔥 Naya Menu Add Kiya
+    { label: "Fast Track Income", icon: Zap, path: "/fast-track-income" },
     { label: "Direct Income", icon: BadgeDollarSign, path: "/direct-income" },
-    { label: "Level Income", icon: Users, path: "/level-income" }, // 🔥 Naya Menu Add Kiya
+    { label: "Level Income", icon: Users, path: "/level-income" },
     { label: "Community Income", icon: BadgeDollarSign, path: "/community-income" },
     { label: "Withdrawals", icon: Banknote, path: "/withdrawals" },
     { label: "Wallet History", icon: History, path: "/wallet-history" },
@@ -72,6 +72,7 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
     { label: "Credit To Wallet", icon: BadgeDollarSign, path: "/credit-to-wallet" },
     { label: "P2P Transfers", icon: History, path: "/my-transfers" },
     { label: "Transactions", icon: Wallet, path: "/transaction-details" },
+    { label: "FAQ", icon: FileQuestion, path: "/faq" },
     { label: "Help & Support", icon: HelpCircle, path: "/support" },
     { label: "All Community", icon: Globe, path: "/global-community" } 
   ];
