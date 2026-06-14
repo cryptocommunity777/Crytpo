@@ -2,23 +2,28 @@ import React, { useEffect, useState } from 'react';
 import api from "../../api/axios";
 import Papa from 'papaparse';
 import { saveAs } from 'file-saver';
-import Swal from 'sweetalert2'; // 🔥 NAYA IMPORT
-import { Crown, User, ArrowRightCircle, ExternalLink } from 'lucide-react'; // 🔥 ExternalLink add kiya
+import Swal from 'sweetalert2';
+import { Crown, User, ArrowRightCircle, ExternalLink } from 'lucide-react';
 
-// 🔥 HELPER: Hamesha Indian Standard Time (IST) Date dega (YYYY-MM-DD format mein)
+// 🔥 HELPER 1: Hamesha Indian Standard Time (IST) Date dega (YYYY-MM-DD format mein) filter aur stats ke liye
 const getISTDateStr = (dateObj = new Date()) => {
-  const utc = dateObj.getTime() + (dateObj.getTimezoneOffset() * 60000);
-  const istDate = new Date(utc + (3600000 * 5.5));
-  return istDate.toISOString().split('T')[0]; 
+  if (!dateObj) return '';
+  // 'en-CA' automatically YYYY-MM-DD format deta hai
+  return new Date(dateObj).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 };
 
-// 🔥 HELPER: Table me dikhane ke liye IST String (DD/MM/YYYY HH:MM)
+// 🔥 HELPER 2: Table me dikhane ke liye Proper Indian DateTime Format (DD MMM YYYY, hh:mm AM/PM)
 const getISTDateTimeString = (dateString) => {
   if (!dateString) return '';
-  const d = new Date(dateString);
-  const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
-  const istDate = new Date(utc + (3600000 * 5.5));
-  return istDate.toLocaleString('en-GB'); 
+  return new Date(dateString).toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
 };
 
 const toNumber = (val) => {
@@ -47,10 +52,8 @@ const TotalTopUpPage = () => {
 
   // ----------------- 🔥 IMPERSONATE (LOGIN) LOGIC -----------------
   const handleImpersonate = async (targetId) => {
-    // Agar text mein 'System' hai ya ID khali hai toh return kardo
     if (!targetId || String(targetId).toLowerCase().includes("system")) return;
 
-    // String mein se sirf number (ID) nikalne ki Ninja Technique
     const match = String(targetId).match(/\d+/);
     const cleanUserId = match ? match[0] : targetId;
 
@@ -148,7 +151,7 @@ const TotalTopUpPage = () => {
   }, [searchId, selectedRole, fromDate, toDate, topupUsers]);
 
   // STATS CALCULATION (IST Based)
-  const todayIST = getISTDateStr();
+  const todayIST = getISTDateStr(); // Aaj ki Indian Date
   
   let totalBusiness = 0;
   let todayBusiness = 0;
@@ -277,7 +280,7 @@ const TotalTopUpPage = () => {
            onClick={() => { setFromDate(''); setToDate(''); }} 
            className="bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded hover:bg-gray-300 transition shadow-sm text-xs w-full md:w-auto"
         >
-           Clear Dates
+          Clear Dates
         </button>
       </div>
 
@@ -374,7 +377,7 @@ const TotalTopUpPage = () => {
                     </td>
 
                     <td className="px-4 py-3 text-emerald-600 font-black text-base">${u.topUpAmount}</td>
-                    <td className="px-4 py-3 text-slate-500 font-bold text-[11px] md:text-xs">
+                    <td className="px-4 py-3 text-slate-500 font-bold text-[11px] md:text-xs whitespace-nowrap">
                         {getISTDateTimeString(u.topUpDate)}
                     </td>
                   </tr>

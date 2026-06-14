@@ -13,20 +13,32 @@ const REWARD_MILESTONES = [
   { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7 (11750 Points)" },
  ];
 
-// 🔥 Naya Hisaab: Sirf Direct ke neeche ki team (downline) count hogi!
+// 🔥 SUPERFAST LOGIC: N+1 Database Query Problem Solved!
 const getMonthlyLegStats = async (sponsorId, startOfMonth, endOfMonth) => {
-    // 1. Pehle user ke saare Directs nikalo (Name aur ID dono la rahe hain)
-    const directs = await User.find({ sponsorId: sponsorId }, 'userId name isToppedUp topUpDate').lean();
+    // 1. 10,000 DB calls ki jagah, sirf 1 Call lagayenge aur sabko RAM (Memory) mein le aayenge.
+    const allUsers = await User.find({}, 'userId name sponsorId isToppedUp topUpDate').lean();
+
+    // 2. RAM (Memory) mein ek map banayenge jisse koi bhi downline INSTANTLY mil jayegi
+    const userMap = new Map();
+    for (let u of allUsers) {
+        if (!userMap.has(u.sponsorId)) {
+            userMap.set(u.sponsorId, []);
+        }
+        userMap.get(u.sponsorId).push(u);
+    }
+
+    // 3. Ab calculate karo (Yeh calculation RAM mein hogi, DB load nahi hoga)
+    const directs = userMap.get(sponsorId) || [];
     let legSizes = [];
 
     for (let direct of directs) {
         let currentLegSize = 0;
         
-        // 2. Sirf Direct ki Downline (Neeche ki team) search hogi
         let queue = [direct.userId];
         while (queue.length > 0) {
             const currentId = queue.shift();
-            const downlines = await User.find({ sponsorId: currentId }, 'userId isToppedUp topUpDate').lean();
+            // 🔥 DB QUERY HATA DI! Ab seedha Memory (Map) se utha rahe hain.
+            const downlines = userMap.get(currentId) || []; 
             
             for (let d of downlines) {
                 // Agar downline pichle mahine me active hui hai, toh point add karo
@@ -37,7 +49,7 @@ const getMonthlyLegStats = async (sponsorId, startOfMonth, endOfMonth) => {
             }
         }
         
-        // 🔥 YAHAN ID AUR NAAM SAVE HO RAHA HAI (Isi wajah se N/A aa raha tha pehle)
+        // 🔥 YAHAN ID AUR NAAM SAVE HO RAHA HAI
         legSizes.push({ 
             size: currentLegSize, 
             userId: direct.userId, 
@@ -57,8 +69,8 @@ const getMonthlyLegStats = async (sponsorId, startOfMonth, endOfMonth) => {
     return { 
         strongLeg: strongLegData.size, 
         otherLegs: otherLegsCount,
-        strongLegId: strongLegData.userId,     // 🔥 ID yahan se bhej rahe hain
-        strongLegName: strongLegData.name      // 🔥 Name yahan se bhej rahe hain
+        strongLegId: strongLegData.userId,     // ID bhej rahe hain
+        strongLegName: strongLegData.name      // Name bhej rahe hain
     };
 };
 

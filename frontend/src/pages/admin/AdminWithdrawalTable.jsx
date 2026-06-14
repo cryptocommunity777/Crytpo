@@ -151,7 +151,11 @@ const AdminWithdrawalTable = () => {
       }
 
       Swal.fire('Success!', 'Payment has been sent successfully.', 'success');
-      fetchWithdrawals();
+      
+      // 🔥 FAST UI FIX: Firse load karne ki jagah local data update kar do (Instant Speed!)
+      setWithdrawals(prev => prev.map(w => 
+        idsToUpdate.includes(w._id) ? { ...w, status: 'approved', txnHash: receipt.transactionHash } : w
+      ));
 
     } catch (err) {
       console.error(err);
@@ -211,7 +215,13 @@ const AdminWithdrawalTable = () => {
       }
 
       Swal.fire('Updated', 'Status changed!!!.', 'success');
-      fetchWithdrawals();
+      
+      // 🔥 FAST UI FIX: Firse API call nahi hogi, direct local state me update ho jayega!
+      const mappedStatus = status === 'dummy' ? 'approved' : 'rejected';
+      setWithdrawals(prev => prev.map(w => 
+        idsToUpdate.includes(w._id) ? { ...w, status: mappedStatus, txnHash: txnHash } : w
+      ));
+
     } catch (err) {
       Swal.fire('Error', err.response?.data?.message || err.message, 'error');
     }
@@ -224,14 +234,11 @@ const AdminWithdrawalTable = () => {
     return n;
   };
 
-  // 🔥 YAHAN HUA HAI MAIN FIX 🔥
   const fetchWithdrawals = async () => {
     try {
       setLoading(true);
       const params = {};
       
-      // Agar admin ne date nahi dali hai, toh backend ko purani date bhej do 
-      // taaki wo shuruwat se lekar ab tak ka saara data la kar de de.
       params.from = fromDate ? format(new Date(fromDate), 'dd-MM-yyyy') : '01-01-2024';
       
       if (toDate) {
@@ -453,7 +460,7 @@ const AdminWithdrawalTable = () => {
 
       <div className="overflow-auto border rounded-lg shadow-sm">
         {loading ? (
-          <div className="p-10 text-center text-gray-500 font-bold tracking-widest uppercase">⏳ Loading withdrawals...</div>
+          <div className="p-10 text-center text-gray-500 font-bold tracking-widest uppercase animate-pulse">⏳ Loading withdrawals...</div>
         ) : (
           <table className="min-w-full text-sm table-auto">
             <thead className="bg-slate-100 text-left text-slate-700 border-b border-slate-200">

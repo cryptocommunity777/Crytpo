@@ -21,7 +21,6 @@ const AdminDashboard = () => {
     pendingWithdrawalTotal: 0,
     pendingWithdrawalToday: 0,
 
-    // ✅ NAYE STATE VARIABLES FOR LEADER AUTO WITHDRAWAL
     leaderAutoWithdrawTotal: 0,
     leaderAutoWithdrawToday: 0,
 
@@ -35,15 +34,22 @@ const AdminDashboard = () => {
   });
 
   const [withdrawals, setWithdrawals] = useState([]);
+  
+  // 🔥 1. NAYE LOADING STATES (Fast rendering ke liye)
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingWithdrawals, setLoadingWithdrawals] = useState(true);
+
   const token = localStorage.getItem('adminToken');
 
   useEffect(() => {
+    // 🔥 Dono functions PARALLEL trigger honge, ek dusre ka wait nahi karenge!
     fetchDashboardData();
     fetchWithdrawals();
   }, []);
 
   const fetchDashboardData = async () => {
     try {
+      setLoadingStats(true);
       const statsRes = await api.get('/admin/dashboard', {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -57,14 +63,12 @@ const AdminDashboard = () => {
         todayDeposit: statsRes.data.todayDeposit || 0,
         pendingDepositToday: statsRes.data.pendingDepositToday || 0,
         
-        // Excludes Leader Withdrawals
         totalWithdrawal: statsRes.data.totalWithdrawal || 0,
         approvedWithdrawalTotal: statsRes.data.approvedWithdrawalTotal || 0,
         approvedWithdrawalToday: statsRes.data.approvedWithdrawalToday || 0,
         pendingWithdrawalTotal: statsRes.data.pendingWithdrawalTotal || 0,
         pendingWithdrawalToday: statsRes.data.pendingWithdrawalToday || 0,
 
-        // ✅ SET LEADER WITHDRAWAL DATA (Only visible in Pink boxes)
         leaderAutoWithdrawTotal: statsRes.data.leaderAutoWithdrawTotal || 0,
         leaderAutoWithdrawToday: statsRes.data.leaderAutoWithdrawToday || 0,
 
@@ -82,17 +86,22 @@ const AdminDashboard = () => {
       });
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoadingStats(false); // Data aate hi spinner off
     }
   };
 
   const fetchWithdrawals = async () => {
     try {
+      setLoadingWithdrawals(true);
       const res = await api.get('/admin/withdrawals', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setWithdrawals(res.data || []);
     } catch (error) {
       console.error('Error fetching withdrawals:', error);
+    } finally {
+      setLoadingWithdrawals(false); // Data aate hi table show hogi
     }
   };
 
@@ -105,8 +114,17 @@ const AdminDashboard = () => {
         <p className="text-sm text-gray-500">Real-time statistics and system management</p>
       </div>
 
-      {/* Stats Cards */}
-      <DashboardCards stats={stats} />
+      {/* 🔥 2. Stats Cards with Loading UI */}
+      {loadingStats ? (
+        <div className="flex justify-center items-center py-12 bg-white rounded-xl border border-gray-100 shadow-sm">
+           <div className="text-indigo-600 font-bold uppercase tracking-widest animate-pulse flex gap-2 items-center">
+              <span className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
+              ⏳ Loading Live Stats...
+           </div>
+        </div>
+      ) : (
+        <DashboardCards stats={stats} />
+      )}
 
       {/* Grid Layout for Search & Tree */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
@@ -126,19 +144,24 @@ const AdminDashboard = () => {
           <h3 className="text-lg font-bold text-gray-700">Recent Withdrawals</h3>
           <button 
             onClick={fetchWithdrawals}
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium bg-blue-50 px-3 py-1.5 rounded-md transition-colors"
           >
-            Refresh Data
+            {loadingWithdrawals ? 'Refreshing...' : 'Refresh Data'}
           </button>
         </div>
          
-        {/* SCROLL FIX START */}
+        {/* 🔥 3. Table with Loading UI */}
         <div className="w-full overflow-x-auto pb-2">
             <div className="min-w-[1000px]"> 
-                <AdminWithdrawalTable withdrawals={withdrawals} refreshWithdrawals={fetchWithdrawals} />
+               {loadingWithdrawals ? (
+                  <div className="text-center py-16 text-gray-400 font-bold tracking-widest uppercase animate-pulse border-2 border-dashed border-gray-100 rounded-lg">
+                    Fetching Withdrawals...
+                  </div>
+               ) : (
+                  <AdminWithdrawalTable withdrawals={withdrawals} refreshWithdrawals={fetchWithdrawals} />
+               )}
             </div>
         </div>
-        {/* SCROLL FIX END */}
          
       </div>
 

@@ -14,7 +14,10 @@ import SpinnerOverlay from "../../components/common/SpinnerOverlay";
 import SuccessModal from "../../components/modals/SuccessModal";
 import TelegramPopup from "../../components/TelegramPopup";
 import PromoVideoBox from "../../components/dashboard/PromoVideoBox"; 
-//import MonthlyRewardBox from "../../components/MonthlyRewardBox";
+
+// 🔥 MONTHLY REWARD BOX IMPORT KIYA (Ab uncommented hai)
+import MonthlyRewardBox from "../../components/MonthlyRewardBox";
+
 // 🔥 WALLET POPUP IMPORT
 import WalletPopup from "../../components/WalletPopup";
 
@@ -53,15 +56,17 @@ const Dashboard = ({ setModalState }) => {
     if (!token || !user?.userId) return;
     try {
         setLoading(true);
-        const userRes = await api.get(`/user/${user.userId}?t=${new Date().getTime()}`, { headers: { Authorization: `Bearer ${token}` } });
+        
+        // 🔥 1. MAIN DATA (Ye parallel aayega aur fast hoga)
+        const [userRes, incomeRes] = await Promise.all([
+            api.get(`/user/${user.userId}?t=${new Date().getTime()}`, { headers: { Authorization: `Bearer ${token}` } }),
+            api.get(`/wallet/${user.userId}?t=${new Date().getTime()}`, { headers: { Authorization: `Bearer ${token}` } })
+        ]);
         
         setUser(userRes.data.user); 
-        
         setTotalRealUsers(userRes.data.totalRealUsers || 0);
         setGlobalFakeCount(userRes.data.globalFakeCount || 0);
 
-        const incomeRes = await api.get(`/wallet/${user.userId}?t=${new Date().getTime()}`, { headers: { Authorization: `Bearer ${token}` } });
-        
         setIncome({
           directIncome: incomeRes.data.directIncome || 0,
           levelIncome: incomeRes.data.levelIncome || 0,
@@ -76,19 +81,20 @@ const Dashboard = ({ setModalState }) => {
           totalFastTrackIncome: incomeRes.data.totalFastTrackIncome || incomeRes.data.income?.totalFastTrackIncome || 0,
         });
 
-        try {
-            const globalRes = await api.get('/community/global-list');
+        // 🔥 2. SILENT BACKGROUND FETCH (Ye spinner ko roke bina peeche se aayega)
+        api.get('/community/global-list').then((globalRes) => {
             if(globalRes.data.success) {
                 setLatestGlobalUsers(globalRes.data.data.slice(0, 5));
             }
-        } catch(globalErr) {
+        }).catch((globalErr) => {
             console.error("Failed to fetch top 5 global users", globalErr);
-        }
+        });
 
     } catch (err) {
         console.error("Failed to fetch user data:", err);
         if (err?.response?.status === 401) logout();
     } finally {
+        // 🔥 User data aate hi spinner turant hat jayega!
         setLoading(false);
     }
   };
@@ -107,12 +113,11 @@ const Dashboard = ({ setModalState }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.userId, token]); 
 
-  // 🔥 DIRECT WALLET POPUP LOGIC (Har login / refresh par check karega)
+  // 🔥 DIRECT WALLET POPUP LOGIC
   useEffect(() => {
     if (user && user.userId) {
       const hasWallet = user.walletAddress && user.walletAddress.trim() !== "";
       
-      // Agar wallet address NAHI hai, toh 800ms baad popup dikhao
       if (!hasWallet) {
         const timer = setTimeout(() => {
           setShowWallet(true);
@@ -121,7 +126,7 @@ const Dashboard = ({ setModalState }) => {
         return () => clearTimeout(timer);
       }
     }
-  }, [user?.userId, user?.walletAddress]); // Jab bhi user load hoga ya wallet update hoga, ye chalega
+  }, [user?.userId, user?.walletAddress]); 
 
   const handleCloseWallet = () => {
     setShowWallet(false);
@@ -160,7 +165,7 @@ const Dashboard = ({ setModalState }) => {
       
       {loading && <SpinnerOverlay />}
 
-      {/* 🔥 WALLET POPUP RENDER HOGA YAHAN */}
+      {/* 🔥 WALLET POPUP */}
       {showWallet && <WalletPopup onClose={handleCloseWallet} />}
 
       <div className="space-y-6 md:space-y-8 relative z-10">
@@ -185,19 +190,17 @@ const Dashboard = ({ setModalState }) => {
              <ReferralLink link={referralLink} />
         </div>
         
-       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-    {/* 1. Income Summary Box */}
-    <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
-        <IncomeSummary income={income} user={user} />
-    </div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* 1. Income Summary Box */}
+            <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
+                <IncomeSummary income={income} user={user} />
+            </div>
 
-    {/* 2. Monthly Reward Box (Income Summary ke theek niche) */}
-    {/* <div>
-        <MonthlyRewardBox />
-    </div> */}
-</div>
-
-        
+            {/* 🔥 2. Monthly Reward Box (Ab UNCOMMENTED hai aur live chalega) */}
+            <div>
+                <MonthlyRewardBox />
+            </div>
+        </div>
 
         <section className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
             <DailyROIPlan dailyROI={user.dailyROI || []} onClaim={claimDailyROI} />

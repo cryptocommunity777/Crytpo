@@ -649,6 +649,7 @@ router.get('/fix-missed-rewards', async (req, res) => {
 
 const { getMonthlyLegStats } = require('../cron/monthlyRewardCron'); // Import the function from your cron file
 
+// 🔥 Target 8 hata diya, sirf Target 7 tak rakha hai
 const REWARD_MILESTONES = [
   { target: 50, strongLeg: 25, otherLegs: 25, reward: 30, title: "Target 1" },
   { target: 250, strongLeg: 125, otherLegs: 125, reward: 100, title: "Target 2" },
@@ -656,20 +657,35 @@ const REWARD_MILESTONES = [
   { target: 1750, strongLeg: 875, otherLegs: 875, reward: 300, title: "Target 4" },
   { target: 3750, strongLeg: 1875, otherLegs: 1875, reward: 500, title: "Target 5" },
   { target: 6750, strongLeg: 3375, otherLegs: 3375, reward: 1000, title: "Target 6" },
-  { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7" },
-  { target: 21750, strongLeg: 10875, otherLegs: 10875, reward: 3000, title: "Target 8" }
+  { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7" }
 ];
+
+// 🔥 SPEED FIX: Simple In-Memory Cache (Taaki dashboard instantly load ho)
+const rewardCache = new Map();
+const CACHE_TTL = 15 * 60 * 1000; // 15 Minutes tak data instantly aayega
 
 router.get('/monthly-reward-stats/:userId', async (req, res) => {
     try {
         const userId = Number(req.params.userId); // ID fetch
+        
+        // 🚀 CACHE CHECK: Agar data already cache me hai, toh directly bhej do (Superfast load)
+        if (rewardCache.has(userId)) {
+            const cached = rewardCache.get(userId);
+            // Agar data 15 minute se purana nahi hai
+            if (Date.now() - cached.timestamp < CACHE_TTL) {
+                return res.json(cached.data);
+            } else {
+                rewardCache.delete(userId); // Purana ho gaya toh delete kardo
+            }
+        }
+
         const now = new Date();
         
         // CURRENT MONTH ki start aur end date
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-        // 🔥 Cron file se getMonthlyLegStats call kar rahe hain
+        // 🔥 Cron file se getMonthlyLegStats call kar rahe hain (Calculation hogi)
         const legStats = await getMonthlyLegStats(userId, startOfMonth, endOfMonth);
         
         // Find current and next target
@@ -685,16 +701,26 @@ router.get('/monthly-reward-stats/:userId', async (req, res) => {
             }
         }
 
-        // 🔥 Frontend ko data bhej rahe hain (Updated with ID & Name)
-        res.json({
+        // Response Data Ready Karte Hain
+        const responseData = {
             success: true,
             strongLeg: legStats.strongLeg,
             otherLegs: legStats.otherLegs,
-            strongLegId: legStats.strongLegId,     // 👉 NAYA: Strong Leg wale ka ID
-            strongLegName: legStats.strongLegName, // 👉 NAYA: Strong Leg wale ka Name
+            strongLegId: legStats.strongLegId,     // 👉 Strong Leg wale ka ID
+            strongLegName: legStats.strongLegName, // 👉 Strong Leg wale ka Name
             milestones: REWARD_MILESTONES,
             nextTarget: nextTarget
+        };
+
+        // 🚀 CACHE SAVE: Agli baar ke liye RAM mein save kar lo
+        rewardCache.set(userId, {
+            data: responseData,
+            timestamp: Date.now()
         });
+
+        // 🔥 Frontend ko data bhej rahe hain
+        res.json(responseData);
+
     } catch (error) {
         console.error("Reward Stats Error:", error);
         res.status(500).json({ success: false, message: "Failed to fetch reward stats." });
