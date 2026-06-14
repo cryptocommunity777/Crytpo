@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import api from "../../api/axios";
 import { useAuth } from '../../context/AuthContext';
-import { Search, ChevronLeft, ChevronRight, ArrowRightLeft, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowRightLeft, ArrowUpRight, ArrowDownLeft, Wallet } from "lucide-react";
 
 const MyTransfers = () => {
   const { user } = useAuth();
@@ -18,12 +18,30 @@ const MyTransfers = () => {
     if (!userId) return;
     try {
       setLoading(true);
-      // 🔥 CACHE FIX: Added &t=${new Date().getTime()}
       const res = await api.get(
         `/transaction/transactions/${userId}?type=transfer&t=${new Date().getTime()}`
       );
+      
+      const rawData = res.data || [];
+
+      // 🔥 DUPLICATE FIX LOGIC: Ek hi transfer ki 2 entry aane par use 1 bana dega
+      const uniqueData = rawData.reduce((acc, current) => {
+        // Check karega ki kya same amount, same sender aur same receiver ki entry pehle se hai (within 10 seconds)
+        const isDuplicate = acc.find(item => 
+          item.amount === current.amount && 
+          item.toUserId === current.toUserId && 
+          item.fromUserId === current.fromUserId &&
+          Math.abs(new Date(item.createdAt).getTime() - new Date(current.createdAt).getTime()) < 10000 
+        );
+        
+        if (!isDuplicate) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
       // Ensure the newest transfers are on top
-      const sortedData = (res.data || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const sortedData = uniqueData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setTransfers(sortedData);
     } catch (err) {
       console.error("❌ Failed to fetch transfers", err);
@@ -38,7 +56,12 @@ const MyTransfers = () => {
 
   const sentTransfers = transfers.filter((txn) => String(txn.fromUserId) === String(userId));
   const receivedTransfers = transfers.filter((txn) => String(txn.toUserId) === String(userId));
+  
   const filtered = view === "sent" ? sentTransfers : receivedTransfers;
+
+  // 🔥 TOTALS CALCULATION
+  const totalSentAmount = sentTransfers.reduce((sum, txn) => sum + Number(txn.amount || 0), 0);
+  const totalReceivedAmount = receivedTransfers.reduce((sum, txn) => sum + Number(txn.amount || 0), 0);
 
   const searchedTransfers = filtered.filter((txn) => {
     const searchLower = searchTerm.toLowerCase();
@@ -75,6 +98,29 @@ const MyTransfers = () => {
           <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
             Manage your sent and received funds
           </p>
+        </div>
+      </div>
+
+      {/* 🔥 SUMMARY BOXES (TOTAL SENT & RECEIVED) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-5 flex items-center justify-between group hover:shadow-md transition-all">
+          <div>
+            <p className="text-gray-500 text-xs font-black uppercase tracking-widest mb-1">Total Sent</p>
+            <h3 className="text-2xl font-black text-red-500">${totalSentAmount.toFixed(2)}</h3>
+          </div>
+          <div className="h-12 w-12 bg-red-50 rounded-xl flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+            <ArrowUpRight size={24} strokeWidth={3} />
+          </div>
+        </div>
+        
+        <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-5 flex items-center justify-between group hover:shadow-md transition-all">
+          <div>
+            <p className="text-gray-500 text-xs font-black uppercase tracking-widest mb-1">Total Received</p>
+            <h3 className="text-2xl font-black text-green-500">${totalReceivedAmount.toFixed(2)}</h3>
+          </div>
+          <div className="h-12 w-12 bg-green-50 rounded-xl flex items-center justify-center text-green-500 group-hover:scale-110 transition-transform">
+            <ArrowDownLeft size={24} strokeWidth={3} />
+          </div>
         </div>
       </div>
 
@@ -180,35 +226,35 @@ const MyTransfers = () => {
                         {(currentPage - 1) * itemsPerPage + idx + 1}
                       </td>
 
-                      <td className="p-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border ${
-                          isSent 
-                            ? "bg-green-500/10 text-green-400 border-green-500/30" 
-                            : "bg-green-500/10 text-green-400 border-green-500/30"
-                        }`}>
-                          {isSent ? <ArrowUpRight size={12} /> : <ArrowDownLeft size={12} />}
-                          {isSent ? "Sent" : "Received"}
-                        </span>
-                      </td>
-                        <td className="p-4 text-gray-500 font-mono text-[10px] sm:text-xs text-right">
+                      <td className="p-4 text-gray-500 font-mono text-[10px] sm:text-xs text-right">
                         <div className="flex flex-col items-end">
                            <span className="text-slate-600">{date.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                            <span>{date.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
                         </div>
                       </td>
 
+                      <td className="p-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border ${
+                          isSent 
+                            ? "bg-red-50 text-red-500 border-red-200" 
+                            : "bg-green-50 text-green-500 border-green-200"
+                        }`}>
+                          {isSent ? <ArrowUpRight size={12} strokeWidth={3} /> : <ArrowDownLeft size={12} strokeWidth={3} />}
+                          {isSent ? "Sent" : "Received"}
+                        </span>
+                      </td>
+
                       <td className="p-4 font-black text-slate-900">
-                         <span className="bg-white/5 px-3 py-1.5 border border-slate-200 rounded-lg">
+                         <span className="bg-slate-50 px-3 py-1.5 border border-slate-200 rounded-lg">
                            {isSent ? txn.toUserId : txn.fromUserId}
                          </span>
                       </td>
 
                       <td className="p-4 font-black text-center">
-                        <span className={`text-base drop-shadow-md ${isSent ? "text-green-400" : "text-green-400"}`}>
+                        <span className={`text-base drop-shadow-md ${isSent ? "text-red-500" : "text-green-500"}`}>
                           {isSent ? "-" : "+"} ${Number(txn.amount || 0).toFixed(2)}
                         </span>
                       </td>
-
                     
                     </tr>
                   );
@@ -220,7 +266,7 @@ const MyTransfers = () => {
 
         {/* Pagination Footer */}
         {!loading && searchedTransfers.length > 0 && (
-           <div className="p-4 border-t border-slate-100 bg-slate-50/40 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-10">
+           <div className="p-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-10">
               <span className="text-gray-500 text-[10px] md:text-xs font-black uppercase tracking-widest">
                 Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, searchedTransfers.length)} of {searchedTransfers.length} Entries
               </span>
@@ -229,19 +275,19 @@ const MyTransfers = () => {
                  <button
                    onClick={handlePrev}
                    disabled={currentPage === 1}
-                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === 1 ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-white/10 text-slate-900 hover:bg-green-500/20 hover:text-green-500 border border-transparent hover:border-green-500/30'}`}
+                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === 1 ? 'bg-white/5 text-gray-400 cursor-not-allowed border border-transparent' : 'bg-white text-slate-900 hover:bg-green-50 hover:text-green-500 border border-slate-200 hover:border-green-500/30 shadow-sm'}`}
                  >
                    <ChevronLeft size={18} />
                  </button>
                  
-                 <span className="bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-2 rounded-lg">
+                 <span className="bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-2 rounded-lg shadow-sm">
                     {currentPage} / {totalPages}
                  </span>
                  
                  <button
                    onClick={handleNext}
                    disabled={currentPage === totalPages}
-                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === totalPages ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-white/10 text-slate-900 hover:bg-green-500/20 hover:text-green-500 border border-transparent hover:border-green-500/30'}`}
+                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === totalPages ? 'bg-white/5 text-gray-400 cursor-not-allowed border border-transparent' : 'bg-white text-slate-900 hover:bg-green-50 hover:text-green-500 border border-slate-200 hover:border-green-500/30 shadow-sm'}`}
                  >
                    <ChevronRight size={18} />
                  </button>
