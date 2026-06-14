@@ -4,8 +4,8 @@ const User = require('../models/User');
 const FastTrack = require('../models/FastTrack');
 const Transaction = require('../models/Transaction');
 
-cron.schedule('8 0 * * *', async () => {
-    console.log('⏳ Running Fast Track Daily Bonus Cron (IST)...');
+cron.schedule('15 1 * * *', async () => {
+        console.log('⏳ Running Fast Track Daily Bonus Cron (IST)...');
     try {
         const activeTracks = await FastTrack.find({ status: 'active' });
         let count = 0;
