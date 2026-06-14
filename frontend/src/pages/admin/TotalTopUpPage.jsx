@@ -8,7 +8,6 @@ import { Crown, User, ArrowRightCircle, ExternalLink } from 'lucide-react';
 // 🔥 HELPER 1: Hamesha Indian Standard Time (IST) Date dega (YYYY-MM-DD format mein) filter aur stats ke liye
 const getISTDateStr = (dateObj = new Date()) => {
   if (!dateObj) return '';
-  // 'en-CA' automatically YYYY-MM-DD format deta hai
   return new Date(dateObj).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 };
 
@@ -46,13 +45,14 @@ const TotalTopUpPage = () => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   
-  // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20); 
 
   // ----------------- 🔥 IMPERSONATE (LOGIN) LOGIC -----------------
   const handleImpersonate = async (targetId) => {
-    if (!targetId || String(targetId).toLowerCase().includes("system")) return;
+    // 🔥 FIX: Agar target "Self" ya "System" hai toh function wahi ruk jayega
+    const idStr = String(targetId || "").toLowerCase();
+    if (!targetId || idStr.includes("system") || idStr === "self") return;
 
     const match = String(targetId).match(/\d+/);
     const cleanUserId = match ? match[0] : targetId;
@@ -107,7 +107,6 @@ const TotalTopUpPage = () => {
   };
   // --------------------------------------------------------------
 
-  // FETCH
   useEffect(() => {
     const fetchTopupUsers = async () => {
       try {
@@ -132,7 +131,6 @@ const TotalTopUpPage = () => {
     fetchTopupUsers();
   }, []);
 
-  // FILTER LOGIC (IST Based)
   useEffect(() => {
     const filtered = topupUsers.filter((user) => {
       const matchesId = searchId ? String(user.userId).includes(searchId) : true;
@@ -150,8 +148,7 @@ const TotalTopUpPage = () => {
     setCurrentPage(1);
   }, [searchId, selectedRole, fromDate, toDate, topupUsers]);
 
-  // STATS CALCULATION (IST Based)
-  const todayIST = getISTDateStr(); // Aaj ki Indian Date
+  const todayIST = getISTDateStr(); 
   
   let totalBusiness = 0;
   let todayBusiness = 0;
@@ -182,7 +179,6 @@ const TotalTopUpPage = () => {
       }
   });
 
-  // Dynamic Pagination Logic
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
@@ -192,7 +188,6 @@ const TotalTopUpPage = () => {
     setCurrentPage(1);
   };
 
-  // CSV EXPORT (IST Dates)
   const exportToCSV = () => {
     const summary = [
       { Metric: 'Total TopUps', Value: filteredUsers.length },
@@ -225,7 +220,6 @@ const TotalTopUpPage = () => {
     <div className="p-6 max-w-7xl pt-24 text-black mx-auto">
       <h2 className="text-3xl font-bold text-indigo-700 mb-6">💰 Detailed Top-Up Report</h2>
 
-      {/* FILTERS */}
       <div className="flex flex-col md:flex-row gap-4 mb-6 flex-wrap bg-slate-50 p-4 rounded-xl border border-slate-200">
         <input
           type="text"
@@ -284,7 +278,6 @@ const TotalTopUpPage = () => {
         </button>
       </div>
 
-      {/* SUMMARY CARDS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
         <SummaryCard label="Total Business" value={`$${totalBusiness}`} color="bg-green-100 border-green-200" />
         <SummaryCard label="Today Business" value={`$${todayBusiness}`} color="bg-teal-100 border-teal-200" />
@@ -294,7 +287,6 @@ const TotalTopUpPage = () => {
         <SummaryCard label="Normal Count" value={normalCount} color="bg-blue-100 border-blue-200" />
       </div>
 
-      {/* EXPORT BUTTON */}
       <div className="flex justify-between items-center mb-4">
         <p className="text-sm text-gray-500 font-bold uppercase tracking-widest">Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredUsers.length)} of {filteredUsers.length} entries</p>
         <button
@@ -305,7 +297,6 @@ const TotalTopUpPage = () => {
         </button>
       </div>
 
-      {/* TABLE */}
       {loading ? (
         <div className="text-center p-10 text-gray-500 font-bold tracking-widest uppercase text-lg animate-pulse">⏳ Loading Data...</div>
       ) : (
@@ -332,7 +323,6 @@ const TotalTopUpPage = () => {
                   <tr key={u._id || i} className="hover:bg-indigo-50/30 transition-colors">
                     <td className="px-4 py-3 text-gray-500 font-bold">{startIndex + i + 1}</td>
                     
-                    {/* 🔥 Clickable Receiver User ID */}
                     <td className="px-4 py-3 font-black text-indigo-600">
                       <button
                         onClick={() => handleImpersonate(u.userId)}
@@ -346,7 +336,6 @@ const TotalTopUpPage = () => {
 
                     <td className="px-4 py-3 text-gray-800 capitalize font-bold">{u.name}</td>
                     
-                    {/* ROLE BADGE */}
                     <td className="px-4 py-3">
                       {u.initiatorRole === 'leader' ? (
                         <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 border border-yellow-300 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">
@@ -359,9 +348,13 @@ const TotalTopUpPage = () => {
                       )}
                     </td>
 
-                    {/* 🔥 Clickable Sender User ID (Topped Up By) */}
+                    {/* 🔥 FIX: Agar Self ya System hai, toh Button nahi, bas text aayega */}
                     <td className="px-4 py-3 text-gray-600 font-medium">
-                       {u.topUpBy ? (
+                       {(!u.topUpBy || String(u.topUpBy).toLowerCase() === 'self' || String(u.topUpBy).toLowerCase() === 'system') ? (
+                         <span className="text-[10px] bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-500 font-black uppercase tracking-widest">
+                           {u.topUpBy || 'Self / System'}
+                         </span>
+                       ) : (
                          <button 
                            onClick={() => handleImpersonate(u.topUpBy)}
                            className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded border border-gray-200 w-max hover:bg-gray-100 hover:text-indigo-600 transition-all"
@@ -371,8 +364,6 @@ const TotalTopUpPage = () => {
                            <span className="text-xs font-bold text-gray-700 hover:text-indigo-600 transition-colors">{u.topUpBy}</span>
                            <ExternalLink size={12} className="opacity-70 text-indigo-600" />
                          </button>
-                       ) : (
-                         <span className="text-[10px] bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-500 font-black uppercase tracking-widest">Self / System</span>
                        )}
                     </td>
 
@@ -388,7 +379,6 @@ const TotalTopUpPage = () => {
         </div>
       )}
 
-      {/* PAGINATION CONTROLS */}
       {totalPages > 1 && (
         <div className="flex justify-center gap-4 mt-6">
           <button 
