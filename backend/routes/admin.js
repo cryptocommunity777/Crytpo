@@ -2302,7 +2302,6 @@ router.get('/leader-withdrawal-list', verifyAdmin, async (req, res) => {
     }
 });
 
-
 // 2. 🔥 LEADER AUTO-WITHDRAWAL EXECUTE KARNE KI API
 router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) => {
     try {
@@ -2367,6 +2366,9 @@ router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) 
                         poolAmtToDistribute -= deductFromPool;
                     }
                 }
+                
+                // 🔥🔥 FIX: MARK ARRAY AS MODIFIED TO SAVE IN DB 🔥🔥
+                user.markModified('activePools'); 
             }
         }
 
