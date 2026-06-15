@@ -500,6 +500,134 @@ router.post('/direct-login/:userId', verifyAdmin, async (req, res) => {
 
 
 
+// ==========================================
+// 🚀 1. FETCH USER INFO FOR SPONSOR CHANGE
+// ==========================================
+router.get('/sponsor-change-info/:userId', verifyAdmin, async (req, res) => {
+    try {
+        const user = await User.findOne({ userId: req.params.userId })
+            .select('userId name sponsorId isToppedUp topUpDate directCount');
+            
+        if (!user) return res.status(404).json({ success: false, message: 'Target User not found!' });
+
+        let currentSponsorName = "None";
+        if (user.sponsorId) {
+            const sp = await User.findOne({ userId: user.sponsorId }).select('name');
+            if (sp) currentSponsorName = sp.name;
+        }
+
+        res.json({ success: true, data: { ...user.toObject(), currentSponsorName } });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
+ 
+// ==========================================
+// 🚀 1. GET SPONSOR CHANGE HISTORY (SUPER FAST OPTIMIZED)
+// ==========================================
+router.get('/sponsor-change-history', verifyAdmin, async (req, res) => {
+    try {
+        // 🔥 JADOO YAHAN HAI: 
+        // 1. .select() -> Sirf wahi data layega jo zaroori hai (baaki sab ignore karega)
+        // 2. .lean() -> Mongoose ke heavy functions ko hata kar direct pure JSON dega (10x faster)
+        const history = await Transaction.find({ type: "sponsor_change" })
+            .select('userId description createdAt') 
+            .sort({ createdAt: -1 })
+            .limit(50)
+            .lean(); 
+
+        res.json({ success: true, data: history });
+    } catch (err) {
+        console.error("Sponsor History Fetch Error:", err);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
+
+
+// ==========================================
+// 🚀 2. EXECUTE SPONSOR CHANGE (UPDATED WITH LOGGING)
+// ==========================================
+// ==========================================
+// 🚀 2. EXECUTE SPONSOR CHANGE (WITH ANTI-CRASH LOOP DETECTION)
+// ==========================================
+router.post('/execute-sponsor-change', verifyAdmin, async (req, res) => {
+    try {
+        const { targetUserId, newSponsorId, adminPassword } = req.body;
+
+        if (!adminPassword) return res.status(400).json({ success: false, message: "Admin password is required." });
+
+        const tokenData = req.admin || req.user;
+        const adminDbId = tokenData?.adminId || tokenData?.id || tokenData?._id;
+        if (!adminDbId) return res.status(403).json({ success: false, message: "Admin token missing ID." });
+
+        const admin = await Admin.findById(adminDbId);
+        if (!admin) return res.status(404).json({ success: false, message: "Admin account not found. Please Re-Login." });
+
+        const isMatch = await bcrypt.compare(adminPassword, admin.password);
+        if (!isMatch) return res.status(403).json({ success: false, message: "Incorrect Admin Password! Access Denied." });
+
+        if (String(targetUserId) === String(newSponsorId)) {
+            return res.status(400).json({ success: false, message: "User cannot be their own sponsor!" });
+        }
+
+        const targetUser = await User.findOne({ userId: targetUserId });
+        if (!targetUser) return res.status(404).json({ success: false, message: "Target user not found." });
+
+        const newSponsor = await User.findOne({ userId: newSponsorId });
+        if (!newSponsor) return res.status(404).json({ success: false, message: `New sponsor ID #${newSponsorId} not found.` });
+
+        // 🔥🔥🔥 CIRCULAR LOOP DETECTION (ANTI-CRASH SYSTEM) 🔥🔥🔥
+        // Check karte hain ki kahin Naya Sponsor, Target User ke neeche (downline) toh nahi aata?
+        let currentUplineId = newSponsor.sponsorId;
+        let loopCount = 0; // Failsafe limit
+        
+        while (currentUplineId && loopCount < 1000) { // Max 1000 level deep check
+            if (String(currentUplineId) === String(targetUser.userId)) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "🚨 ERROR: Circular Loop Detected! Aap kisi User ko uski khud ki Downline (Team) ke neeche shift nahi kar sakte. Isse site crash ho jayegi!" 
+                });
+            }
+            // Upar ki taraf check karte jao
+            const uplineUser = await User.findOne({ userId: currentUplineId }).select('sponsorId').lean();
+            currentUplineId = uplineUser ? uplineUser.sponsorId : null;
+            loopCount++;
+        }
+        // 🔥🔥🔥 ANTI-CRASH CHECK END 🔥🔥🔥
+
+        // Execute Sponsor Change
+        const oldSponsorId = targetUser.sponsorId;
+        targetUser.sponsorId = newSponsorId;
+        await targetUser.save();
+
+        // YAHAN HISTORY SAVE HO RAHI HAI
+        await Transaction.create({
+            userId: targetUser.userId,
+            type: "sponsor_change",
+            source: "admin",
+            amount: 0,
+            description: `Changed from Old Sponsor #${oldSponsorId || 'None'} to New Sponsor #${newSponsor.userId} (${newSponsor.name})`,
+            status: "completed"
+        });
+
+        res.json({ 
+            success: true, 
+            message: `Successfully changed sponsor for #${targetUser.userId}.` 
+        });
+
+    } catch (err) {
+        console.error("Sponsor Change Error:", err);
+        res.status(500).json({ success: false, message: 'Server Error during sponsor change.' });
+    }
+});
+
+
+
+
+
+
+
  
 
 // 🔹 GET /login-stats (For Advanced Login Analytics)
@@ -969,7 +1097,77 @@ router.get('/global-team', verifyAdmin, async (req, res) => {
 
 
 
+// 🚀 NAYA: FAST TRACK ADD-ON OFFER PROGRESS TRACKER API
+// ==========================================
+// 🚀 FAST TRACK PROGRESS (100x SUPER FAST OPTIMIZED)
+// ==========================================
+router.get('/fast-track-progress', verifyAdmin, async (req, res) => {
+    try {
+        const NEW_OFFER_START = new Date("2026-06-14T00:00:00+05:30");
+        const now = new Date();
 
+        // 1. 🔥 Ek hi baar saara zaroori data uthao (Loop ke andar query NAHI karni hai)
+        const allUsers = await User.find({ isToppedUp: true })
+            .select('userId name topUpDate sponsorId')
+            .lean();
+
+        // 2. RAM (Memory) me ek Map banayenge fast calculation ke liye
+        const userMap = {};
+        for (let user of allUsers) {
+            if (!user.topUpDate) continue;
+            
+            const topUpDate = new Date(user.topUpDate);
+            const deadline = new Date(topUpDate.getTime() + (144 * 60 * 60 * 1000)); // 6 Days (144 hours)
+            
+            userMap[user.userId] = {
+                userId: user.userId,
+                name: user.name,
+                topUpDate: user.topUpDate,
+                deadline: deadline,
+                directs: 0
+            };
+        }
+
+        // 3. 🔥 In-Memory Directs Calculation (Database par no load)
+        for (let directUser of allUsers) {
+            // Agar is user ka koi sponsor hai aur us sponsor ka data Map me available hai
+            if (directUser.sponsorId && userMap[directUser.sponsorId] && directUser.topUpDate) {
+                const sponsor = userMap[directUser.sponsorId];
+                const directTopUpDate = new Date(directUser.topUpDate);
+
+                // Agar direct 14 June ke baad aaya hai aur sponsor ki deadline ke andar hai
+                if (directTopUpDate >= NEW_OFFER_START && directTopUpDate <= sponsor.deadline) {
+                    sponsor.directs += 1;
+                }
+            }
+        }
+
+        // 4. Sirf unko filter karenge jinke > 0 directs hain
+        let progressList = [];
+        for (let key in userMap) {
+            const sponsor = userMap[key];
+            if (sponsor.directs >= 1) {
+                let status = 'In Progress';
+                if (sponsor.directs >= 6) {
+                    status = 'Achieved';
+                } else if (now > sponsor.deadline) {
+                    status = 'Failed';
+                }
+
+                sponsor.status = status;
+                progressList.push(sponsor);
+            }
+        }
+
+        // 5. Sabse zyada directs wale top par
+        progressList.sort((a, b) => b.directs - a.directs);
+        
+        res.json({ success: true, data: progressList });
+    } catch (error) {
+        console.error("Fast Track Progress Error:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+});
 
 
 

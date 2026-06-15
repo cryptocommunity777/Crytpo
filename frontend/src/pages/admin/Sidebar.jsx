@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { Timer } from 'lucide-react'; // 🔥 NAYA IMPORT ADD KIYA
 import {
   FaHome, FaUsers, FaMoneyBill, FaWallet, FaListAlt, FaCog, FaSignOutAlt,
   FaSitemap, FaProjectDiagram, FaExchangeAlt, FaFileAlt, FaUserPlus, FaGift,
@@ -98,6 +99,9 @@ const Sidebar = () => {
             <NavLink to={`${BASE_PATH}/manage-users`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/manage-users`)}>
               <FaUserCog className="inline-block mr-2 text-blue-500" /> Manage Roles & Leaders
             </NavLink>
+            {/* <NavLink to={`${BASE_PATH}/change-sponsor`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/change-sponsor`)}>
+  <FaExchangeAlt className="inline-block mr-2 text-indigo-500" /> Change Sponsor
+</NavLink> */}
 
             <NavLink to={`${BASE_PATH}/blocked-users`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/blocked-users`)}>
               <FaUserSlash className="inline-block mr-2" /> Blocked Users
@@ -143,13 +147,17 @@ const Sidebar = () => {
               <FaSearchDollar className="inline-block mr-2 text-orange-500" /> Address Monitor
             </NavLink>
 
-            {/* 🔥 NAYA LINK: INDIA BOOST 🔥 */}
             <NavLink to={`${BASE_PATH}/india-boost`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/india-boost`)}>
               <FaBolt className="inline-block mr-2 text-orange-500 animate-pulse" /> India Boost 🇮🇳
             </NavLink>
 
             <NavLink to={`${BASE_PATH}/fast-track-report`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/fast-track-report`)}>
               <FaRocket className="inline-block mr-2 text-orange-500" /> Fast Track Report
+            </NavLink>
+
+            {/* 🔥 NAYA LINK: FAST TRACK TRACKER 🔥 */}
+            <NavLink to={`${BASE_PATH}/fast-track-progress`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/fast-track-progress`)}>
+              <Timer className="inline-block mr-2 text-indigo-500" size={16} style={{ verticalAlign: 'text-bottom' }} /> Fast Track Tracker
             </NavLink>
             
             <NavLink to={`${BASE_PATH}/wallet-direct-stats`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/wallet-direct-stats`)}>
@@ -191,7 +199,6 @@ const Sidebar = () => {
             <NavLink to={`${BASE_PATH}/transactions/reverse`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/transactions/reverse`)}>
               <FaExchangeAlt className="inline-block mr-2" /> Reverse Txn
             </NavLink>
-
 
             <div className="pt-2 pb-1">
                 <p className="text-xs font-bold text-black uppercase tracking-wider ml-2">System</p>

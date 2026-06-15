@@ -80,6 +80,8 @@ import WalletDirectStats from './pages/admin/WalletDirectStats'; // Path apne hi
 import LeaderAutoWithdraw from './pages/admin/LeaderAutoWithdraw';
 import DepositAddressMonitor from './pages/admin/DepositAddressMonitor';
 import IndiaBoostControl from './pages/admin/IndiaBoostControl';
+import FastTrackProgress from './pages/admin/FastTrackProgress.jsx';
+import ChangeSponsor from './pages/admin/ChangeSponsor';
 
 // 📜 Scroll Restoration
 const ScrollToTop = () => {
@@ -151,6 +153,7 @@ function AppContent() {
               <Route path="address-monitor" element={<DepositAddressMonitor />} />
               <Route path="india-boost" element={<IndiaBoostControl />} />
               <Route path="booster-offer" element={<BoosterOfferPage />} />
+              <Route path="change-sponsor" element={<ChangeSponsor />} />
               <Route path="security" element={<AdminSecurity />} />
               <Route path="withdrawals/request" element={<RequestWithdrawalPage />} />
               <Route path="withdrawals/all" element={<AllWithdrawalsPage />} />
@@ -159,6 +162,7 @@ function AppContent() {
               <Route path="level-income" element={<LevelIncomePage />} />
               <Route path="wallet-summary" element={<WalletSummaryPage />} />
               <Route path="fast-track-report" element={<FastTrackReport />} />
+              <Route path="fast-track-progress" element={<FastTrackProgress />} />
               <Route path="user-fund-overview" element={<UserFundOverview />} />
               <Route path="credit-to-wallet" element={<CreditToWalletPage />} />
               <Route path="blocked-users" element={<BlockedUsers />} />
