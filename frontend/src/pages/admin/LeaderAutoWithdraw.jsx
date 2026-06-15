@@ -1,5 +1,3 @@
-// C:\Users\HP\Desktop\Cryptocommunity\frontend\src\pages\admin\LeaderAutoWithdraw.jsx
-
 import React, { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import { ShieldCheck, Zap, Wallet, CheckCircle, User } from 'lucide-react';
@@ -39,7 +37,7 @@ const LeaderAutoWithdraw = () => {
             });
 
             alert(res.data.message);
-            fetchLeaders(); // List refresh karne ke liye
+            fetchLeaders(); // Refresh the list after execution
         } catch (error) {
             alert(error.response?.data?.message || "Failed to process withdrawal.");
         } finally {

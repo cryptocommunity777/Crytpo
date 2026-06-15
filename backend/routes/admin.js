@@ -2264,6 +2264,7 @@ router.put('/withdrawals/reject/:id', verifyAdmin, async (req, res) => {
 // 1. 🔥 LEADER LIST FETCH KARNE KI API
 // 1. 🔥 LEADER LIST FETCH KARNE KI API
 // 1. 🔥 LEADER LIST FETCH KARNE KI API
+// 1. 🔥 LEADER WITHDRAWAL LIST API (Updated with Dynamic Math)
 router.get('/leader-withdrawal-list', verifyAdmin, async (req, res) => {
     try {
         const leaders = await User.find(
@@ -2272,12 +2273,25 @@ router.get('/leader-withdrawal-list', verifyAdmin, async (req, res) => {
         ).lean();
         
         const leaderData = leaders.map(user => {
+            
+            // 🔥 JADOO YAHAN HAI: Admin ab user ki tarah live calculate karega
+            let dynamicPoolIncome = 0;
+            if (user.activePools && user.activePools.length > 0) {
+                for (let pool of user.activePools) {
+                    let earned = (pool.daysPaid || 0) * (pool.dailyAmount || 0);
+                    let available = earned - (pool.withdrawnAmount || 0);
+                    if (available > 0) {
+                        dynamicPoolIncome += available;
+                    }
+                }
+            }
+
             // 🔥 RULE: Fast Track aur Wallet Balance isme JUDEGA NAHI
             const totalIncome = 
                 (user.directIncome || 0) + 
                 (user.levelIncome || 0) + 
                 (user.rewardIncome || 0) + 
-                (user.poolIncome || 0);
+                dynamicPoolIncome; // Purane user.poolIncome ki jagah naya live total
             
             const eligibleWithdrawal = Math.floor(totalIncome / 10) * 10; // Sirf 10 ke multiples
             
@@ -2302,7 +2316,8 @@ router.get('/leader-withdrawal-list', verifyAdmin, async (req, res) => {
     }
 });
 
-// 2. 🔥 LEADER AUTO-WITHDRAWAL EXECUTE KARNE KI API
+
+// 2. 🔥 LEADER AUTO-WITHDRAWAL EXECUTE API (Updated with Dynamic Math)
 router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) => {
     try {
         const leaderId = Number(req.params.userId);
@@ -2310,11 +2325,23 @@ router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) 
 
         if (!user) return res.status(404).json({ success: false, message: "Leader not found." });
 
+        // 🔥 Live calculate Pool Income for execute as well
+        let dynamicPoolIncome = 0;
+        if (user.activePools && user.activePools.length > 0) {
+            for (let pool of user.activePools) {
+                let earned = (pool.daysPaid || 0) * (pool.dailyAmount || 0);
+                let available = earned - (pool.withdrawnAmount || 0);
+                if (available > 0) {
+                    dynamicPoolIncome += available;
+                }
+            }
+        }
+
         // 🔥 RULE: SIRF 4 INCOMES KA TOTAL (Wallet Balance & Fast Track excluded)
         const dInc = user.directIncome || 0;
         const lInc = user.levelIncome || 0;
         const rInc = user.rewardIncome || 0;
-        const pInc = user.poolIncome || 0;
+        const pInc = dynamicPoolIncome; // Use dynamic pool income
 
         const totalIncome = dInc + lInc + rInc + pInc;
         const eligibleAmt = Math.floor(totalIncome / 10) * 10; 
@@ -2326,7 +2353,7 @@ router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) 
         let remainingToDeduct = eligibleAmt;
         const deductions = { direct: 0, level: 0, reward: 0, pool: 0 };
 
-        // 🧠 Logic: Income boxes se deduction (Fast Track is completely ignored)
+        // 🧠 Logic: Income boxes se deduction
         if (user.directIncome > 0 && remainingToDeduct > 0) {
             let amt = Math.min(user.directIncome, remainingToDeduct);
             deductions.direct = amt;
@@ -2345,10 +2372,10 @@ router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) 
             user.rewardIncome -= amt;
             remainingToDeduct -= amt;
         }
-        if (user.poolIncome > 0 && remainingToDeduct > 0) {
-            let amt = Math.min(user.poolIncome, remainingToDeduct);
+        if (dynamicPoolIncome > 0 && remainingToDeduct > 0) {
+            let amt = Math.min(dynamicPoolIncome, remainingToDeduct);
             deductions.pool = amt;
-            user.poolIncome -= amt;
+            user.poolIncome = Math.max(0, (user.poolIncome || 0) - amt); // Sync master wallet
             remainingToDeduct -= amt;
 
             // 🔥 PRO-LOGIC: Active Pools ke andar `withdrawnAmount` set karna
@@ -2367,7 +2394,7 @@ router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) 
                     }
                 }
                 
-                // 🔥🔥 FIX: MARK ARRAY AS MODIFIED TO SAVE IN DB 🔥🔥
+                // 🔥🔥 FIX: MARK ARRAY AS MODIFIED TO SAVE IN DB
                 user.markModified('activePools'); 
             }
         }
