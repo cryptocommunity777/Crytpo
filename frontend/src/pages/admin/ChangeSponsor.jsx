@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import Swal from 'sweetalert2';
-import { UserCog, Search, User, ShieldCheck, ArrowRightLeft, Key, History } from 'lucide-react';
+import { UserCog, Search, User, ShieldCheck, ArrowRightLeft, Key, History, AlertTriangle } from 'lucide-react';
 
 const ChangeSponsor = () => {
     const [targetId, setTargetId] = useState('');
@@ -128,7 +128,7 @@ const ChangeSponsor = () => {
     return (
         <div className="p-4 pt-12 md:pt-16 max-w-5xl mx-auto w-full animate-in fade-in duration-500 text-slate-800 pb-20">
             
-            {/* Header */}
+            {/* Header & Warnings */}
             <div className="mb-8 border-b border-slate-200 pb-5">
                 <h2 className="text-2xl md:text-3xl font-black text-indigo-700 flex items-center gap-3">
                     <UserCog size={32} /> Network Sponsor Management
@@ -136,6 +136,16 @@ const ChangeSponsor = () => {
                 <p className="text-slate-500 text-sm mt-2 font-medium">
                     Move a user to a new sponsor. <strong className="text-red-500">Warning:</strong> This permanently shifts their downline network.
                 </p>
+
+                {/* 🚨 CRITICAL ENGLISH WARNING BOX ADDED HERE 🚨 */}
+                <div className="mt-5 bg-red-50 border border-red-200 border-l-4 border-l-red-600 p-4 rounded-r-xl shadow-sm">
+                    <h4 className="text-red-700 font-black text-sm md:text-base flex items-center gap-2 tracking-wide uppercase">
+                        <AlertTriangle size={20} className="text-red-600 animate-pulse"/> Critical System Warning
+                    </h4>
+                    <p className="text-red-600/90 text-xs md:text-sm mt-1.5 font-bold leading-relaxed">
+                        Never change a Top Leader's sponsor to someone who is already in their own Downline (Team). Doing this will create an <strong className="bg-red-200 text-red-800 px-1 rounded">Infinite Circular Loop</strong> which will instantly HANG, SLOW DOWN, or CRASH the entire website. The system has Anti-Crash security, but please be extremely careful.
+                    </p>
+                </div>
             </div>
 
             {/* Step 1: Search Target User */}
