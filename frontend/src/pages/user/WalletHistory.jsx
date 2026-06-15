@@ -78,12 +78,20 @@ const WalletHistory = () => {
         const desc = (t.description || "").toLowerCase();
         
         // 🔥 DUPLICATE ENTRY FIX FOR TRANSFERS
-        // Backend transfer me 2 entries banata hai, humein sirf current user wali dikhani hai
+        // Backend transfer me 2 entries banata hai, humein sirf ek sahi wali dikhani hai
         if (t.type === 'transfer') {
             const isSender = String(t.fromUserId) === String(uid) || String(t.userId) === String(uid);
             const isReceiver = String(t.toUserId) === String(uid);
+            
             // Agar transfer hai, toh ensure karo ki user is entry ka hissa hai
             if (!isSender && !isReceiver) return false;
+
+            // 🔥 MAIN FIX: Dusri party ki mirror entry hide karo
+            // Agar main Receiver hoon, toh mujhe "Transferred To" wali entry nahi dekhni
+            if (isReceiver && !isSender && desc.includes("transferred")) return false;
+
+            // Agar main Sender hoon, toh mujhe "Received From" wali entry nahi dekhni
+            if (isSender && !isReceiver && desc.includes("received")) return false;
         }
 
         return !(
