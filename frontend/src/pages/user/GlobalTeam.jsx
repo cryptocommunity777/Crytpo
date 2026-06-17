@@ -4,12 +4,36 @@ import api from "../../api/axios";
 import { Globe, Users, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 
 // ✅ HELPER 1: For Flag Image (Strictly 2 letters)
+// ✅ HELPER 1: For Flag Image (Ultra Smart - Handles both Old Full Names & New Codes)
 const fixCountryCode = (code) => {
   if (!code) return 'un'; 
   const c = code.toLowerCase().trim();
-  if (c === 'uk') return 'gb';   
-  if (c === 'usa') return 'us';  
-  if (c === 'uae') return 'ae';  
+
+  // Agar database me purana lamba naam save hai, toh usko sahi code me convert kar do
+  const oldNamesFix = {
+    'pakistan': 'pk',
+    'bangladesh': 'bd',
+    'india': 'in',
+    'south africa': 'za',
+    'nigeria': 'ng',
+    'sri lanka': 'lk',
+    'malaysia': 'my',
+    'vietnam': 'vn',
+    'ghana': 'gh',
+    'kenya': 'ke',
+    'nepal': 'np',
+    'usa': 'us',
+    'united states': 'us',
+    'uk': 'gb',
+    'united kingdom': 'gb',
+    'uae': 'ae',
+    'united arab emirates': 'ae'
+  };
+
+  // Agar lamba naam match hota hai toh sahi 2-letter code bhejo
+  if (oldNamesFix[c]) return oldNamesFix[c];
+
+  // Warna jo naya 2-letter code aa raha hai usko use karo
   return c.substring(0, 2);      
 };
 

@@ -166,7 +166,7 @@ function Register() {
   { value: 'Canada', label: 'Canada (+1)' },
   { value: 'Singapore', label: 'Singapore (+65)' },
   { value: 'Malaysia', label: 'Malaysia (+60)' },
-  { value: 'Pakistan', label: 'Pakistan (+92)' },
+  { value: 'PK', label: 'Pakistan (+92)' }, // 🔥 Fix: 'PK' instead of 'Pakistan'
   { value: 'Bangladesh', label: 'Bangladesh (+880)' },
   { value: 'Nepal', label: 'Nepal (+977)' },
   { value: 'South Africa', label: 'South Africa (+27)' },
