@@ -115,6 +115,19 @@ const CreditToWalletHistory = () => {
     setFiltered(result);
   };
 
+  // 🔥 TOTAL CALCULATOR LOGIC
+  const totalCredit = filtered.reduce((acc, txn) => {
+    let val = 0;
+    if (txn.amount && typeof txn.amount === 'object' && txn.amount.$numberDecimal) {
+      val = parseFloat(txn.amount.$numberDecimal);
+    } else if (txn.amount !== undefined && txn.amount !== null) {
+      val = parseFloat(txn.amount);
+    } else {
+      val = parseFloat(txn.grossAmount || 0);
+    }
+    return acc + (isNaN(val) ? 0 : val);
+  }, 0);
+
   const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
   const indexOfLast = currentPage * itemsPerPage;
   const indexOfFirst = indexOfLast - itemsPerPage;
@@ -132,7 +145,7 @@ const CreditToWalletHistory = () => {
         .custom-scroll::-webkit-scrollbar-thumb { background: #f97316; border-radius: 10px; }
       `}</style>
 
-      {/* Header */}
+      {/* Header with Total Amount Box */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
@@ -141,6 +154,17 @@ const CreditToWalletHistory = () => {
           <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
             Track your internal fund credits and binary income
           </p>
+        </div>
+
+        {/* 🔥 NEW TOTAL BOX 🔥 */}
+        <div className="bg-white shadow-sm border border-slate-200 px-6 py-3.5 rounded-2xl flex items-center gap-4 min-w-[200px]">
+            <div className="p-2.5 bg-green-50 rounded-xl text-green-500 shrink-0">
+               <Wallet size={24} />
+            </div>
+            <div>
+               <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Credited</p>
+               <h3 className="text-xl md:text-2xl font-black text-green-500">+ ${totalCredit.toFixed(2)}</h3>
+            </div>
         </div>
       </div>
 

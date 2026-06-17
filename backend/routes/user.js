@@ -874,13 +874,15 @@ router.put(
     // =======================================================
       // 🔹 4. BACKGROUND MLM ENGINE (Runs behind the scenes)
       // =======================================================
+      // =======================================================
+      // 🔹 4. BACKGROUND MLM ENGINE (Runs behind the scenes)
+      // =======================================================
       (async () => {
           try {
               if (isFirstTopup) {
-                   // 🌟 GLOBAL TEAM COUNT
-                 // 🔥 SMART CAPPING ENGINE CALL (Real Topup)
-      await processGlobalTeamGrowth(targetUser.userId);
-
+                  // 🌟 GLOBAL TEAM COUNT
+                  // 🔥 SMART CAPPING ENGINE CALL (Real Topup)
+                  await processGlobalTeamGrowth(targetUser.userId);
 
                   if (targetUser.sponsorId) {
                       const sponsor = await User.findOne({ userId: targetUser.sponsorId });
@@ -920,13 +922,10 @@ router.put(
                       }
                   }
 
-                  // 🌟 UNIFIED 100-LEVEL ENGINE (Level Income + Leader Breakaway)
+                  // 🌟 UNIFIED 100-LEVEL ENGINE (ABSOLUTE BREAKAWAY SYSTEM)
                   const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
                   let currentUplineId = targetUser.sponsorId; 
                   let currentLevel = 1;
-                  
-                  // 🔥 THE MAGIC LOCK: Check karega ki kya immediate leader ko paisa mil chuka hai
-                  let leaderFoundAndPaid = false;
 
                   while (currentUplineId && currentLevel <= 100) {
                       const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId role');
@@ -942,19 +941,26 @@ router.put(
 
                       const isCurrentUplineLeader = (upline.role === 'leader');
 
-                      // 🛑 RULE 2: 2ND LEADER BLOCKER (Agar ek leader ko paisa mil chuka hai, aur ye doosra leader hai, toh SKIP karo)
-                      if (isCurrentUplineLeader && leaderFoundAndPaid) {
-                          console.log(`[BREAKAWAY] Skipped Leader ${upline.userId} at Level ${currentLevel} because Immediate Leader already paid.`);
-                          currentUplineId = upline.sponsorId;
-                          currentLevel++;
-                          continue; 
+                      // ============================================
+                      // 1. LEVEL INCOME LOGIC (Level 2 se 20 tak)
+                      // ============================================
+                      if (currentLevel >= 2 && currentLevel <= 20) {
+                          const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
+                          const levelAmount = (amount * percentage) / 100;
+
+                          if (levelAmount > 0) {
+                              await User.updateOne({ _id: upline._id }, { $inc: { levelIncome: levelAmount, totalLevelIncome: levelAmount } });
+                              await createTransaction({
+                                  userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
+                                  fromUserId: targetUser.userId, description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation`, status: 'success'
+                              });
+                          }
                       }
 
                       // ============================================
-                      // 1. INSTANT LEADER 10% LOGIC (Level 2 se 100 tak)
+                      // 2. INSTANT LEADER 10% LOGIC & BREAKAWAY
                       // ============================================
-                      // Ye sirf us pehle (Immediate) leader ke liye chalega
-                      if (currentLevel >= 2 && isCurrentUplineLeader && !leaderFoundAndPaid) {
+                      if (currentLevel >= 2 && isCurrentUplineLeader) {
                           const instantBonusAmount = (amount * 10) / 100;
                           
                           await User.updateOne(
@@ -970,27 +976,11 @@ router.put(
                           });
 
                           console.log(`✅ [NORMAL ROUTE -> LEADER BONUS] Paid $${instantBonusAmount} to Leader ${upline.userId}`);
+
+                          // 🔥 THE ULTIMATE LEADER BREAKAWAY WALL 🔥
+                          console.log(`[MLM ENGINE] Breakaway hit at Leader ${upline.userId} (Level ${currentLevel}). Normal Route Income distribution stopped completely.`);
                           
-                          // 🔥 LOCK ACTIVATED: Iske baad aane wale saare leaders block ho jayenge
-                          // Lekin humne "continue" hata diya hai, taaki is immediate leader ko Niche wali Level Income bhi mil sake!
-                          leaderFoundAndPaid = true; 
-                      }
-
-                      // ============================================
-                      // 2. LEVEL INCOME LOGIC (Level 2 se 20 tak)
-                      // ============================================
-                      // Yahan ya toh Normal Users aayenge, YA FIR wo Pehla (Immediate) Leader aayega
-                      if (currentLevel >= 2 && currentLevel <= 20) {
-                          const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
-                          const levelAmount = (amount * percentage) / 100;
-
-                          if (levelAmount > 0) {
-                              await User.updateOne({ _id: upline._id }, { $inc: { levelIncome: levelAmount, totalLevelIncome: levelAmount } });
-                              await createTransaction({
-                                  userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
-                                  fromUserId: targetUser.userId, description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation`, status: 'success'
-                              });
-                          }
+                          break; // Yahan chain toot jayegi. Iske upar kisi ko paisa nahi jayega!
                       }
 
                       currentUplineId = upline.sponsorId;
@@ -1147,21 +1137,20 @@ router.put(
       // =======================================================
       // 🔹 5. BACKGROUND MLM ENGINE (LEADER BREAKAWAY SYSTEM)
       // =======================================================
+      // =======================================================
+      // 🔹 5. BACKGROUND MLM ENGINE (ABSOLUTE BREAKAWAY SYSTEM)
+      // =======================================================
       (async () => {
           try {
               if (isFirstTopup) {
-                   // 🌟 GLOBAL TEAM COUNT
-                // 🔥 SMART CAPPING ENGINE CALL (Leader Topup)
-        await processGlobalTeamGrowth(targetUser.userId);
+                  // 🌟 GLOBAL TEAM COUNT (Smart Capping Engine)
+                  await processGlobalTeamGrowth(targetUser.userId);
 
                   if (targetUser.sponsorId) {
                       const sponsor = await User.findOne({ userId: targetUser.sponsorId });
                       if (sponsor) {
-                          
-                          // ✅ DIRECT COUNT
+                          // ✅ DIRECT COUNT & INCOME (10%)
                           sponsor.directCount = (sponsor.directCount || 0) + 1;
-
-                          // ✅ DIRECT INCOME (10%)
                           const DIRECT_BONUS_PERCENTAGE = 10; 
                           const directBonusAmount = (amount * DIRECT_BONUS_PERCENTAGE) / 100; 
 
@@ -1190,28 +1179,22 @@ router.put(
                       }
                   }
 
-                  // 🌟 UNIFIED 100-LEVEL ENGINE (Level Income + Leader Breakaway)
+                  // 🌟 UNIFIED 100-LEVEL ENGINE (ABSOLUTE BREAKAWAY LOCK)
                   const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
                   let currentUplineId = targetUser.sponsorId; 
                   let currentLevel = 1;
-                  
-                  // 🔥 THE MAGIC LOCK: Ye check karega ki immediate leader ko paisa mila ya nahi
-                  let leaderFoundAndPaid = false; 
 
                   while (currentUplineId && currentLevel <= 100) {
                       const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId role');
                       if (!upline) break; 
 
                       const isCurrentUplineLeader = (upline.role === 'leader');
-                      
-                      // Agar ye leader hai, aur niche wale leader ko pehle hi paisa mil chuka hai, toh ise SKIP karo
-                      const shouldSkipLeader = (isCurrentUplineLeader && leaderFoundAndPaid);
 
                       // ============================================
-                      // 1. LEVEL INCOME LOGIC (Sirf Level 2 se Level 20 tak)
+                      // 1. LEVEL INCOME LOGIC (Level 2 se 20 tak)
                       // ============================================
                       if (currentLevel >= 2 && currentLevel <= 20) {
-                          if (!shouldSkipLeader && upline.isToppedUp) {
+                          if (upline.isToppedUp) {
                               const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
                               const levelAmount = (amount * percentage) / 100;
                               
@@ -1231,27 +1214,29 @@ router.put(
                       }
 
                       // ============================================
-                      // 2. INSTANT LEADER 10% LOGIC (Level 2 se 100 tak) - Only Real Topup
+                      // 2. INSTANT LEADER 10% LOGIC (Level 2 se 100 tak)
                       // ============================================
-                      if (!isDummyTopup && currentLevel >= 2) {
-                          if (isCurrentUplineLeader && !leaderFoundAndPaid) {
-                              const instantBonusAmount = (amount * 10) / 100;
-                              
-                              await User.updateOne(
-                                  { _id: upline._id }, 
-                                  { $inc: { walletBalance: instantBonusAmount } }
-                              );
-                              
-                              await createTransaction({
-                                  userId: upline.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
-                                  fromUserId: targetUser.userId, 
-                                  description: `10% Instant Bonus from Downline Activation (Level ${currentLevel})`,
-                                  status: "success"
-                              });
+                      if (!isDummyTopup && currentLevel >= 2 && isCurrentUplineLeader) {
+                          const instantBonusAmount = (amount * 10) / 100;
+                          
+                          await User.updateOne(
+                              { _id: upline._id }, 
+                              { $inc: { walletBalance: instantBonusAmount } }
+                          );
+                          
+                          await createTransaction({
+                              userId: upline.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
+                              fromUserId: targetUser.userId, 
+                              description: `10% Instant Bonus from Downline Activation (Level ${currentLevel})`,
+                              status: "success"
+                          });
+                      }
 
-                              // 🔥 LOCK ACTIVATED: Iske upar kisi leader ko ab kuch nahi milega
-                              leaderFoundAndPaid = true; 
-                          }
+                      // 🔥 THE ULTIMATE LEADER BREAKAWAY WALL 🔥
+                      // Agar ye upline Leader tha, toh iske baad connection cut!
+                      if (isCurrentUplineLeader) {
+                          console.log(`[MLM ENGINE] Breakaway hit at Leader ${upline.userId} (Level ${currentLevel}). Income distribution stopped.`);
+                          break; // Loop yahin khatam, ab iske upar kisi user/leader ko kuch nahi jayega.
                       }
 
                       currentUplineId = upline.sponsorId;

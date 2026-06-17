@@ -13,12 +13,12 @@ const REWARD_MILESTONES = [
   { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7 (11750 Points)" },
  ];
 
-// 🔥 SUPERFAST LOGIC: N+1 Database Query Problem Solved!
+// 🔥 SUPERFAST LOGIC + ABSOLUTE BREAKAWAY
 const getMonthlyLegStats = async (sponsorId, startOfMonth, endOfMonth) => {
-    // 1. 10,000 DB calls ki jagah, sirf 1 Call lagayenge aur sabko RAM (Memory) mein le aayenge.
-    const allUsers = await User.find({}, 'userId name sponsorId isToppedUp topUpDate').lean();
+    // 1. Memory mein saare users load karenge, is baar 'role' bhi lenge taaki Leader pehchan sakein
+    const allUsers = await User.find({}, 'userId name sponsorId isToppedUp topUpDate role').lean();
 
-    // 2. RAM (Memory) mein ek map banayenge jisse koi bhi downline INSTANTLY mil jayegi
+    // 2. Map banayenge fast lookup ke liye
     const userMap = new Map();
     for (let u of allUsers) {
         if (!userMap.has(u.sponsorId)) {
@@ -27,29 +27,45 @@ const getMonthlyLegStats = async (sponsorId, startOfMonth, endOfMonth) => {
         userMap.get(u.sponsorId).push(u);
     }
 
-    // 3. Ab calculate karo (Yeh calculation RAM mein hogi, DB load nahi hoga)
+    // 3. Calculation Memory mein hogi
     const directs = userMap.get(sponsorId) || [];
     let legSizes = [];
 
     for (let direct of directs) {
         let currentLegSize = 0;
+        let queue = [direct]; 
         
-        let queue = [direct.userId];
         while (queue.length > 0) {
-            const currentId = queue.shift();
-            // 🔥 DB QUERY HATA DI! Ab seedha Memory (Map) se utha rahe hain.
-            const downlines = userMap.get(currentId) || []; 
+            const currentUserNode = queue.shift();
             
+            // 🛑 ABSOLUTE BREAKAWAY WALL: 
+            // Agar yeh banda Leader hai (aur yeh khud wo Direct nahi hai jisko hum count kar rahe hain), 
+            // Toh iske neeche ki team process nahi hogi.
+            // Note: Direct banda agar khud leader hai toh uska count toh hoga, par uske neeche waale leaders pe break lagega.
+            // Lekin aapke case me agar Direct khud leader hai, to uske neeche ki team aapko nahi jani chahiye.
+            // Toh hum seedha rule lagayenge: 
+            // Agar current node "Leader" hai, toh uski downline queue me PUSH NAHI hogi!
+            
+            // 🔥 Check for point counting:
+            if (currentUserNode.isToppedUp && currentUserNode.topUpDate >= startOfMonth && currentUserNode.topUpDate <= endOfMonth) {
+                currentLegSize += 1; 
+            }
+
+            // 🔥 BREAKAWAY CHECK: Kya iski downline dekhni chahiye?
+            // Agar yeh banda Leader hai, toh network aage badhna yahi band ho jayega.
+            if (currentUserNode.role === 'leader') {
+               // Is Leader ki team aage add nahi hogi. We skip pushing its downlines.
+               continue; 
+            }
+
+            // Agar Leader nahi hai, toh hi iski downline queue mein add hogi
+            const downlines = userMap.get(currentUserNode.userId) || []; 
             for (let d of downlines) {
-                // Agar downline pichle mahine me active hui hai, toh point add karo
-                if (d.isToppedUp && d.topUpDate >= startOfMonth && d.topUpDate <= endOfMonth) {
-                    currentLegSize += 1; 
-                }
-                queue.push(d.userId); 
+                queue.push(d); 
             }
         }
         
-        // 🔥 YAHAN ID AUR NAAM SAVE HO RAHA HAI
+        // Save the leg stat
         legSizes.push({ 
             size: currentLegSize, 
             userId: direct.userId, 
@@ -57,20 +73,18 @@ const getMonthlyLegStats = async (sponsorId, startOfMonth, endOfMonth) => {
         });
     }
 
-    // 3. Descending order me sort (Jiska size sabse bada wo array mein sabse upar)
+    // 4. Sort (Descending)
     legSizes.sort((a, b) => b.size - a.size);
 
-    // Sabse badi value Strong Leg banegi
+    // Strong Leg & Other Legs
     const strongLegData = legSizes.length > 0 ? legSizes[0] : { size: 0, userId: null, name: null };
-    
-    // Baaki sabka sum Other Legs ban jayega
     const otherLegsCount = legSizes.length > 1 ? legSizes.slice(1).reduce((a, b) => a + b.size, 0) : 0;
 
     return { 
         strongLeg: strongLegData.size, 
         otherLegs: otherLegsCount,
-        strongLegId: strongLegData.userId,     // ID bhej rahe hain
-        strongLegName: strongLegData.name      // Name bhej rahe hain
+        strongLegId: strongLegData.userId,
+        strongLegName: strongLegData.name
     };
 };
 
@@ -80,29 +94,24 @@ cron.schedule('15 0 1 * *', async () => {
     try {
         const now = new Date();
         
-        // Pichle mahine ki start aur end date nikalna
         let startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         let endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
-        // Saare Active users nikalo
         const allUsers = await User.find({ isToppedUp: true }).lean();
 
         for (let user of allUsers) {
-            // Pichle mahine ka report card
             const legStats = await getMonthlyLegStats(user.userId, startOfLastMonth, endOfLastMonth);
             
-            // Reverse loop taaki sabse bada (Highest) reward pehle mil jaye
             let highestEligibleReward = null;
 
             for (let i = REWARD_MILESTONES.length - 1; i >= 0; i--) {
                 const milestone = REWARD_MILESTONES[i];
                 if (legStats.strongLeg >= milestone.strongLeg && legStats.otherLegs >= milestone.otherLegs) {
                     highestEligibleReward = milestone;
-                    break; // Jaise hi highest mila, baaki chote targets ignore kardo
+                    break;
                 }
             }
 
-            // Agar koi target hit hua hai, toh uska paisa de do
             if (highestEligibleReward) {
                 const userDoc = await User.findOne({ userId: user.userId });
                 

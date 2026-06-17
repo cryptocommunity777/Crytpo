@@ -320,7 +320,11 @@ const TotalTopUpPage = () => {
                 </tr>
               ) : (
                 paginatedUsers.map((u, i) => (
-                  <tr key={u._id || i} className="hover:bg-indigo-50/30 transition-colors">
+                  <tr 
+                    key={u._id || i} 
+                    // 🔥 YAHAN CONDITIONAL CLASS LAGI HAI LEADER RED LINE KE LIYE
+                    className={`transition-colors border-b ${u.initiatorRole === 'leader' ? 'bg-red-50 hover:bg-red-100 border-red-100' : 'bg-white hover:bg-indigo-50/30 border-slate-100'}`}
+                  >
                     <td className="px-4 py-3 text-gray-500 font-bold">{startIndex + i + 1}</td>
                     
                     <td className="px-4 py-3 font-black text-indigo-600">
@@ -348,21 +352,20 @@ const TotalTopUpPage = () => {
                       )}
                     </td>
 
-                    {/* 🔥 FIX: Agar Self ya System hai, toh Button nahi, bas text aayega */}
                     <td className="px-4 py-3 text-gray-600 font-medium">
                        {(!u.topUpBy || String(u.topUpBy).toLowerCase() === 'self' || String(u.topUpBy).toLowerCase() === 'system') ? (
-                         <span className="text-[10px] bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-500 font-black uppercase tracking-widest">
+                         <span className={`text-[10px] border px-2 py-0.5 rounded font-black uppercase tracking-widest ${u.initiatorRole === 'leader' ? 'bg-white border-red-200 text-red-500' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
                            {u.topUpBy || 'Self / System'}
                          </span>
                        ) : (
                          <button 
                            onClick={() => handleImpersonate(u.topUpBy)}
-                           className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded border border-gray-200 w-max hover:bg-gray-100 hover:text-indigo-600 transition-all"
+                           className={`flex items-center gap-1.5 px-2 py-1 rounded border w-max transition-all ${u.initiatorRole === 'leader' ? 'bg-white border-red-200 hover:bg-red-100 text-red-600' : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:text-indigo-600 text-gray-700'}`}
                            title="Login as Sender"
                          >
-                           <ArrowRightCircle size={14} className="text-gray-400" />
-                           <span className="text-xs font-bold text-gray-700 hover:text-indigo-600 transition-colors">{u.topUpBy}</span>
-                           <ExternalLink size={12} className="opacity-70 text-indigo-600" />
+                           <ArrowRightCircle size={14} className={u.initiatorRole === 'leader' ? 'text-red-400' : 'text-gray-400'} />
+                           <span className="text-xs font-bold transition-colors">{u.topUpBy}</span>
+                           <ExternalLink size={12} className="opacity-70" />
                          </button>
                        )}
                     </td>

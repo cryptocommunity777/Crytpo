@@ -24,6 +24,15 @@ cron.schedule('15 1 * * *', async () => {
             
             if (!sponsor) continue;
 
+            // 🛑 LEADER BLOCKER: Agar sponsor ek 'leader' hai, toh usko Fast Track bonus nahi milega
+            if (sponsor.role === 'leader') {
+                // Chahein toh yahan track ko 'completed' bhi kar sakte hain taaki aage check hi na ho
+                track.status = 'completed';
+                await track.save();
+                console.log(`🚫 Fast Track Skipped & Closed: Sponsor ${sponsor.userId} is a Leader.`);
+                continue; 
+            }
+
             let isEligibleForPayout = false;
             let amountToPay = track.dailyAmount; // Default amount purane offer ke liye
 

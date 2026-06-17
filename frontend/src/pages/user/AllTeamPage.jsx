@@ -94,8 +94,7 @@ const AllTeamPage = () => {
         { label: "Date", key: "createdAt", right: true },
     { label: "Level", key: "level", center: true },
     { label: "User ID", key: "userId" },
-    { label: "Top-Up", key: "topUpAmount", center: true },
-    { label: "Name", key: "name" },
+     { label: "Name", key: "name" },
     { label: "Country", key: "country" },
   ];
 
@@ -197,13 +196,7 @@ const AllTeamPage = () => {
                       {u.userId}
                     </td>
                     
-                    <td className="p-4 font-black text-center">
-                       {Number(u.topUpAmount) > 0 ? (
-                          <span className="text-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]">${u.topUpAmount}</span>
-                       ) : (
-                          <span className="text-red-500">$0</span>
-                       )}
-                    </td>
+                     
 
                     <td className="p-4 font-bold text-slate-600 max-w-[150px] truncate" title={u.name || "-"}>
                       {u.name || "-"}

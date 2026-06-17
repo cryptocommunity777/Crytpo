@@ -1405,9 +1405,7 @@ router.get('/topup-users', verifyAdmin, async (req, res) => {
 
 
 
-
-
-const REWARD_MILESTONES = [
+ const REWARD_MILESTONES = [
   { target: 50, strongLeg: 25, otherLegs: 25, reward: 30, title: "Target 1 (50 Points)" },
   { target: 250, strongLeg: 125, otherLegs: 125, reward: 100, title: "Target 2 (250 Points)" },
   { target: 750, strongLeg: 375, otherLegs: 375, reward: 200, title: "Target 3 (750 Points)" },
@@ -1417,10 +1415,10 @@ const REWARD_MILESTONES = [
   { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7 (11750 Points)" },
  ];
 
-// 🔥 Helper Function: Ab ID ke sath Name bhi return karega
+// 🔥 Helper Function: Ab ID ke sath Name bhi return karega + Breakaway
 const getMonthlyLegStatsForAdmin = async (sponsorId, startOfMonth, endOfMonth) => {
-    // 💡 Name field ko bhi fetch kar rahe hain
-    const directs = await User.find({ sponsorId: sponsorId }, 'userId name isToppedUp topUpDate');
+    // 💡 Name aur 'role' field ko bhi fetch kar rahe hain
+    const directs = await User.find({ sponsorId: sponsorId }, 'userId name isToppedUp topUpDate role');
     
     let legsData = [];
 
@@ -1428,18 +1426,23 @@ const getMonthlyLegStatsForAdmin = async (sponsorId, startOfMonth, endOfMonth) =
         let currentLegUsers = []; 
         
         // 🛑 FIX: Direct user ka apna top-up count hata diya gaya hai.
-        // (Pehle yahan direct ki id push hoti thi, ab nahi hogi)
-
-        let queue = [direct.userId];
+        let queue = [direct];
         while (queue.length > 0) {
-            const currentId = queue.shift();
-            const downlines = await User.find({ sponsorId: currentId }, 'userId name isToppedUp topUpDate');
+            const currentNode = queue.shift();
+            
+            // 🔥 ABSOLUTE BREAKAWAY WALL 🔥
+            // Agar yeh node Leader hai, toh iske aage ki downline queue mein nahi jayegi
+            if (currentNode.role === 'leader') {
+                continue; 
+            }
+
+            const downlines = await User.find({ sponsorId: currentNode.userId }, 'userId name isToppedUp topUpDate role');
             
             for (let d of downlines) {
                 if (d.isToppedUp && d.topUpDate >= startOfMonth && d.topUpDate <= endOfMonth) {
                     currentLegUsers.push({ userId: d.userId, name: d.name }); 
                 }
-                queue.push(d.userId);
+                queue.push(d); // Push full object to check 'role' in next loop
             }
         }
         
@@ -1470,13 +1473,13 @@ const getMonthlyLegStatsForAdmin = async (sponsorId, startOfMonth, endOfMonth) =
         strongLeg: strongLegCount, 
         otherLegs: otherLegsCount, 
         totalTeam: strongLegCount + otherLegsCount,
-        strongLegList: strongLegUsers, // Frontend ko List bhejenge
-        otherLegList: otherLegUsers    // Frontend ko List bhejenge
+        strongLegList: strongLegUsers,
+        otherLegList: otherLegUsers  
     };
 };
 
 // =========================================================================
-// 🔥 SUPER FAST API: "RAM TREE MAPPING" (0 loops on Database)
+// 🔥 SUPER FAST API: "RAM TREE MAPPING" (0 loops on Database) + BREAKAWAY
 // =========================================================================
 router.get('/monthly-reward-progress', async (req, res) => {
     try {
@@ -1489,8 +1492,8 @@ router.get('/monthly-reward-progress', async (req, res) => {
         let startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
         let endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59);
 
-        // 2. 🔥 SIRF 1 BAAR DATABASE CALL: Saare users fetch kar lo
-        const allUsers = await User.find({}, 'userId sponsorId name isToppedUp topUpDate').lean();
+        // 2. 🔥 SIRF 1 BAAR DATABASE CALL: Saare users + 'role' fetch kar lo
+        const allUsers = await User.find({}, 'userId sponsorId name isToppedUp topUpDate role').lean();
 
         // 3. 🧠 SERVER KI RAM MEIN NETWORK TREE BANAO (Extremely Fast)
         const userMap = new Map();
@@ -1506,7 +1509,7 @@ router.get('/monthly-reward-progress', async (req, res) => {
             }
         }
 
-        // 4. IN-MEMORY CALCULATION HELPER
+        // 4. IN-MEMORY CALCULATION HELPER WITH BREAKAWAY
         const getLegStatsRAM = (sponsorId) => {
             const directs = directMap.get(sponsorId) || [];
             let legsData = [];
@@ -1514,13 +1517,19 @@ router.get('/monthly-reward-progress', async (req, res) => {
             for (let directId of directs) {
                 let currentLegUsers = [];
 
-                // 🛑 FIX: Yahan se bhi Direct ka point hataya gaya hai!
-                // Sirf uski downlines hi us leg me count hongi.
-
                 // BFS loop in RAM (No database calls here = 1000x faster)
                 let queue = [directId];
                 while (queue.length > 0) {
                     const currentId = queue.shift();
+                    const currentObj = userMap.get(currentId);
+
+                    // 🔥 ABSOLUTE BREAKAWAY WALL 🔥
+                    // Agar current banda Leader hai, toh iski team queue mein add nahi hogi!
+                    // Iske neeche ki poori chain yahi par block ho jayegi.
+                    if (currentObj && currentObj.role === 'leader') {
+                        continue; 
+                    }
+
                     const downlines = directMap.get(currentId) || [];
                     
                     for (let childId of downlines) {
@@ -1618,48 +1627,137 @@ router.get('/monthly-reward-progress', async (req, res) => {
 // 🔥 NEW API: Wallet Balance & Paid Directs List (With > 0 Filter)
 router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
     try {
+        const { fromDate, toDate } = req.query;
+
+        // 🔥 DATE FILTER LOGIC (IST ke hisaab se) 🔥
+        // Ye sirf Transactions ko filter karega (Current Wallet balance waise hi rahega)
+        let dateFilter = {};
+        if (fromDate || toDate) {
+            dateFilter.date = {}; 
+            if (fromDate) {
+                // Din ki shurwat (00:00:00) IST
+                dateFilter.date.$gte = new Date(`${fromDate}T00:00:00+05:30`);
+            }
+            if (toDate) {
+                // Din ka end (23:59:59) IST
+                dateFilter.date.$lte = new Date(`${toDate}T23:59:59+05:30`);
+            }
+        }
+
+        // Amount ko properly Number format mein convert karne ka helper
+        const amountToNumber = { 
+            $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } 
+        };
+
         const stats = await User.aggregate([
             {
+                // 1. Basic Details (🔥 Yahan 'role' add kiya hai Leader filter ke liye)
                 $project: {
                     userId: 1,
                     name: 1,
+                    role: 1, 
                     walletBalance: { $ifNull: ["$walletBalance", 0] },
                 }
             },
             {
+                // 2. Paid Directs Count (Sirf Active Directs ginega)
                 $lookup: {
-                    from: "users", // Database me table ka naam (small case)
+                    from: "users", 
                     localField: "userId",
                     foreignField: "sponsorId",
                     pipeline: [
-                        { $match: { isToppedUp: true } }, // Sirf un directs ko gino jo Topped Up hain
+                        { $match: { isToppedUp: true } }, 
                         { $count: "paidDirects" }
                     ],
                     as: "directsData"
                 }
             },
             {
+                // 3. 🔥 TRANSACTIONS BREAKDOWN CALCULATION 🔥
+                $lookup: {
+                    from: "transactions", 
+                    let: { uid: "$userId" },
+                    pipeline: [
+                        {
+                            // Status success ho aur Date filter match kare
+                            $match: {
+                                $expr: { $eq: ["$userId", "$$uid"] },
+                                status: "success",
+                                ...dateFilter 
+                            }
+                        },
+                        {
+                            // Alag-alag type ki income/expense calculate karna
+                            $group: {
+                                _id: null,
+                                
+                                // P2P Received
+                                p2pReceived: {
+                                    $sum: {
+                                        $cond: [
+                                            { $or: [
+                                                { $in: ["$type", ["p2p_receive", "p2p_transfer_receive"]] },
+                                                { $and: [{ $eq: ["$type", "credit_to_wallet"] }, { $regexMatch: { input: { $ifNull: ["$source", ""] }, regex: /p2p/i } }] }
+                                            ]},
+                                            amountToNumber,
+                                            0
+                                        ]
+                                    }
+                                },
+                                
+                                // Total Deposits (Fund Added by user or admin)
+                                totalDeposit: {
+                                    $sum: {
+                                        $cond: [{ $in: ["$type", ["deposit", "add_fund", "fund_added"]] }, amountToNumber, 0]
+                                    }
+                                },
+                                
+                                // Fast Track Income
+                                fastTrackIncome: {
+                                    $sum: {
+                                        $cond: [{ $in: ["$type", ["fast_track", "fast_track_income"]] }, amountToNumber, 0]
+                                    }
+                                },
+                                
+                                // Total Withdrawals
+                                totalWithdrawal: {
+                                    $sum: {
+                                        $cond: [{ $in: ["$type", ["withdrawal", "withdraw", "payout"]] }, amountToNumber, 0]
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    as: "txStats"
+                }
+            },
+            {
+                // 4. Sab data ko main object me set karna
                 $addFields: {
-                    paidDirectCount: {
-                        $ifNull: [{ $arrayElemAt: ["$directsData.paidDirects", 0] }, 0]
-                    }
+                    paidDirectCount: { $ifNull: [{ $arrayElemAt: ["$directsData.paidDirects", 0] }, 0] },
+                    p2pReceived: { $ifNull: [{ $arrayElemAt: ["$txStats.p2pReceived", 0] }, 0] },
+                    totalDeposit: { $ifNull: [{ $arrayElemAt: ["$txStats.totalDeposit", 0] }, 0] },
+                    fastTrackIncome: { $ifNull: [{ $arrayElemAt: ["$txStats.fastTrackIncome", 0] }, 0] },
+                    totalWithdrawal: { $ifNull: [{ $arrayElemAt: ["$txStats.totalWithdrawal", 0] }, 0] }
                 }
             },
             {
-                $project: {
-                    directsData: 0 // Kachra hata do
-                }
+                $project: { directsData: 0, txStats: 0 } // Extra arrays ko hata diya
             },
             {
-                // 🔥 Yahan filter lagaya hai: Balance > 0 HO **YA** Paid Directs > 0 HO
+                // 5. Sirf unhi logo ko bhejo jinka koi bhi transaction ya balance ho (Zero walo ko hatao)
                 $match: {
                     $or: [
                         { walletBalance: { $gt: 0 } },
-                        { paidDirectCount: { $gt: 0 } }
+                        { paidDirectCount: { $gt: 0 } },
+                        { p2pReceived: { $gt: 0 } },
+                        { totalDeposit: { $gt: 0 } },
+                        { fastTrackIncome: { $gt: 0 } },
+                        { totalWithdrawal: { $gt: 0 } }
                     ]
                 }
             },
-            { $sort: { walletBalance: -1 } } // Default sorting (Highest balance first)
+            { $sort: { walletBalance: -1 } } // Default Highest Wallet Upar ayega
         ]);
 
         res.json({ success: true, data: stats });
