@@ -91,10 +91,10 @@ const AllTeamPage = () => {
 
   const tableColumns = [
     { label: "Sr", key: null, center: true },
-        { label: "Date", key: "createdAt", right: true },
+    { label: "Date", key: "createdAt", right: true },
     { label: "Level", key: "level", center: true },
     { label: "User ID", key: "userId" },
-     { label: "Name", key: "name" },
+    { label: "Name", key: "name" },
     { label: "Country", key: "country" },
   ];
 
@@ -107,12 +107,6 @@ const AllTeamPage = () => {
         .custom-scroll::-webkit-scrollbar-track { background: #050505; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #f97316; border-radius: 10px; }
       `}</style>
-
-      {/* Header */}
-      
-
-      {/* Top Stats Cards */}
-     
 
       {/* Filters (Search & Entries) */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between items-center bg-white shadow-sm p-4 rounded-2xl border border-slate-200">
@@ -130,7 +124,6 @@ const AllTeamPage = () => {
            />
         </div>
 
-        
       </div>
 
       {/* Table */}
@@ -161,15 +154,14 @@ const AllTeamPage = () => {
             <tbody className="text-slate-600">
               {isLoading ? (
                 <tr>
-
-                  <td colSpan="7" className="text-center py-10">
+                  <td colSpan="6" className="text-center py-10">
                      <svg className="animate-spin h-8 w-8 text-green-500 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                      <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Loading Network Data...</span>
                   </td>
                 </tr>
               ) : currentItems.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-10">
+                  <td colSpan="6" className="text-center py-10">
                     <span className="text-gray-500 font-bold text-sm uppercase tracking-widest">No Team Members Found</span>
                   </td>
                 </tr>
@@ -195,8 +187,6 @@ const AllTeamPage = () => {
                     <td className="p-4 font-black text-slate-900">
                       {u.userId}
                     </td>
-                    
-                     
 
                     <td className="p-4 font-bold text-slate-600 max-w-[150px] truncate" title={u.name || "-"}>
                       {u.name || "-"}
@@ -206,7 +196,6 @@ const AllTeamPage = () => {
                       {u.country || "-"}
                     </td>
 
-                   
                   </tr>
                 ))
               )}

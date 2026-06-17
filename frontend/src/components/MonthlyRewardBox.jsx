@@ -3,15 +3,15 @@ import { Target, Zap, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
-// 🔥 NAYA: Matching points ke hisaab se "Achieved Rank" nikalne ka function
+// 🔥 FIXED: Ab ye Backend ke REWARD_MILESTONES (Strong 25, Other 25 etc.) se 100% match karega
 const getAchievedRank = (matchedPoints) => {
-    if (matchedPoints >= 5000) return { name: "LEGEND", reward: 1500 };
-    if (matchedPoints >= 3000) return { name: "TITAN", reward: 1000 };
-    if (matchedPoints >= 2000) return { name: "ROYAL", reward: 500 };
-    if (matchedPoints >= 1000) return { name: "PIONEER", reward: 300 };
-    if (matchedPoints >= 500) return { name: "VICTOR", reward: 200 };
-    if (matchedPoints >= 200) return { name: "WOLF", reward: 100 };
-    if (matchedPoints >= 50) return { name: "PHOENIX", reward: 30 };
+    if (matchedPoints >= 5875) return { name: "LEGEND", reward: 1500 }; // Target 7
+    if (matchedPoints >= 3375) return { name: "TITAN", reward: 1000 };  // Target 6
+    if (matchedPoints >= 1875) return { name: "ROYAL", reward: 500 };   // Target 5
+    if (matchedPoints >= 875)  return { name: "PIONEER", reward: 300 };  // Target 4
+    if (matchedPoints >= 375)  return { name: "VICTOR", reward: 200 };   // Target 3
+    if (matchedPoints >= 125)  return { name: "WOLF", reward: 100 };     // Target 2
+    if (matchedPoints >= 25)   return { name: "PHOENIX", reward: 30 };   // Target 1
     return { name: "NONE", reward: 0 };
 };
 

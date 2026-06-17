@@ -385,83 +385,101 @@ router.get('/direct-team/:userId', async (req, res) => {
   try {
     const currentUserId = Number(req.params.userId);
 
-    // 🔥 1. Ek hi Aggregation Query me Directs aur unki Total Team/Directs Count nikal lenge
-    // Ye query 1 second se bhi kam me execute hogi
-    const result = await User.aggregate([
-      // Step A: Find the main user's directs
-      { $match: { sponsorId: currentUserId } },
-      
-      // Step B: Har direct member ki poori downline nikalna (Team Size ke liye)
-      {
-        $graphLookup: {
-          from: "users",
-          startWith: "$userId",
-          connectFromField: "userId",
-          connectToField: "sponsorId",
-          as: "fullDownline",
-         }
-      },
+    // 🔥 1. Ek hi baar me saare users RAM mein load karenge (Superfast Breakaway ke liye)
+    // Isme 'role' fetch karna sabse zaruri hai!
+    const allUsers = await User.find({}, 'userId sponsorId name mobile country topUpAmount createdAt role').lean();
 
-      // Step C: Result ko format karna aur counts banana
-      {
-        $project: {
-          _id: 1,
-          userId: 1,
-          name: 1,
-          mobile: 1,
-          country: 1,
-          topUpAmount: 1,
-          createdAt: 1,
-          
-          // Directs of this member
-          totalDirects: {
-            $size: {
-              $filter: {
-                input: "$fullDownline",
-                as: "member",
-                cond: { $eq: ["$$member.sponsorId", "$userId"] }
-              }
+    // 2. RAM mein Network Tree (Map) banayenge
+    const directMap = new Map();
+    const userDetailsMap = new Map();
+
+    for (let u of allUsers) {
+        userDetailsMap.set(u.userId, u);
+        if (u.sponsorId) {
+            if (!directMap.has(u.sponsorId)) {
+                directMap.set(u.sponsorId, []);
             }
-          },
-          
-          // Total Team Size of this member
-          totalTeam: { $size: "$fullDownline" }
+            directMap.get(u.sponsorId).push(u);
         }
-      },
-      // Optional: Naye log upar dikhane ke liye sort
-      { $sort: { createdAt: -1 } }
-    ]);
+    }
 
-    // 🔥 2. Main User (Aapki) Total Team Count Nikalna
-    const myTotalTeamResult = await User.aggregate([
-      { $match: { userId: currentUserId } },
-      {
-        $graphLookup: {
-          from: "users",
-          startWith: "$userId",
-          connectFromField: "userId",
-          connectToField: "sponsorId",
-          as: "myDownline"
-         }
-      },
-      { $project: { totalMyTeam: { $size: "$myDownline" } } }
-    ]);
+    // 🔥 3. MAIN USER KI TOTAL TEAM NIKALNA (With Breakaway Rule) 🔥
+    let mainUserTotalTeam = 0;
+    let mainQueue = [...(directMap.get(currentUserId) || [])];
 
-    const myTotalTeamCount = myTotalTeamResult.length > 0 ? myTotalTeamResult[0].totalMyTeam : 0;
+    while (mainQueue.length > 0) {
+        const currentNode = mainQueue.shift();
+        mainUserTotalTeam++; // Ek user count ho gaya
 
-    // Formatting for frontend
-    const teamWithStats = result.map((member, i) => ({
-      srNo: i + 1,
-      ...member
-    }));
+        // 🛑 ABSOLUTE BREAKAWAY WALL 🛑
+        // Agar ye current banda 'leader' hai, toh network yahi cut ho jayega.
+        // Iske neeche ki team main user ko nahi dikhegi!
+        if (currentNode.role === 'leader') {
+            continue; 
+        }
 
+        // Agar leader nahi hai, toh iski team aage queue mein add karo
+        const children = directMap.get(currentNode.userId) || [];
+        for (let child of children) {
+            mainQueue.push(child);
+        }
+    }
+
+    // 🔥 4. TABLE KE LIYE DIRECTS KA DATA BANANA 🔥
+    const myDirects = directMap.get(currentUserId) || [];
+    
+    const teamWithStats = myDirects.map((direct, index) => {
+        const membersDirects = directMap.get(direct.userId) || [];
+        const directCount = membersDirects.length;
+
+        let teamSize = 0;
+
+        // Agar Direct member Leader hai, toh uski team 0 bhejenge (Frontend Breakaway)
+        if (direct.role === 'leader') {
+            teamSize = 0; 
+        } else {
+            // Agar normal user hai, toh uski team size calculate karenge (with Breakaway rules)
+            let subQueue = [...membersDirects];
+            while (subQueue.length > 0) {
+                const subNode = subQueue.shift();
+                teamSize++;
+
+                // Agar is normal user ki team mein koi Leader aa gaya, toh wahan break lag jayega
+                if (subNode.role === 'leader') {
+                    continue; 
+                }
+                const subChildren = directMap.get(subNode.userId) || [];
+                for (let child of subChildren) {
+                    subQueue.push(child);
+                }
+            }
+        }
+
+        return {
+            srNo: index + 1,
+            userId: direct.userId,
+            name: direct.name,
+            mobile: direct.mobile,
+            country: direct.country,
+            role: direct.role, // 🔥 Frontend ko role bhej rahe hain red line aur badge ke liye
+            topUpAmount: direct.topUpAmount,
+            createdAt: direct.createdAt,
+            totalDirects: directCount,
+            totalTeam: teamSize // Yahan se calculated team jayegi (Leader ke liye 0)
+        };
+    });
+
+    // Naye directs sabse upar dikhane ke liye sort (Descending order of date)
+    teamWithStats.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Response Bhejenge
     res.json({
-      team: teamWithStats,      // Table ka data
-      totalTeam: myTotalTeamCount // Upar wale card ke liye data
+      team: teamWithStats,      // Table ka data (Leader ke liye totalTeam 0 jayega)
+      totalTeam: mainUserTotalTeam // Upar wale card ke liye total data (Breakaway filtered)
     });
 
   } catch (err) {
-    console.error("Error in direct-team:", err);
+    console.error("Error in direct-team API:", err);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -481,75 +499,78 @@ router.get('/direct-team/:userId', async (req, res) => {
 // 2. All Team (HIGHLY OPTIMIZED WITH GRAPH LOOKUP)
 // ---------------------------
 router.get('/all-team/:userId', async (req, res) => {
-  const userId = Number(req.params.userId);
-
   try {
-    const result = await User.aggregate([
-      { $match: { userId: userId } },
-      {
-        $graphLookup: {
-          from: "users",
-          startWith: "$userId",
-          connectFromField: "userId",
-          connectToField: "sponsorId",
-          as: "downline",
-          depthField: "level"
-        }
-      },
-      // 🔥 YEH NAYA STAGE ADD KIYA HAI 🔥
-      // Isse 4000+ users ka data 90% halka (lightweight) ho jayega
-      {
-        $project: {
-          "downline._id": 1,
-          "downline.userId": 1,
-          "downline.name": 1,
-          "downline.country": 1,
-          "downline.topUpAmount": 1,
-          "downline.createdAt": 1,
-          "downline.level": 1
-        }
-      }
-    ]);
+    const currentUserId = Number(req.params.userId);
 
-    if (!result || result.length === 0 || !result[0].downline) {
-      return res.json({
-        team: [],
-        totalTeamCount: 0,
-        directCount: 0,
-        indirectCount: 0,
-        levelWiseCount: {}
-      });
+    // 🔥 1. Ek hi baar me saare users RAM mein load karenge (Superfast + Role Checking)
+    const allUsers = await User.find({}, '_id userId sponsorId name country topUpAmount createdAt role').lean();
+
+    // 2. RAM mein Network Tree banayenge
+    const directMap = new Map();
+    for (let u of allUsers) {
+        if (u.sponsorId) {
+            if (!directMap.has(u.sponsorId)) {
+                directMap.set(u.sponsorId, []);
+            }
+            directMap.get(u.sponsorId).push(u);
+        }
     }
 
-    let allTeam = result[0].downline;
-
-    const levelWiseCount = {};
-    let directCount = 0;
+    // 3. Traversal with SECRET BREAKAWAY
+    let allTeam = [];
+    let queue = [];
     
-    // Formatting data for frontend
-    const formattedTeam = allTeam.map((u, i) => {
-      const actualLevel = (u.level || 0) + 1; 
-      
-      levelWiseCount[actualLevel] = (levelWiseCount[actualLevel] || 0) + 1;
-      if (actualLevel === 1) directCount++;
+    // Stats maintain karne ke variables (Aapke purane code ke hisaab se)
+    let directCount = 0;
+    const levelWiseCount = {};
 
-      return {
-        srNo: i + 1,
-        _id: u._id,
-        userId: u.userId,
-        name: u.name,
-        country: u.country,
-        topUpAmount: u.topUpAmount || 0,
-        createdAt: u.createdAt,
-        level: actualLevel
-      };
-    });
+    // Pehle apne direct (Level 1) walo ko queue mein daalo
+    const directs = directMap.get(currentUserId) || [];
+    for (let d of directs) {
+        queue.push({ user: d, level: 1 });
+    }
 
+    // Ab poora network traverse karenge
+    while (queue.length > 0) {
+        const { user, level } = queue.shift();
+
+        // Stats update karo
+        if (level === 1) directCount++;
+        levelWiseCount[level] = (levelWiseCount[level] || 0) + 1;
+
+        // User ko All Team list mein add kar do
+        allTeam.push({
+            srNo: allTeam.length + 1,
+            _id: user._id,
+            userId: user.userId,
+            name: user.name,
+            country: user.country,
+            topUpAmount: user.topUpAmount || 0,
+            createdAt: user.createdAt,
+            level: level
+            // Role ko hum response mein bhej hi nahi rahe, taaki frontend par kisi ko doubt na ho!
+        });
+
+        // 🛑 SECRET BREAKAWAY WALL 🛑
+        // Agar ye current banda 'leader' hai, toh network aage badhna band ho jayega.
+        // Iska matlab uske neeche ke Level 2, Level 3 wale log check hi nahi honge!
+        if (user.role === 'leader') {
+            continue; 
+        }
+
+        // Agar leader nahi hai, toh uske direct logo ko queue mein dalo (Next Level ke liye)
+        const children = directMap.get(user.userId) || [];
+        for (let child of children) {
+            queue.push({ user: child, level: level + 1 });
+        }
+    }
+
+    // 4. Response exactly aapke purane format me bhej rahe hain
     res.json({
-      team: formattedTeam,
-      totalTeamCount: formattedTeam.length,
+      team: allTeam,
+      totalTeamCount: allTeam.length,
       directCount: directCount,
-      indirectCount: formattedTeam.length - directCount,
+      indirectCount: allTeam.length - directCount,
       levelWiseCount: levelWiseCount
     });
 
