@@ -13,9 +13,9 @@ const REWARD_MILESTONES = [
   { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7 (11750 Points)" },
  ];
 
-// 🔥 SUPERFAST LOGIC + ABSOLUTE BREAKAWAY
+// 🔥 SUPERFAST LOGIC + ABSOLUTE BREAKAWAY (Sync with Admin Panel)
 const getMonthlyLegStats = async (sponsorId, startOfMonth, endOfMonth) => {
-    // 1. Memory mein saare users load karenge, is baar 'role' bhi lenge taaki Leader pehchan sakein
+    // 1. Memory mein saare users load karenge
     const allUsers = await User.find({}, 'userId name sponsorId isToppedUp topUpDate role').lean();
 
     // 2. Map banayenge fast lookup ke liye
@@ -39,28 +39,19 @@ const getMonthlyLegStats = async (sponsorId, startOfMonth, endOfMonth) => {
             const currentUserNode = queue.shift();
             
             // 🛑 ABSOLUTE BREAKAWAY WALL: 
-            // Agar yeh banda Leader hai (aur yeh khud wo Direct nahi hai jisko hum count kar rahe hain), 
-            // Toh iske neeche ki team process nahi hogi.
-            // Note: Direct banda agar khud leader hai toh uska count toh hoga, par uske neeche waale leaders pe break lagega.
-            // Lekin aapke case me agar Direct khud leader hai, to uske neeche ki team aapko nahi jani chahiye.
-            // Toh hum seedha rule lagayenge: 
-            // Agar current node "Leader" hai, toh uski downline queue me PUSH NAHI hogi!
-            
-            // 🔥 Check for point counting:
-            if (currentUserNode.isToppedUp && currentUserNode.topUpDate >= startOfMonth && currentUserNode.topUpDate <= endOfMonth) {
-                currentLegSize += 1; 
-            }
-
-            // 🔥 BREAKAWAY CHECK: Kya iski downline dekhni chahiye?
-            // Agar yeh banda Leader hai, toh network aage badhna yahi band ho jayega.
+            // Agar yeh banda Leader hai, toh iske aage ki team process nahi hogi.
             if (currentUserNode.role === 'leader') {
-               // Is Leader ki team aage add nahi hogi. We skip pushing its downlines.
                continue; 
             }
 
-            // Agar Leader nahi hai, toh hi iski downline queue mein add hogi
+            // Agar Leader nahi hai, toh iski downline uthao
             const downlines = userMap.get(currentUserNode.userId) || []; 
             for (let d of downlines) {
+                // 🔥 FIX EXACTLY LIKE ADMIN: Point counting yahan downlines par lagayi hai.
+                // Isse direct member ka apna top-up count nahi hoga, sirf neeche ki team count hogi.
+                if (d.isToppedUp && d.topUpDate >= startOfMonth && d.topUpDate <= endOfMonth) {
+                    currentLegSize += 1; 
+                }
                 queue.push(d); 
             }
         }
