@@ -207,7 +207,7 @@ const Dashboard = ({ setModalState }) => {
         </section>
 
         {latestGlobalUsers.length > 0 && (
-          <section 
+       <section 
              onClick={() => navigate('/global-community')}
              className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group p-4 md:p-5"
           >
@@ -234,7 +234,10 @@ const Dashboard = ({ setModalState }) => {
                                  />
                                  <div>
                                      <span className="block font-black text-slate-700 text-sm capitalize leading-tight">{u.name || "User"}</span>
-                                     <span className="text-[10px] font-bold text-slate-400">#{u.userId}</span>
+                                     {/* 🔥 YAHAN UPDATE KIYA HAI: User ID masking (Start me **) */}
+                                     <span className="text-[10px] font-bold text-slate-400">
+                                         #{u.userId ? (String(u.userId).length > 2 ? '**' + String(u.userId).substring(2) : '**') : ''}
+                                     </span>
                                  </div>
                              </div>
                              

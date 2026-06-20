@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import api from "../../api/axios";
 import { Globe, Users, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 
-// ✅ HELPER 1: For Flag Image (Strictly 2 letters)
 // ✅ HELPER 1: For Flag Image (Ultra Smart - Handles both Old Full Names & New Codes)
 const fixCountryCode = (code) => {
   if (!code) return 'un'; 
@@ -30,10 +29,7 @@ const fixCountryCode = (code) => {
     'united arab emirates': 'ae'
   };
 
-  // Agar lamba naam match hota hai toh sahi 2-letter code bhejo
   if (oldNamesFix[c]) return oldNamesFix[c];
-
-  // Warna jo naya 2-letter code aa raha hai usko use karo
   return c.substring(0, 2);      
 };
 
@@ -48,6 +44,17 @@ const getFullCountryName = (code) => {
     'GB': 'United Kingdom', 'UK': 'United Kingdom', 'AE': 'UAE'
   };
   return countryMap[c] || c; 
+};
+
+// 🔥 NAYA HELPER: User ID ke SHURU ke 2 number chupane ke liye (Start mein **)
+const maskUserId = (id) => {
+  if (!id) return '';
+  const strId = String(id);
+  // Agar ID 2 character se badi hai toh shuru ke 2 numbers hata ke '**' laga do
+  if (strId.length > 2) {
+    return '**' + strId.substring(2);
+  }
+  return '**'; 
 };
 
 const GlobalTeam = () => {
@@ -157,12 +164,13 @@ const GlobalTeam = () => {
                       </div>
                     </td>
                     
+                    {/* 🔥 YAHAN UPDATE KIYA HAI: User ID ki Shuruwat me ** lagaya hai */}
                     <td className="p-4 font-black text-slate-900">
                       <div className="flex items-center gap-2">
                           <div className="p-1.5 rounded-md bg-slate-100 text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
                               <Users size={14} strokeWidth={3} />
                           </div>
-                          #{member.userId}
+                          #{maskUserId(member.userId)}
                       </div>
                     </td>
                     
@@ -178,7 +186,6 @@ const GlobalTeam = () => {
                              className="w-6 h-auto rounded-[2px] shadow-[0_0_2px_rgba(0,0,0,0.2)]"
                              onError={(e) => { e.target.src = 'https://flagcdn.com/w40/un.png'; }} 
                           />
-                          {/* ✅ YAHAN UPDATE KIYA HAI: Poora naam dikhega */}
                           <span className="text-[10px] font-black text-slate-500 uppercase">
                               {getFullCountryName(member.country)}
                           </span>
@@ -193,8 +200,6 @@ const GlobalTeam = () => {
                       </div>
                     </td>
                     
-                  
-
                   </tr>
                 ))
               )}
