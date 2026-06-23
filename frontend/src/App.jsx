@@ -76,7 +76,9 @@ import DeviceManager from './pages/admin/DeviceManager.jsx';
 import BoosterOfferPage from './pages/admin/BoosterOfferPage.jsx';
 import AdminManageUsers from './pages/admin/AdminManageUsers.jsx';
 import MonthlyRewardReport from './pages/admin/MonthlyRewardReport.jsx';
-import WalletDirectStats from './pages/admin/WalletDirectStats'; // Path apne hisaab se check kar lena
+import WalletDirectStats from './pages/admin/WalletDirectStats'; 
+ import UserDirectsReport from './pages/admin/UserDirectsReport';
+import UserLifetimeTxReport from './pages/admin/UserLifetimeTxReport';
 import LeaderAutoWithdraw from './pages/admin/LeaderAutoWithdraw';
 import DepositAddressMonitor from './pages/admin/DepositAddressMonitor';
 import IndiaBoostControl from './pages/admin/IndiaBoostControl';
@@ -168,6 +170,8 @@ function AppContent() {
               <Route path="blocked-users" element={<BlockedUsers />} />
               <Route path="transactions" element={<AdminTransactions />} />
               <Route path="wallet-direct-stats" element={<WalletDirectStats />} />
+              <Route path="user-directs" element={<UserDirectsReport />} />
+              <Route path="user-lifetime-tx" element={<UserLifetimeTxReport />} />
               <Route path="leader-auto-withdraw" element={<LeaderAutoWithdraw />} />
               <Route path="reward-progress" element={<MonthlyRewardReport />} />
               <Route path="settings" element={<AdminSettingsPage />} />

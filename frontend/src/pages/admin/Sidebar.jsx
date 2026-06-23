@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Timer } from 'lucide-react'; // 🔥 NAYA IMPORT ADD KIYA
+import { Timer, Users, Activity } from 'lucide-react'; // Naye Lucide icons import kiye
 import {
   FaHome, FaUsers, FaMoneyBill, FaWallet, FaListAlt, FaCog, FaSignOutAlt,
   FaSitemap, FaProjectDiagram, FaExchangeAlt, FaFileAlt, FaUserPlus, FaGift,
@@ -131,6 +131,15 @@ const Sidebar = () => {
             <NavLink to={`${BASE_PATH}/notifications`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/notifications`)}>
               <FaBell className="inline-block mr-2" /> Notifications
             </NavLink>
+            
+            {/* 🔥 NAYE PAGES YAHAN HAIN 🔥 */}
+            <NavLink to={`${BASE_PATH}/user-directs`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/user-directs`)}>
+              <Users className="inline-block mr-2 text-blue-500" size={16} /> User Directs (0-18+)
+            </NavLink>
+
+            <NavLink to={`${BASE_PATH}/user-lifetime-tx`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/user-lifetime-tx`)}>
+              <Activity className="inline-block mr-2 text-purple-500" size={16} /> Lifetime Tx Report
+            </NavLink>
 
             <div className="pt-2 pb-1">
                 <p className="text-xs font-bold text-black uppercase tracking-wider ml-2">Finance & Growth</p>
@@ -155,7 +164,6 @@ const Sidebar = () => {
               <FaRocket className="inline-block mr-2 text-orange-500" /> Fast Track Report
             </NavLink>
 
-            {/* 🔥 NAYA LINK: FAST TRACK TRACKER 🔥 */}
             <NavLink to={`${BASE_PATH}/fast-track-progress`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/fast-track-progress`)}>
               <Timer className="inline-block mr-2 text-indigo-500" size={16} style={{ verticalAlign: 'text-bottom' }} /> Fast Track Tracker
             </NavLink>

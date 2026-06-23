@@ -1629,29 +1629,24 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
     try {
         const { fromDate, toDate } = req.query;
 
-        // 🔥 DATE FILTER LOGIC (IST ke hisaab se) 🔥
-        // Ye sirf Transactions ko filter karega (Current Wallet balance waise hi rahega)
+        // 🔥 DATE FILTER LOGIC
         let dateFilter = {};
         if (fromDate || toDate) {
             dateFilter.date = {}; 
             if (fromDate) {
-                // Din ki shurwat (00:00:00) IST
                 dateFilter.date.$gte = new Date(`${fromDate}T00:00:00+05:30`);
             }
             if (toDate) {
-                // Din ka end (23:59:59) IST
                 dateFilter.date.$lte = new Date(`${toDate}T23:59:59+05:30`);
             }
         }
 
-        // Amount ko properly Number format mein convert karne ka helper
         const amountToNumber = { 
             $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } 
         };
 
         const stats = await User.aggregate([
             {
-                // 1. Basic Details (🔥 Yahan 'role' add kiya hai Leader filter ke liye)
                 $project: {
                     userId: 1,
                     name: 1,
@@ -1660,7 +1655,6 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                 }
             },
             {
-                // 2. Paid Directs Count (Sirf Active Directs ginega)
                 $lookup: {
                     from: "users", 
                     localField: "userId",
@@ -1673,31 +1667,38 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                 }
             },
             {
-                // 3. 🔥 TRANSACTIONS BREAKDOWN CALCULATION 🔥
+                // 🔥 TRANSACTIONS BREAKDOWN CALCULATION 🔥
                 $lookup: {
                     from: "transactions", 
                     let: { uid: "$userId" },
                     pipeline: [
                         {
-                            // Status success ho aur Date filter match kare
                             $match: {
-                                $expr: { $eq: ["$userId", "$$uid"] },
-                                status: "success",
-                                ...dateFilter 
+                                $expr: {
+                                    $or: [
+                                        { $eq: ["$userId", "$$uid"] },
+                                        { $eq: ["$toUserId", "$$uid"] }
+                                    ]
+                                },
+                                ...(dateFilter.date ? { date: dateFilter.date } : {})
                             }
                         },
                         {
-                            // Alag-alag type ki income/expense calculate karna
                             $group: {
                                 _id: null,
                                 
-                                // P2P Received
                                 p2pReceived: {
                                     $sum: {
                                         $cond: [
                                             { $or: [
-                                                { $in: ["$type", ["p2p_receive", "p2p_transfer_receive"]] },
-                                                { $and: [{ $eq: ["$type", "credit_to_wallet"] }, { $regexMatch: { input: { $ifNull: ["$source", ""] }, regex: /p2p/i } }] }
+                                                { $and: [
+                                                    { $eq: ["$userId", "$$uid"] },
+                                                    { $in: ["$type", ["p2p_receive", "p2p_transfer_receive", "transfer_receive"]] }
+                                                ]},
+                                                { $and: [
+                                                    { $eq: ["$toUserId", "$$uid"] },
+                                                    { $in: ["$type", ["transfer", "p2p_transfer", "fund_transfer"]] }
+                                                ]}
                                             ]},
                                             amountToNumber,
                                             0
@@ -1705,24 +1706,85 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                                     }
                                 },
                                 
-                                // Total Deposits (Fund Added by user or admin)
                                 totalDeposit: {
                                     $sum: {
-                                        $cond: [{ $in: ["$type", ["deposit", "add_fund", "fund_added"]] }, amountToNumber, 0]
+                                        $cond: [
+                                            { $and: [
+                                                { $eq: ["$userId", "$$uid"] }, 
+                                                { $in: ["$status", ["success", "approved", "completed"]] },
+                                                { $in: ["$type", ["deposit", "add_fund", "fund_added"]] }
+                                            ]},
+                                            amountToNumber,
+                                            0
+                                        ]
                                     }
                                 },
                                 
-                                // Fast Track Income
                                 fastTrackIncome: {
                                     $sum: {
-                                        $cond: [{ $in: ["$type", ["fast_track", "fast_track_income"]] }, amountToNumber, 0]
+                                        $cond: [
+                                            { $and: [
+                                                { $eq: ["$userId", "$$uid"] }, 
+                                                { $in: ["$status", ["success", "approved", "completed"]] },
+                                                { $in: ["$type", ["fast_track", "fast_track_income"]] }
+                                            ]},
+                                            amountToNumber,
+                                            0
+                                        ]
                                     }
                                 },
                                 
-                                // Total Withdrawals
+                                // 🔥 NAYA ADDITION: SIRF 10% LEADER BONUS KO ALAG SE GIN RAHA HAI ($3 WALA)
+                                leaderBonus: {
+                                    $sum: {
+                                        $cond: [
+                                            { $and: [
+                                                { $eq: ["$userId", "$$uid"] }, 
+                                                { $in: ["$status", ["success", "approved", "completed"]] },
+                                                { $eq: ["$type", "credit_to_wallet"] },
+                                                { $eq: ["$source", "instant_leader_bonus"] } // Yeh apke topup code ka source hai
+                                            ]},
+                                            amountToNumber,
+                                            0
+                                        ]
+                                    }
+                                },
+
+                                // CREDIT TO WALLET (Isme se Leader Bonus ko exclude kar diya taaki double count na ho)
+                                creditToWallet: {
+                                    $sum: {
+                                        $cond: [
+                                            { $and: [
+                                                { $eq: ["$userId", "$$uid"] }, 
+                                                { $in: ["$status", ["success", "approved", "completed"]] },
+                                                { $or: [
+                                                    { $and: [
+                                                        { $eq: ["$type", "credit_to_wallet"] },
+                                                        { $ne: ["$source", "instant_leader_bonus"] }, // EXCLUDE
+                                                        { $not: { $regexMatch: { input: { $ifNull: ["$source", ""] }, regex: /p2p/i } } }
+                                                    ]},
+                                                    { $and: [
+                                                        { $eq: ["$type", "credit"] },
+                                                        { $eq: ["$source", "system"] }
+                                                    ]}
+                                                ]}
+                                            ]},
+                                            amountToNumber,
+                                            0
+                                        ]
+                                    }
+                                },
+                                
                                 totalWithdrawal: {
                                     $sum: {
-                                        $cond: [{ $in: ["$type", ["withdrawal", "withdraw", "payout"]] }, amountToNumber, 0]
+                                        $cond: [
+                                            { $and: [
+                                                { $eq: ["$userId", "$$uid"] }, 
+                                                { $in: ["$type", ["withdrawal", "withdraw", "payout"]] }
+                                            ]}, 
+                                            amountToNumber, 
+                                            0
+                                        ]
                                     }
                                 }
                             }
@@ -1732,20 +1794,39 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                 }
             },
             {
-                // 4. Sab data ko main object me set karna
+                // 🔥 MAIN ADD FIELDS 
                 $addFields: {
                     paidDirectCount: { $ifNull: [{ $arrayElemAt: ["$directsData.paidDirects", 0] }, 0] },
                     p2pReceived: { $ifNull: [{ $arrayElemAt: ["$txStats.p2pReceived", 0] }, 0] },
                     totalDeposit: { $ifNull: [{ $arrayElemAt: ["$txStats.totalDeposit", 0] }, 0] },
                     fastTrackIncome: { $ifNull: [{ $arrayElemAt: ["$txStats.fastTrackIncome", 0] }, 0] },
-                    totalWithdrawal: { $ifNull: [{ $arrayElemAt: ["$txStats.totalWithdrawal", 0] }, 0] }
+                    
+                    // 🌟 NAYA: Leader Bonus direct map hoga
+                    leaderBonus: { $ifNull: [{ $arrayElemAt: ["$txStats.leaderBonus", 0] }, 0] },
+                    
+                    // 🛑 LEADER RULE FOR CREDIT TO WALLET
+                    creditToWallet: { 
+                        $cond: [
+                            { $eq: ["$role", "leader"] }, 
+                            0, // Leader ka normal C2W hide hoga
+                            { $ifNull: [{ $arrayElemAt: ["$txStats.creditToWallet", 0] }, 0] } 
+                        ] 
+                    }, 
+                    
+                    // 🛑 LEADER RULE FOR TOTAL WITHDRAWAL
+                    totalWithdrawal: { 
+                        $cond: [
+                            { $eq: ["$role", "leader"] }, 
+                            0, // Leader ka withdraw hide hoga
+                            { $ifNull: [{ $arrayElemAt: ["$txStats.totalWithdrawal", 0] }, 0] } 
+                        ] 
+                    }
                 }
             },
             {
-                $project: { directsData: 0, txStats: 0 } // Extra arrays ko hata diya
+                $project: { directsData: 0, txStats: 0 } 
             },
             {
-                // 5. Sirf unhi logo ko bhejo jinka koi bhi transaction ya balance ho (Zero walo ko hatao)
                 $match: {
                     $or: [
                         { walletBalance: { $gt: 0 } },
@@ -1753,11 +1834,13 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                         { p2pReceived: { $gt: 0 } },
                         { totalDeposit: { $gt: 0 } },
                         { fastTrackIncome: { $gt: 0 } },
+                        { leaderBonus: { $gt: 0 } }, // 🌟 Isko bhi condition me daal diya
+                        { creditToWallet: { $gt: 0 } },
                         { totalWithdrawal: { $gt: 0 } }
                     ]
                 }
             },
-            { $sort: { walletBalance: -1 } } // Default Highest Wallet Upar ayega
+            { $sort: { walletBalance: -1 } } 
         ]);
 
         res.json({ success: true, data: stats });
@@ -1767,6 +1850,198 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
     }
 });
 
+
+
+// ========================================================
+// 📊 PAGE 1: USER DIRECTS REPORT (NORMAL USERS ONLY)
+// ========================================================
+// ========================================================
+// 📊 PAGE 1: USER DIRECTS REPORT (ALL USERS + LEADERS)
+// ========================================================
+router.get('/user-directs-report', verifyAdmin, async (req, res) => {
+    try {
+        const stats = await User.aggregate([
+            {
+                // 🔥 NAYA FIX: Ab saare users (Normal + Leader) fetch honge
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "sponsorId",
+                    pipeline: [
+                        { $match: { isToppedUp: true } }, // Sirf active directs gino
+                        { $count: "count" }
+                    ],
+                    as: "directs"
+                }
+            },
+            {
+                $project: {
+                    userId: 1,
+                    name: 1,
+                    role: 1, // Role field jaroori hai frontend filter ke liye
+                    country: 1,
+                    isToppedUp: 1,
+                    createdAt: 1,
+                    directCount: { $ifNull: [{ $arrayElemAt: ["$directs.count", 0] }, 0] }
+                }
+            },
+            { $sort: { directCount: -1, createdAt: -1 } }
+        ]);
+
+        res.json({ success: true, data: stats });
+    } catch (error) {
+        console.error("User Directs Report Error:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+// ========================================================
+// 📊 PAGE 2: USER LIFETIME TX REPORT (NORMAL USERS ONLY)
+// ========================================================
+// ========================================================
+// 📊 PAGE 2: USER LIFETIME TX REPORT (ALL USERS + LEADERS)
+// ========================================================
+router.get('/user-lifetime-tx-report', verifyAdmin, async (req, res) => {
+    try {
+        const { fromDate, toDate } = req.query;
+
+        // 🔥 DATE FILTER LOGIC
+        let dateFilter = {};
+        if (fromDate || toDate) {
+            dateFilter.date = {}; 
+            if (fromDate) {
+                dateFilter.date.$gte = new Date(`${fromDate}T00:00:00+05:30`);
+            }
+            if (toDate) {
+                dateFilter.date.$lte = new Date(`${toDate}T23:59:59+05:30`);
+            }
+        }
+
+        const amountToNumber = { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } };
+
+        const stats = await User.aggregate([
+            {
+                $project: {
+                    userId: 1,
+                    name: 1,
+                    role: 1, // Leader/Normal frontend filter ke liye
+                    walletBalance: { $ifNull: ["$walletBalance", 0] }
+                }
+            },
+            {
+                $lookup: {
+                    from: "transactions",
+                    let: { uid: "$userId" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $or: [
+                                        { $eq: ["$userId", "$$uid"] },
+                                        { $eq: ["$toUserId", "$$uid"] }
+                                    ]
+                                },
+                                status: { $in: ["success", "approved", "completed", "pending"] },
+                                ...(dateFilter.date ? { date: dateFilter.date } : {})
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                
+                                // Withdrawals
+                                withdrawn: {
+                                    $sum: { $cond: [{ $in: ["$type", ["withdrawal", "withdraw", "payout"]] }, amountToNumber, 0] }
+                                },
+                                
+                                // Credit To Wallet (Manual + Auto Split)
+                                c2w: {
+                                    $sum: {
+                                        $cond: [{
+                                            $or: [
+                                                { $and: [{ $eq: ["$type", "credit_to_wallet"] }, { $not: { $regexMatch: { input: { $ifNull: ["$source", ""] }, regex: /p2p/i } } }] },
+                                                { $and: [{ $eq: ["$type", "credit"] }, { $eq: ["$source", "system"] }] }
+                                            ]
+                                        }, amountToNumber, 0]
+                                    }
+                                },
+                                
+                                // P2P Sent
+                                p2pSent: {
+                                    $sum: {
+                                        $cond: [{
+                                            $and: [
+                                                { $eq: ["$userId", "$$uid"] },
+                                                { $in: ["$type", ["transfer", "p2p_transfer", "p2p_transfer_send"]] }
+                                            ]
+                                        }, amountToNumber, 0]
+                                    }
+                                },
+                                
+                                // P2P Received
+                                p2pReceived: {
+                                    $sum: {
+                                        $cond: [{
+                                            $or: [
+                                                { $and: [{ $eq: ["$userId", "$$uid"] }, { $in: ["$type", ["p2p_receive", "p2p_transfer_receive"]] }] },
+                                                { $and: [{ $eq: ["$toUserId", "$$uid"] }, { $in: ["$type", ["transfer", "p2p_transfer"]] }] }
+                                            ]
+                                        }, amountToNumber, 0]
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    as: "tx"
+                }
+            },
+            {
+                // 🔥 MAIN ADD FIELDS (Leader C2W & Withdraw Rule Applied)
+                $addFields: {
+                    p2pSent: { $ifNull: [{ $arrayElemAt: ["$tx.p2pSent", 0] }, 0] },
+                    p2pReceived: { $ifNull: [{ $arrayElemAt: ["$tx.p2pReceived", 0] }, 0] },
+                    
+                    // Leader ka C2W hide hoga
+                    c2w: {
+                        $cond: [
+                            { $eq: ["$role", "leader"] },
+                            0,
+                            { $ifNull: [{ $arrayElemAt: ["$tx.c2w", 0] }, 0] }
+                        ]
+                    },
+                    // Leader ka Withdraw hide hoga
+                    withdrawn: {
+                        $cond: [
+                            { $eq: ["$role", "leader"] },
+                            0,
+                            { $ifNull: [{ $arrayElemAt: ["$tx.withdrawn", 0] }, 0] }
+                        ]
+                    }
+                }
+            },
+            {
+                $project: { tx: 0 } // Kachra saaf
+            },
+            {
+                $match: {
+                    $or: [
+                        { withdrawn: { $gt: 0 } }, 
+                        { c2w: { $gt: 0 } }, 
+                        { p2pSent: { $gt: 0 } }, 
+                        { p2pReceived: { $gt: 0 } }, 
+                        { walletBalance: { $gt: 0 } }
+                    ]
+                }
+            },
+            { $sort: { withdrawn: -1 } }
+        ]);
+
+        res.json({ success: true, data: stats });
+    } catch (error) {
+        console.error("User Lifetime Tx Report Error:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
 
 // ==========================================
 // 1. OPTIMIZED TRANSACTIONS ROUTE
