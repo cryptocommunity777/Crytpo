@@ -12,7 +12,8 @@ const { startCron } = require('./roiCron');
 // 🔥 1. USER MODEL UNCOMMENT KAR DIYA HAI (Agar aapka file naam alag hai, toh './models/User' ko theek kar lena)
 const User = require('./models/User'); 
 const startGlobalGrowthCron = require('./cron/autoGlobalGrowth');
-  
+const startStakingCron = require('./cron/stakingCron');
+
 const app = express();
 app.set('trust proxy', true);
 
@@ -130,6 +131,9 @@ mongoose.connect(process.env.MONGO_URI)
       require('./cron/fastTrackCron'); 
       console.log('✅ Fast Track Offer Daily Cron Started (Runs at 12:05 AM)');
       // 👆👆👆 ========================================= 👆👆👆
+
+      // startStakingCron();
+      // console.log("🚀 Staking 1% Daily Cron Started (Runs at 12:10 AM IST)");
 
       require('./cron/monthlyRewardCron');
       console.log('✅ Monthly Reward Cron Started');

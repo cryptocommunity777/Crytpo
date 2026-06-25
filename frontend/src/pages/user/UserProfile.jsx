@@ -10,12 +10,10 @@ import MessageModal from '../../components/modals/MessageModal';
 
 function UserProfile() {
   const navigate = useNavigate();
-  const { user, updateUser, token } = useAuth();
+  const { user, updateUser } = useAuth(); // Token is now handled by interceptor
 
-  /* ================= TABS STATE ================= */
   const [activeTab, setActiveTab] = useState('profile'); 
 
-  /* ================= STATES ================= */
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -23,7 +21,6 @@ function UserProfile() {
     walletAddress: user?.walletAddress || '',
   });
 
-  // 🔥 Sync data whenever user object changes from backend/context
   useEffect(() => {
     if (user) {
       setFormData({
@@ -35,67 +32,82 @@ function UserProfile() {
     }
   }, [user]);
 
-  const [profileTxnPassword, setProfileTxnPassword] = useState('');
+  // 🔥 FAST FLOW OTP States
+  const [otp, setOtp] = useState('');
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); 
+
   const [loginPassword, setLoginPassword] = useState('');
   const [newLoginPassword, setNewLoginPassword] = useState('');
   const [currentTxnPassword, setCurrentTxnPassword] = useState('');
   const [newTxnPassword, setNewTxnPassword] = useState('');
 
   const [messageModal, setMessageModal] = useState({
-    open: false,
-    title: '',
-    message: '',
-    type: 'info',
+    open: false, title: '', message: '', type: 'info',
   });
 
   const showMessage = (title, message, type = 'info') =>
     setMessageModal({ open: true, title, message, type });
 
-  /* ================= WALLET LOCK LOGIC ================= */
+  // Wallet Lock Logic
   const walletLockReason = useMemo(() => {
     if (!user) return null;
-    
     if (user.walletAddress && user.walletAddress.trim() !== '') {
-      return 'Wallet address is permanently locked once set. For changes, use Edit Profile.';
+      return 'Wallet address is permanently locked once set. For changes, contact support.';
     }
     return null;
   }, [user]);
 
   const isWalletLocked = Boolean(walletLockReason);
 
-  /* ================= HANDLERS ================= */
-  const handleChange = e => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = e => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+
+  // 🔥 STEP 1: SEND OTP
+  const handleSendOtp = async () => {
+    setIsSendingOtp(true);
+    try {
+      const payload = { userId: user.userId };
+      const res = await api.post(`/user/send-edit-otp`, payload);
+      setIsOtpSent(true);
+      showMessage('OTP Sent 📧', res.data.message || 'Verification OTP sent to your registered email.', 'success');
+    } catch (err) {
+      showMessage('Error', err.response?.data?.message || 'Failed to send OTP. Try again.', 'error');
+    } finally {
+      setIsSendingOtp(false);
+    }
   };
 
+  // 🔥 STEP 2: VERIFY & SAVE (1-Click Magic)
   const handleSaveProfile = async () => {
-    if (isWalletLocked) {
-      return showMessage(
-        'Wallet Address Locked',
-        '🔒 Wallet address cannot be changed once it is set.',
-        'error'
-      );
-    }      
-
-    if (!profileTxnPassword) {
-      return showMessage('Transaction Password Required', 'Please enter your transaction password to update profile.', 'warning');
-    }
-
+    if (isWalletLocked) return showMessage('Wallet Locked', 'Wallet address cannot be changed.', 'error');
+    if (!otp || otp.length < 6) return showMessage('Invalid OTP', 'Please enter a valid 6-digit OTP.', 'warning');
+    
+    setIsSaving(true);
     try {
-      const payload = { ...formData, oldTxnPassword: profileTxnPassword };
-      const res = await api.put(`/user/${user.userId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      // 1. Verify OTP
+      await api.post(`/user/verify-edit-otp`, { userId: user.userId, otp: otp });
+
+      // 2. Agar verify ho gaya, toh Update Profile hit karo
+      const payload = { 
+        userId: user.userId,
+        newWalletAddress: formData.walletAddress 
+      }; 
+      const res = await api.put(`/user/update-profile-secure`, payload); 
       
-      // Update Context
       if (res.data && res.data.user) {
         updateUser(res.data.user);
-      } else {
-        updateUser(res.data);
       }
       
-      setProfileTxnPassword('');
-      showMessage('Profile Updated Successfully ✅', 'Your wallet address has been saved permanently.', 'success');
+      // Reset states
+      setOtp('');
+      setIsOtpSent(false);
+      showMessage('Updated Successfully ✅', 'Your wallet address has been saved.', 'success');
     } catch (err) {
-      showMessage(err.response?.status === 403 ? 'Update Blocked 🚫' : 'Error', err.response?.data?.message || 'Profile update blocked due to security rules.', 'error');
+      // Agar Verify ya Save mein koi bhi fail hua, yahan error aayega
+      showMessage('Error', err.response?.data?.message || 'Invalid OTP or Update failed.', 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -110,7 +122,7 @@ function UserProfile() {
     }
 
     try {
-      await api.put(`/user/change-password/${user.userId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      await api.put(`/user/change-password/${user.userId}`, payload);
       showMessage('Password Updated 🔐', 'Your password has been changed successfully.', 'success');
 
       if(type === 'login') {
@@ -135,7 +147,6 @@ function UserProfile() {
 
   return (
    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-20 pt-6 md:pt-10 selection:bg-green-500/30">
-      
       <div className="max-w-3xl mx-auto px-4 md:px-6">
           
           {/* Header & Back Button */}
@@ -162,7 +173,6 @@ function UserProfile() {
              <div className="text-center sm:text-left flex-1">
                 <h2 className="text-2xl font-black text-slate-900">{user.name}</h2>
                 <p className="text-sm font-bold text-slate-500 mt-0.5">{user.email}</p>
-                
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-4">
                    <div className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2">
                       <BadgeInfo size={14} className="text-green-500" />
@@ -197,7 +207,6 @@ function UserProfile() {
           {/* ================= TAB 1: PROFILE DETAILS ================= */}
           {activeTab === 'profile' && (
              <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-5 md:p-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                
                 <div className="space-y-5">
                    
                    {/* Non-Editable Fields */}
@@ -215,14 +224,6 @@ function UserProfile() {
                          <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Mail size={16} className="text-slate-400" /></div>
                             <input name="email" value={formData.email} readOnly disabled className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pl-10 text-slate-500 font-bold cursor-not-allowed outline-none text-sm" />
-                         </div>
-                      </div>
-
-                      <div className="md:col-span-2">
-                         <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Mobile Number</label>
-                         <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Smartphone size={16} className="text-slate-400" /></div>
-                            <input name="mobile" value={formData.mobile} readOnly disabled className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pl-10 text-slate-500 font-bold cursor-not-allowed outline-none text-sm" />
                          </div>
                       </div>
                    </div>
@@ -243,11 +244,6 @@ function UserProfile() {
                             className={`w-full bg-white border ${isWalletLocked ? 'border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed' : 'border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-slate-900'} rounded-xl px-4 py-3.5 pl-10 font-bold outline-none transition-all text-sm`} 
                          />
                       </div>
-                      {isWalletLocked && (
-                         <div className="mt-2.5 bg-red-50 border border-red-200 p-3 rounded-xl flex items-start gap-2 text-red-600 text-[10px] md:text-xs font-bold leading-relaxed shadow-sm">
-                            <Lock size={14} className="shrink-0 mt-0.5 text-red-500" /> <span>{walletLockReason}</span>
-                         </div>
-                      )}
                    </div>
 
                    {/* 🔥 WALLET HISTORY SECTION */}
@@ -271,26 +267,41 @@ function UserProfile() {
                       </div>
                    )}
 
-                   {/* Save Section */}
+                   {/* 🔥 OTP VERIFICATION FLOW (FAST FLOW) */}
                    {!isWalletLocked && (
                      <div className="pt-4 border-t border-slate-100">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Transaction Password to Save</label>
-                        <div className="relative mb-4">
-                           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Key size={16} className="text-slate-400" /></div>
-                           <input 
-                              type="password" 
-                              placeholder="Enter Txn Password"
-                              value={profileTxnPassword} 
-                              onChange={e => setProfileTxnPassword(e.target.value)} 
-                              className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 pl-10 text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all text-sm" 
-                           />
-                        </div>
-                        <button 
-                           onClick={handleSaveProfile} 
-                           className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-wider shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
-                        >
-                           <Save size={18} /> Update Wallet Address
-                        </button>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Security Verification</label>
+                        
+                        {!isOtpSent ? (
+                           <button 
+                              onClick={handleSendOtp} 
+                              disabled={isSendingOtp || !formData.walletAddress}
+                              className={`w-full py-3.5 rounded-xl text-white font-black text-sm uppercase tracking-wider shadow-sm transition-all flex items-center justify-center gap-2 ${isSendingOtp || !formData.walletAddress ? 'bg-slate-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                           >
+                              <Mail size={18} /> {isSendingOtp ? "Sending OTP..." : "Send OTP to Email"}
+                           </button>
+                        ) : (
+                           <div className="animate-in fade-in zoom-in duration-300 space-y-3">
+                              <div className="relative">
+                                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Key size={16} className="text-slate-400" /></div>
+                                 <input 
+                                    type="text" 
+                                    placeholder="Enter OTP sent to your Email"
+                                    value={otp} 
+                                    onChange={e => setOtp(e.target.value.replace(/\D/g, ''))} 
+                                    maxLength={6}
+                                    className="w-full tracking-[0.5em] text-center font-black text-lg bg-slate-50 border border-slate-300 rounded-xl px-4 py-3.5 pl-10 text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all" 
+                                 />
+                              </div>
+                              <button 
+                                 onClick={handleSaveProfile} 
+                                 disabled={isSaving}
+                                 className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-wider shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
+                              >
+                                 <Save size={18} /> {isSaving ? "Saving..." : "Verify & Save Changes"}
+                              </button>
+                           </div>
+                        )}
                      </div>
                    )}
 

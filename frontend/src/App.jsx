@@ -33,6 +33,7 @@ import DirectTeamPage from './pages/user/DirectTeamPage.jsx';
 import DirectIncome from './pages/user/DirectIncome.jsx';
 import LevelIncome from './pages/user/LevelIncome.jsx';
 import FastTrackIncome from './pages/user/FastTrackIncome.jsx';
+import StakingProgram from './pages/user/StakingProgram.jsx';
 import DailyROIIncome from './components/dashboard/DailyROI.jsx';
 import MyTransfers from './pages/user/MyTransfers.jsx';
 import DepositHistory from "./pages/user/DepositHistory.jsx";
@@ -231,6 +232,7 @@ function AppContent() {
              <Route path="/direct-income" element={<RequireUserAuth><UserLayout><DirectIncome /></UserLayout></RequireUserAuth>} />
 <Route path="/level-income" element={<RequireUserAuth><UserLayout><LevelIncome /></UserLayout></RequireUserAuth>} />
 <Route path="/fast-track-income" element={<RequireUserAuth><UserLayout><FastTrackIncome /></UserLayout></RequireUserAuth>} />            <Route path="/daily-roi" element={<RequireUserAuth><UserLayout><DailyROIIncome /></UserLayout></RequireUserAuth>} />
+    <Route path="/staking-program" element={<RequireUserAuth><UserLayout><StakingProgram /></UserLayout></RequireUserAuth>} />
             <Route path="/my-transfers" element={<RequireUserAuth><UserLayout><MyTransfers /></UserLayout></RequireUserAuth>} />
             <Route path="/deposit-history" element={<RequireUserAuth><UserLayout><DepositHistory /></UserLayout></RequireUserAuth>} />
             <Route path="/topup-details" element={<RequireUserAuth><UserLayout><TopupDetails /></UserLayout></RequireUserAuth>} />

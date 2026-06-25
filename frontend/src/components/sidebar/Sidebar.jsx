@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { useNavigate, useLocation, Link } from "react-router-dom"; 
-import { Home, Wallet, Banknote, History, Users, UserCircle2, HelpCircle, BadgeDollarSign, BarChart, Globe, Zap, FileQuestion } from "lucide-react";
+import { Home, Wallet, Banknote, History, Users, UserCircle2, HelpCircle, BadgeDollarSign, BarChart, Globe, Zap, FileQuestion, Coins } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const SidebarItem = ({ label, icon: Icon, active, onClick, badge, path }) => {
@@ -65,6 +65,7 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
     { label: "Fast Track Income", icon: Zap, path: "/fast-track-income" },
     { label: "Direct Income", icon: BadgeDollarSign, path: "/direct-income" },
     { label: "Level Income", icon: Users, path: "/level-income" },
+  //  { label: "Staking Program", icon: Coins, path: "/staking-program" },
     { label: "Community Income", icon: BadgeDollarSign, path: "/community-income" },
     { label: "Withdrawals", icon: Banknote, path: "/withdrawals" },
     { label: "Wallet History", icon: History, path: "/wallet-history" },
