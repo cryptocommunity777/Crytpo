@@ -150,7 +150,7 @@ function UserProfile() {
              </div>
              
              <button onClick={() => navigate('/edit-profile')} className="px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 border border-blue-200 shadow-sm">
-                <Edit3 size={14} /> Edit
+                <Edit3 size={14} /> Change Details
              </button>
           </div>
 

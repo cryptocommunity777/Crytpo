@@ -89,7 +89,7 @@ function EditProfile() {
               <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Unlock size={32} />
               </div>
-              <h2 className="text-xl font-black text-slate-800 uppercase">Unlock Editing</h2>
+              <h2 className="text-xl font-black text-slate-800 uppercase">Send otp to change details</h2>
               <p className="text-sm font-bold text-slate-500">To edit your profile or wallet address, we need to verify your identity. An OTP will be sent to <b>{user?.email}</b>.</p>
               <button onClick={handleSendOTP} disabled={loading} className="w-full mt-4 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2">
                 {loading ? 'Sending...' : <><Mail size={18} /> Send OTP to Email</>}
