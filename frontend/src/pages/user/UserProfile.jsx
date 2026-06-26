@@ -286,11 +286,11 @@ function UserProfile() {
                                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Key size={16} className="text-slate-400" /></div>
                                  <input 
                                     type="text" 
-                                    placeholder="Enter OTP sent to your Email"
+                                    placeholder="Enter OTP"
                                     value={otp} 
                                     onChange={e => setOtp(e.target.value.replace(/\D/g, ''))} 
                                     maxLength={6}
-                                    className="w-full tracking-[0.5em] text-center font-black text-lg bg-slate-50 border border-slate-300 rounded-xl px-4 py-3.5 pl-10 text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all" 
+                                    className="w-full tracking-[0.5em] text-center font-black text-sm bg-slate-50 border border-slate-300 rounded-xl px-4 py-3.5 pl-10 text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all" 
                                  />
                               </div>
                               <button 
