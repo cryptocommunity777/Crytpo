@@ -39,57 +39,63 @@ const StakingProgram = () => {
     if (loading) return <SpinnerOverlay />;
 
     return (
-        <div className="w-full relative animate-fadeIn pb-28 md:pb-8">
-            <div className="p-4 md:p-8 max-w-6xl mx-auto pt-4 md:pt-8 space-y-6">
+        <div className="w-full relative animate-fadeIn">
+            {/* Dashboard ke hisaab se padding aur spacing kam kar di gayi hai */}
+            <div className="p-2 md:p-4 w-full space-y-4">
                 
-                {/* Header */}
-                <div className="mb-2">
-                    <h1 className="text-2xl md:text-3xl font-black text-slate-800 flex items-center gap-3">
-                        <Coins className="text-yellow-500" size={32}/> CCT Airdrop & Staking
+                {/* Header (Compact) */}
+                <div className="mb-1">
+                    <h1 className="text-xl md:text-2xl font-black text-slate-800 flex items-center gap-2">
+                        <Coins className="text-yellow-500" size={24}/> CCT Airdrop & Staking Program
                     </h1>
                 </div>
 
-                {/* 📊 STATS CARDS */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                {/* 📊 STATS CARDS (Chhote Boxes) */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
                     <StatCard label="Main Wallet" value={`$${stats.walletBalance.toFixed(2)}`} color="bg-blue-50 text-blue-700 border-blue-200" />
-                    <StatCard label="Available CCT" value={`${stats.cctBalance.toFixed(2)} CCT`} color="bg-yellow-50 text-yellow-700 border-yellow-200" />
-                    <StatCard label="Total Staked" value={`${stats.totalCctStaked.toFixed(2)} CCT`} color="bg-indigo-50 text-indigo-700 border-indigo-200" />
-                    <StatCard label="Staking Income" value={`${stats.cctStakingIncome.toFixed(2)} CCT`} color="bg-green-50 text-green-700 border-green-200" />
+                    <StatCard label="Available CCT" value={`${stats.cctBalance.toFixed(2)}`} color="bg-yellow-50 text-yellow-700 border-yellow-200" />
+                    <StatCard label="Total Staked" value={`${stats.totalCctStaked.toFixed(2)}`} color="bg-indigo-50 text-indigo-700 border-indigo-200" />
+                    
+                    {/* 🔥 YAHAN CHANGE KIYA HAI: cctStakingIncome ki jagah stakedEarned lagaya hai */}
+                    <StatCard label="Total Staking Income" value={`${stats.stakedEarned.toFixed(2)}`} color="bg-green-50 text-green-700 border-green-200" />
                 </div>
 
-                {/* 📈 STAKING PROGRESS */}
+                {/* 📈 STAKING PROGRESS (Amount with details) */}
                 {stats.isStaked && (
-                    <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
-                        <div className="flex justify-between items-center mb-3">
-                            <h3 className="font-black text-slate-800 uppercase tracking-wider text-xs">My Staking Progress</h3>
+                    <div className="bg-white border border-slate-200 rounded-lg p-3 md:p-4 shadow-sm">
+                        <div className="flex justify-between items-end mb-2">
+                            <h3 className="font-black text-slate-800 uppercase tracking-wider text-[10px] md:text-xs">Staking Progress</h3>
+                            <span className="text-[10px] md:text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                                Earned: {stats.stakedEarned.toFixed(2)} / {stats.stakedMaxCap.toFixed(2)}
+                            </span>
                         </div>
-                        <div className="w-full bg-slate-100 rounded-full h-3 mb-2 overflow-hidden shadow-inner">
-                            <div className="bg-indigo-600 h-3 rounded-full transition-all duration-1000" style={{ width: `${Math.min((stats.stakedEarned / stats.stakedMaxCap) * 100, 100)}%` }}></div>
+                        <div className="w-full bg-slate-100 rounded-full h-2.5 mb-1 overflow-hidden shadow-inner">
+                            <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-1000" style={{ width: `${Math.min((stats.stakedEarned / stats.stakedMaxCap) * 100, 100)}%` }}></div>
                         </div>
                     </div>
                 )}
 
-                {/* 🛠️ BUTTONS - STYLE OF image_23f55e.png */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                {/* 🛠️ ACTION BUTTONS (Compact size) */}
+                <div className="grid grid-cols-3 gap-2 md:gap-3 pt-1">
                     <button 
                         onClick={() => setIsConvertOpen(true)} 
-                        className="bg-green-600 hover:bg-green-700 text-white font-black py-4 rounded-lg transition-all shadow-md hover:shadow-lg active:scale-[0.98] uppercase tracking-widest text-lg"
+                        className="bg-green-600 hover:bg-green-700 text-white font-black py-2.5 rounded-md transition-all shadow-sm active:scale-[0.98] uppercase tracking-widest text-[11px] md:text-sm"
                     >
-                        BUY CCT
+                        BUY 
                     </button>
 
                     <button 
                         onClick={() => setIsStakeOpen(true)} 
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-lg transition-all shadow-md hover:shadow-lg active:scale-[0.98] uppercase tracking-widest text-lg"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black py-2.5 rounded-md transition-all shadow-sm active:scale-[0.98] uppercase tracking-widest text-[11px] md:text-sm"
                     >
                         STAKE
                     </button>
 
                     <button 
                         onClick={() => setIsWithdrawOpen(true)} 
-                        className="bg-red-500 hover:bg-red-600 text-white font-black py-4 rounded-lg transition-all shadow-md hover:shadow-lg active:scale-[0.98] uppercase tracking-widest text-lg"
+                        className="bg-red-500 hover:bg-red-600 text-white font-black py-2.5 rounded-md transition-all shadow-sm active:scale-[0.98] uppercase tracking-widest text-[11px] md:text-sm"
                     >
-                        SELL CCT
+                        SELL 
                     </button>
                 </div>
             </div>
@@ -97,15 +103,18 @@ const StakingProgram = () => {
             {/* Modals */}
             {isConvertOpen && <ConvertCctModal isOpen={isConvertOpen} onClose={() => setIsConvertOpen(false)} walletBalance={stats.walletBalance} onSuccess={fetchStats} />}
             {isStakeOpen && <StakeCctModal isOpen={isStakeOpen} onClose={() => setIsStakeOpen(false)} cctBalance={stats.cctBalance} onSuccess={fetchStats} />}
+            
+            {/* Withdrawal Modal ko abhi bhi 'cctStakingIncome' hi bhejenge, taaki user sirf bacha hua fund nikal sake */}
             {isWithdrawOpen && <WithdrawCctModal isOpen={isWithdrawOpen} onClose={() => setIsWithdrawOpen(false)} cctStakingIncome={stats.cctStakingIncome} onSuccess={fetchStats} />}
         </div>
     );
 };
 
+// StatCard Component - Made more compact
 const StatCard = ({ label, value, color }) => (
-    <div className={`p-4 border rounded-xl shadow-sm flex flex-col justify-center ${color}`}>
-        <span className="text-[9px] font-black uppercase tracking-widest opacity-80 mb-1.5">{label}</span>
-        <span className="text-lg md:text-xl font-black tracking-tight">{value}</span>
+    <div className={`p-3 border rounded-lg shadow-sm flex flex-col justify-center ${color}`}>
+        <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest opacity-80 mb-1">{label}</span>
+        <span className="text-base md:text-lg font-black tracking-tight">{value}</span>
     </div>
 );
 

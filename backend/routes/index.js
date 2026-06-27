@@ -39,7 +39,7 @@ router.use('/packages', require('./packages'));
 router.use('/support', require('./support'));
 router.use('/dashboard', require('./dashboard'));
 router.use('/community', require('./community'));
-// router.use('/staking', require('./staking')); // 🔥 YEH LINE ADD KAREIN
+router.use('/staking', require('./staking')); // 🔥 YEH LINE ADD KAREIN
 
 // 🎥 NAYA: User Promo Video Route (Dashboard pe video dikhane ke liye)
 router.use('/video', require('./videoRoutes')); // 👈 YE LINE BHI ADD KI HAI

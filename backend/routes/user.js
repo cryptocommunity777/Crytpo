@@ -241,13 +241,15 @@ router.get('/:userId', getUserById);
 
 
 
+// =========================================================
+// 🔥 SECURE PROFILE UPDATE & WALLET ROUTES
+// =========================================================
 
- 
-
-// 1. Send OTP to Email
-router.post('/send-edit-otp', /* verifyToken, */ async (req, res) => {
+// 1. Send OTP to Email (SECURED)
+// Ab authMiddleware laga diya hai, aur req.body.userId nahi balki token se userId nikal rahe hain.
+router.post('/send-edit-otp', authMiddleware, async (req, res) => {
     try {
-        const user = await User.findOne({ userId: req.body.userId }); // ya req.user.userId agar middleware use kar rahe hain
+        const user = await User.findOne({ userId: req.user.userId }); // 🔥 ALWAYS use req.user.userId
         if (!user) return res.status(404).json({ message: "User not found" });
 
         // Generate 6 digit OTP
@@ -265,6 +267,7 @@ router.post('/send-edit-otp', /* verifyToken, */ async (req, res) => {
                    <p>This OTP is valid for 10 minutes. Do not share it with anyone.</p>`
         };
 
+        // Note: Assumes transporter is defined elsewhere in your file
         await transporter.sendMail(mailOptions);
         res.json({ success: true, message: "OTP sent to your registered email." });
     } catch (error) {
@@ -273,28 +276,23 @@ router.post('/send-edit-otp', /* verifyToken, */ async (req, res) => {
     }
 });
 
-// 2. Verify OTP
-// 2. Verify OTP
-router.post('/verify-edit-otp', async (req, res) => {
+// 2. Verify OTP (SECURED)
+// Isme bhi authMiddleware add kiya gaya hai
+router.post('/verify-edit-otp', authMiddleware, async (req, res) => {
     try {
-        const { userId, otp } = req.body;
-        const user = await User.findOne({ userId });
-
-        // 🔥 Backend terminal mein check karne ke liye logs
-        console.log("Frontend se aaya OTP:", otp);
-        console.log("Database mein saved OTP:", user?.editProfileOtp);
+        const { otp } = req.body; // userId body se nahi lena!
+        const user = await User.findOne({ userId: req.user.userId }); // 🔥 Secure check
 
         if (!user) {
             return res.status(400).json({ success: false, message: "User not found." });
         }
 
-        // 🔥 Strict String comparison taaki type mismatch na ho
-        if (String(user.editProfileOtp) !== String(otp)) {
-            return res.status(400).json({ success: false, message: "Invalid OTP." });
+        if (!user.editProfileOtp || user.editProfileOtpExpiry < Date.now()) {
+            return res.status(400).json({ success: false, message: "OTP has expired or was not requested." });
         }
 
-        if (user.editProfileOtpExpiry < Date.now()) {
-            return res.status(400).json({ success: false, message: "OTP has expired." });
+        if (String(user.editProfileOtp) !== String(otp)) {
+            return res.status(400).json({ success: false, message: "Invalid OTP." });
         }
 
         // OTP Sahi hai! Clear OTP and give 15 mins access window
@@ -310,13 +308,12 @@ router.post('/verify-edit-otp', async (req, res) => {
     }
 });
 
-// 3. Update Profile & Wallet
-// 3. Update Profile & Wallet
-// 3. Update Profile & Wallet (Now with Email Update)
-router.put('/update-profile-secure', async (req, res) => {
+// 3. Update Profile & Wallet (SECURED)
+// Bina auth token ke ab update nahi hoga
+router.put('/update-profile-secure', authMiddleware, async (req, res) => {
     try {
-        const { userId, name, mobile, email, newWalletAddress } = req.body; // 🔥 email ko req.body me add kiya
-        const user = await User.findOne({ userId });
+        const { name, mobile, email, newWalletAddress } = req.body; // userId removed from here
+        const user = await User.findOne({ userId: req.user.userId }); // 🔥 Secure
 
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found." });
@@ -324,16 +321,17 @@ router.put('/update-profile-secure', async (req, res) => {
 
         // Check if user has verified OTP recently (within 15 mins)
         if (!user.profileEditAccessExpiry || user.profileEditAccessExpiry < Date.now()) {
-            return res.status(403).json({ success: false, message: "Session expired. Please verify OTP again." });
+            // Security measure: agar try kiya aur fail hua, access deny.
+            return res.status(403).json({ success: false, message: "Session expired or unauthorized. Please verify OTP first." });
         }
 
-        // 🔥 Email Change Logic (Check if email is already taken by someone else)
+        // 🔥 Email Change Logic
         if (email && email.trim() !== '' && email !== user.email) {
             const emailExists = await User.findOne({ email: email.trim() });
             if (emailExists) {
                 return res.status(400).json({ success: false, message: "This email is already used by another account." });
             }
-            user.email = email.trim(); // Update the email
+            user.email = email.trim(); 
         }
 
         // Basic Profile Update
@@ -365,8 +363,9 @@ router.put('/update-profile-secure', async (req, res) => {
             }
         }
 
-        // Lock profile again after successful update
+        // 🔒 SEVERE SECURITY: Lock profile instantly after ONE successful update to prevent multi-updates
         user.profileEditAccessExpiry = undefined;
+        
         await user.save();
 
         res.json({ success: true, message: "Profile updated successfully!", user });

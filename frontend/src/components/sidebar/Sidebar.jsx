@@ -65,7 +65,7 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
     { label: "Fast Track Income", icon: Zap, path: "/fast-track-income" },
     { label: "Direct Income", icon: BadgeDollarSign, path: "/direct-income" },
     { label: "Level Income", icon: Users, path: "/level-income" },
-  //  { label: "Staking Program", icon: Coins, path: "/staking-program" },
+   // { label: "Staking Program", icon: Coins, path: "/staking-program" },
     { label: "Community Income", icon: BadgeDollarSign, path: "/community-income" },
     { label: "Withdrawals", icon: Banknote, path: "/withdrawals" },
     { label: "Wallet History", icon: History, path: "/wallet-history" },

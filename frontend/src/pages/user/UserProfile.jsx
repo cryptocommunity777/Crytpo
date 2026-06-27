@@ -63,12 +63,12 @@ function UserProfile() {
 
   const handleChange = e => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
-  // 🔥 STEP 1: SEND OTP
+  // 🔥 STEP 1: SEND OTP (SECURED - Token via Interceptor)
   const handleSendOtp = async () => {
     setIsSendingOtp(true);
     try {
-      const payload = { userId: user.userId };
-      const res = await api.post(`/user/send-edit-otp`, payload);
+      // Backend ab user ID token se lega, frontend se nahi
+      const res = await api.post(`/user/send-edit-otp`);
       setIsOtpSent(true);
       showMessage('OTP Sent 📧', res.data.message || 'Verification OTP sent to your registered email.', 'success');
     } catch (err) {
@@ -78,19 +78,18 @@ function UserProfile() {
     }
   };
 
-  // 🔥 STEP 2: VERIFY & SAVE (1-Click Magic)
+  // 🔥 STEP 2: VERIFY & SAVE (SECURED - Token via Interceptor)
   const handleSaveProfile = async () => {
     if (isWalletLocked) return showMessage('Wallet Locked', 'Wallet address cannot be changed.', 'error');
     if (!otp || otp.length < 6) return showMessage('Invalid OTP', 'Please enter a valid 6-digit OTP.', 'warning');
     
     setIsSaving(true);
     try {
-      // 1. Verify OTP
-      await api.post(`/user/verify-edit-otp`, { userId: user.userId, otp: otp });
+      // 1. Verify OTP (Sirf OTP jayega, backend check karega kiska token hai)
+      await api.post(`/user/verify-edit-otp`, { otp: otp });
 
       // 2. Agar verify ho gaya, toh Update Profile hit karo
       const payload = { 
-        userId: user.userId,
         newWalletAddress: formData.walletAddress 
       }; 
       const res = await api.put(`/user/update-profile-secure`, payload); 
@@ -104,7 +103,6 @@ function UserProfile() {
       setIsOtpSent(false);
       showMessage('Updated Successfully ✅', 'Your wallet address has been saved.', 'success');
     } catch (err) {
-      // Agar Verify ya Save mein koi bhi fail hua, yahan error aayega
       showMessage('Error', err.response?.data?.message || 'Invalid OTP or Update failed.', 'error');
     } finally {
       setIsSaving(false);
@@ -257,7 +255,7 @@ function UserProfile() {
                                <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                   <span className="text-xs font-mono font-bold text-slate-600 break-all">
                                      {history.address}
-                                  </span>
+                                 </span>
                                   <span className="text-[10px] font-bold text-slate-400 shrink-0 bg-white px-2 py-1 rounded border border-slate-100">
                                      {new Date(history.changedAt).toLocaleDateString()}
                                   </span>

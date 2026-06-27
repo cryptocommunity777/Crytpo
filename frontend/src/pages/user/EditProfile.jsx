@@ -7,7 +7,7 @@ import MessageModal from '../../components/modals/MessageModal';
 
 function EditProfile() {
   const navigate = useNavigate();
-  const { user, updateUser, token } = useAuth();
+  const { user, updateUser } = useAuth(); // Token ab interceptor handle kar raha hai
 
   const [step, setStep] = useState(1); // 1: Send OTP, 2: Verify OTP, 3: Edit Form
   const [loading, setLoading] = useState(false);
@@ -25,10 +25,11 @@ function EditProfile() {
 
   const showMessage = (title, message, type = 'info') => setMessageModal({ open: true, title, message, type });
 
+  // 🔥 STEP 1: SEND OTP (Secured - No userId needed in body)
   const handleSendOTP = async () => {
     setLoading(true);
     try {
-      await api.post('/user/send-edit-otp', { userId: user.userId }, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post('/user/send-edit-otp');
       showMessage('OTP Sent 📧', 'Please check your registered email for the OTP.', 'success');
       setStep(2);
     } catch (err) {
@@ -38,11 +39,12 @@ function EditProfile() {
     }
   };
 
+  // 🔥 STEP 2: VERIFY OTP (Secured - Only OTP needed)
   const handleVerifyOTP = async () => {
     if (!otp || otp.length < 6) return showMessage('Invalid OTP', 'Please enter a valid 6-digit OTP', 'warning');
     setLoading(true);
     try {
-      await api.post('/user/verify-edit-otp', { userId: user.userId, otp }, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post('/user/verify-edit-otp', { otp });
       showMessage('Unlocked 🔓', 'You can now edit your profile.', 'success');
       setStep(3);
     } catch (err) {
@@ -52,12 +54,23 @@ function EditProfile() {
     }
   };
 
+  // 🔥 STEP 3: UPDATE PROFILE (Secured - No userId needed in body)
   const handleUpdateProfile = async () => {
     setLoading(true);
     try {
-      const payload = { userId: user.userId, ...formData };
-      const res = await api.put('/user/update-profile-secure', payload, { headers: { Authorization: `Bearer ${token}` } });
-      updateUser(res.data.user);
+      const payload = { 
+        name: formData.name, 
+        email: formData.email, 
+        mobile: formData.mobile, 
+        newWalletAddress: formData.newWalletAddress 
+      };
+      
+      const res = await api.put('/user/update-profile-secure', payload);
+      
+      if(res.data && res.data.user) {
+         updateUser(res.data.user);
+      }
+      
       showMessage('Success ✅', 'Profile updated successfully!', 'success');
       setTimeout(() => navigate('/profile'), 2000);
     } catch (err) {
@@ -128,7 +141,7 @@ function EditProfile() {
                 </div>
               </div>
 
-              {/* 🔥 NAYA: Email Update Field */}
+              {/* 🔥 Email Update Field */}
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Email Address</label>
                 <div className="relative">

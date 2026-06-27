@@ -132,8 +132,8 @@ mongoose.connect(process.env.MONGO_URI)
       console.log('✅ Fast Track Offer Daily Cron Started (Runs at 12:05 AM)');
       // 👆👆👆 ========================================= 👆👆👆
 
-      // startStakingCron();
-      // console.log("🚀 Staking 1% Daily Cron Started (Runs at 12:10 AM IST)");
+      startStakingCron();
+      console.log("🚀 Staking 1% Daily Cron Started (Runs at 12:10 AM IST)");
 
       require('./cron/monthlyRewardCron');
       console.log('✅ Monthly Reward Cron Started');
