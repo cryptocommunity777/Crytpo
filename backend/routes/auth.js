@@ -72,9 +72,37 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         return res.status(400).json({ message: 'Registration failed: Only @gmail.com emails are accepted.' });
     }
 
+    // 🔥 4. STRICT PASSWORD VALIDATION (Naya Logic - Blocks @123 etc.)
+    if (!password || password.length < 8) {
+        return res.status(400).json({ message: 'Password must be at least 8 characters long.' });
+    }
+
+    const lowerPass = password.toLowerCase();
+
+    // Check A: Repeating characters (e.g., 11111111, aaaaaaaa)
+    const isRepeating = /^(.)\1+$/.test(password); 
+
+    // Check B: Common weak substrings anywhere in the password (Blocks Name@123, etc.)
+    const weakSubstrings = ['@123', '#123', '1234', '9876', 'password', 'qwerty', 'asdf'];
+    const containsWeakPattern = weakSubstrings.some(pattern => lowerPass.includes(pattern));
+
+    // Check C: Sequential characters for the whole string (like 12345678, abcdefgh)
+    let isAscending = true;
+    let isDescending = true;
+    for (let i = 0; i < password.length - 1; i++) {
+        if (password.charCodeAt(i) + 1 !== password.charCodeAt(i + 1)) isAscending = false;
+        if (password.charCodeAt(i) - 1 !== password.charCodeAt(i + 1)) isDescending = false;
+    }
+
+    if (isRepeating || isAscending || isDescending || containsWeakPattern) {
+        return res.status(400).json({ 
+            message: 'Weak password detected! Please do not use predictable patterns like @123, 1234, or repeating characters. Choose a unique password.' 
+        });
+    }
+
     if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
 
-    // 🔥 4. SPONSOR CHECK LOGIC (Real and Fake)
+    // 🔥 5. SPONSOR CHECK LOGIC (Real and Fake)
     let actualSponsorId = parseInt(sponsorId);
     let sponsorExists = await User.findOne({ userId: actualSponsorId });
     let isFakeSponsor = false;
