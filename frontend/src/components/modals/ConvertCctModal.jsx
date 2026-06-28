@@ -59,7 +59,7 @@ const ConvertCctModal = ({ onClose, onSuccess, walletBalance }) => {
                    <ArrowRightLeft size={18} className="text-green-600" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-black text-slate-800 tracking-tight">Convert to <span className="text-green-600">CCT</span></h1>
+                  <h1 className="text-lg font-black text-slate-800 tracking-tight">Convert USDT to <span className="text-green-600">CCT</span></h1>
                 </div>
               </div>
               <button onClick={onClose} className="group bg-white hover:bg-red-50 p-1.5 rounded-full transition-all border border-slate-200 hover:border-red-200 shadow-sm cursor-pointer">
@@ -72,7 +72,7 @@ const ConvertCctModal = ({ onClose, onSuccess, walletBalance }) => {
               
               <div className="flex justify-between items-center bg-white border border-slate-200 rounded-xl p-2 px-3 shadow-sm">
                  <div>
-                    <span className="text-black text-[9px] uppercase tracking-wider font-bold block mb-0.5">Usable Balance</span>
+                    <span className="text-black text-[9px] uppercase tracking-wider font-bold block mb-0.5">USDT Balance</span>
                     <div className="text-sm md:text-base font-black text-slate-800 font-mono">
                       ${usableBalance.toFixed(2)}
                     </div>

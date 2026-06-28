@@ -61,7 +61,7 @@ const WithdrawCctModal = ({ onClose, onSuccess, cctStakingIncome }) => {
                    <Download size={18} className="text-emerald-600" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-black text-slate-800 tracking-tight">Withdraw <span className="text-emerald-600">Income</span></h1>
+                  <h1 className="text-lg font-black text-slate-800 tracking-tight">SELL <span className="text-emerald-600">CCT</span></h1>
                 </div>
               </div>
               <button onClick={onClose} className="group bg-white hover:bg-red-50 p-1.5 rounded-full transition-all border border-slate-200 hover:border-red-200 shadow-sm cursor-pointer">

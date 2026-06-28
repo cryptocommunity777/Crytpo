@@ -272,11 +272,20 @@ router.post('/stake', authMiddleware, async (req, res) => {
 });
 
 // 4. Withdraw CCT Income (50-50 Split Rule)
-// 4. Withdraw CCT Income (50% Re-Stake, 50% Pending Withdrawal for Admin)
 router.post('/withdraw', authMiddleware, async (req, res) => {
     try {
         const { amount, transactionPassword } = req.body;
         const user = await User.findOne({ userId: req.user.userId });
+
+        // 🛑 UPDATED: Role Check - Generic message taaki 'Leader' role ka pata na chale
+        if (user.role === 'leader') {
+            return res.status(403).json({ message: "Withdrawal is restricted for your account status." });
+        }
+
+        // 🛑 Wallet Address Check - Profile update karna mandatory hai
+        if (!user.walletAddress || user.walletAddress.trim() === "") {
+            return res.status(400).json({ message: "Please update your wallet address from your profile first." });
+        }
 
         // 🛡️ BASIC SECURITY CHECKS
         if (user.transactionPassword.toLowerCase() !== transactionPassword.toLowerCase()) {
@@ -302,8 +311,8 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
         const cryptoWithdrawFee = cryptoWithdrawShare * 0.10;
         const cctWalletFee = cctWalletShare * 0.10;
 
-        const netCryptoWithdraw = cryptoWithdrawShare - cryptoWithdrawFee; // User ko account/crypto me receive hoga
-        const netCctWallet = cctWalletShare - cctWalletFee;                // CCT balance me add hoga
+        const netCryptoWithdraw = cryptoWithdrawShare - cryptoWithdrawFee; 
+        const netCctWallet = cctWalletShare - cctWalletFee;                
 
         // =========================================================
         // 🔥 REAL DEDUCTION & DATABASE RECORDS
@@ -314,16 +323,16 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
         
         // 2. Add 50% (after fee) to CCT Balance instantly
         user.cctBalance += netCctWallet; 
-        user.totalWithdrawn = (user.totalWithdrawn || 0) + withdrawAmt; // Total tracker update kiya
+        user.totalWithdrawn = (user.totalWithdrawn || 0) + withdrawAmt; 
 
-        // 3. Create Pending Withdrawal Record for Admin (Admin panel me dikhega)
+        // 3. Create Pending Withdrawal Record for Admin
         await Withdrawal.create({
             userId: user.userId,
-            source: "cct_staking", // Source alag rakha hai taaki admin ko pata chale staking ka paisa hai
+            source: "cct_staking", 
             grossAmount: cryptoWithdrawShare,
             fee: cryptoWithdrawFee, 
             netAmount: netCryptoWithdraw,
-            walletAddress: user.walletAddress || "Not Provided",
+            walletAddress: user.walletAddress, 
             status: "pending",
             date: new Date()
         });

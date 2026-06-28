@@ -2587,20 +2587,9 @@ router.post("/credit", async (req, res) => {
 // GET /api/admin/withdrawals
 router.get('/withdrawals', verifyAdmin, async (req, res) => {
   try {
-    const withdrawals = await Withdrawal.find().sort({ createdAt: -1 }).lean();
-    const users = await User.find({}, { userId: 1, name: 1, walletAddress: 1 }).lean();
-
-    // userId → name, wallet
-    const userMap = users.reduce((acc, u) => {
-      acc[String(u.userId)] = {
-        name: u.name || '-',
-        walletAddress: u.walletAddress || ''
-      };
-      return acc;
-    }, {});
-
     const showAll = req.query.all === 'true';
 
+    // 🔹 1. Date Parsing Logic (Same as before)
     const parseDate = (str) => {
       if (!str) return null;
       const [d, m, y] = str.split('-').map(Number);
@@ -2618,27 +2607,58 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
       ? normalizeDate(parseDate(req.query.to))
       : new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
 
+    // Ensure 'toDate' covers the entire day till 11:59 PM
+    const endOfDayToDate = new Date(toDate);
+    endOfDayToDate.setHours(23, 59, 59, 999);
+
+    // 🔹 2. FAST DB QUERY: Filter directly in MongoDB instead of RAM
+    let withdrawalQuery = {};
+    if (!showAll) {
+        // Sirf selected date range ka data hi uthao
+        withdrawalQuery.createdAt = { $gte: fromDate, $lte: endOfDayToDate };
+    }
+
+    const withdrawals = await Withdrawal.find(withdrawalQuery).sort({ createdAt: -1 }).lean();
+
+    // 🔹 3. SMART USER FETCHING: Fetch only the users present in current withdrawals
+    const uniqueUserIds = [...new Set(withdrawals.map(w => w.userId))]; // Get unique IDs only
+    
+    const users = await User.find(
+        { userId: { $in: uniqueUserIds } }, // Sirf inhi users ko uthao
+        { userId: 1, name: 1, walletAddress: 1 }
+    ).lean();
+
+    // userId → name, wallet (Same as before)
+    const userMap = users.reduce((acc, u) => {
+      acc[String(u.userId)] = {
+        name: u.name || '-',
+        walletAddress: u.walletAddress || ''
+      };
+      return acc;
+    }, {});
+
     const isInRange = (date) => {
       const d = normalizeDate(new Date(date));
       return d >= fromDate && d <= toDate;
     };
 
+    // 🔹 4. FORMATTING LOGIC (Exact same to same)
     const flattened = withdrawals.flatMap((w) => {
       const userKey = String(w.userId);
 
-      // 🔹 NAME RESOLVE
+      // NAME RESOLVE
       const resolvedName =
         w.name && String(w.name).trim() !== '-'
           ? w.name
           : userMap[userKey]?.name || '-';
 
-      // 🔹 NON-SCHEDULE WALLET (parent)
+      // NON-SCHEDULE WALLET (parent)
       const parentWallet =
         w.status === 'approved'
           ? (w.walletAddress || '')
           : (w.walletAddress || userMap[userKey]?.walletAddress || '');
 
-      // 🔹 WITH SCHEDULE
+      // WITH SCHEDULE
       if (Array.isArray(w.schedule) && w.schedule.length > 0) {
         let remainingGross = Number(w.grossAmount || 0);
 
@@ -2652,7 +2672,7 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
             ? new Date(day.date)
             : new Date(new Date(w.createdAt).getTime() + index * 1000);
 
-          // 🔐 FINAL WALLET LOCK LOGIC (DAY-WISE)
+          // FINAL WALLET LOCK LOGIC (DAY-WISE)
           const finalWallet =
             day.status === 'approved'
               ? (day.walletAddress || '')
@@ -2668,7 +2688,7 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
             withdrawalId: w._id,
             userId: w.userId,
             name: resolvedName,
-            walletAddress: finalWallet, // ✅ FIXED
+            walletAddress: finalWallet,
             source: w.source,
             grossAmount: gross,
             fee,
@@ -2681,7 +2701,7 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
         });
       }
 
-      // 🔹 NO SCHEDULE (single withdrawal)
+      // NO SCHEDULE (single withdrawal)
       const dateObj = new Date(w.createdAt);
 
       return [{
@@ -2689,7 +2709,7 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
         withdrawalId: w._id,
         userId: w.userId,
         name: resolvedName,
-        walletAddress: parentWallet, // ✅ FIXED
+        walletAddress: parentWallet,
         source: w.source,
         grossAmount: Number(w.grossAmount || 0),
         fee: Number(w.fee || 0),
