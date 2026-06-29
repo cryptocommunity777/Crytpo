@@ -14,12 +14,16 @@ import SpinnerOverlay from "../../components/common/SpinnerOverlay";
 import SuccessModal from "../../components/modals/SuccessModal";
 import TelegramPopup from "../../components/TelegramPopup";
 import PromoVideoBox from "../../components/dashboard/PromoVideoBox"; 
-
-// 🔥 MONTHLY REWARD BOX IMPORT KIYA (Ab uncommented hai)
+import FastTrackTimerBanner from "../../components/dashboard/FastTrackTimerBanner"; // Import yahan se ho raha hai
+import StakingPopup from "../../components/StakingPopup";
+// 🔥 MONTHLY REWARD BOX IMPORT
 import MonthlyRewardBox from "../../components/MonthlyRewardBox";
 
 // 🔥 WALLET POPUP IMPORT
 import WalletPopup from "../../components/WalletPopup";
+
+// 🔥 STAKING PROGRAM IMPORT (Naya Add Kiya)
+import StakingProgram from "./StakingProgram";
 
 const Dashboard = ({ setModalState }) => {
   const { user, token, setUser, logout } = useAuth();
@@ -50,6 +54,8 @@ const Dashboard = ({ setModalState }) => {
   // 🔥 WALLET POPUP STATE
   const [showWallet, setShowWallet] = useState(false);
 
+  const [showStakingPopup, setShowStakingPopup] = useState(true);
+
   const hasFetched = useRef(false);
 
   const fetchUserData = async () => {
@@ -57,7 +63,7 @@ const Dashboard = ({ setModalState }) => {
     try {
         setLoading(true);
         
-        // 🔥 1. MAIN DATA (Ye parallel aayega aur fast hoga)
+        // 🔥 1. MAIN DATA
         const [userRes, incomeRes] = await Promise.all([
             api.get(`/user/${user.userId}?t=${new Date().getTime()}`, { headers: { Authorization: `Bearer ${token}` } }),
             api.get(`/wallet/${user.userId}?t=${new Date().getTime()}`, { headers: { Authorization: `Bearer ${token}` } })
@@ -81,7 +87,7 @@ const Dashboard = ({ setModalState }) => {
           totalFastTrackIncome: incomeRes.data.totalFastTrackIncome || incomeRes.data.income?.totalFastTrackIncome || 0,
         });
 
-        // 🔥 2. SILENT BACKGROUND FETCH (Ye spinner ko roke bina peeche se aayega)
+        // 🔥 2. SILENT BACKGROUND FETCH 
         api.get('/community/global-list').then((globalRes) => {
             if(globalRes.data.success) {
                 setLatestGlobalUsers(globalRes.data.data.slice(0, 5));
@@ -94,7 +100,6 @@ const Dashboard = ({ setModalState }) => {
         console.error("Failed to fetch user data:", err);
         if (err?.response?.status === 401) logout();
     } finally {
-        // 🔥 User data aate hi spinner turant hat jayega!
         setLoading(false);
     }
   };
@@ -167,6 +172,9 @@ const Dashboard = ({ setModalState }) => {
 
       {/* 🔥 WALLET POPUP */}
       {showWallet && <WalletPopup onClose={handleCloseWallet} />}
+      {showStakingPopup && (
+  <StakingPopup onClose={() => setShowStakingPopup(false)} />
+)}
 
       <div className="space-y-6 md:space-y-8 relative z-10">
         
@@ -182,6 +190,14 @@ const Dashboard = ({ setModalState }) => {
            />
         </section>
 
+        {/* 🔥 STAKING PROGRAM SECTION (Promo Video ke theek upar) */}
+        <section className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
+            <StakingProgram />
+        </section>
+
+ {/* 🔥 SMART TIMER BANNER: Yeh sirf valid users ko dikhega */}
+      <FastTrackTimerBanner user={user} />
+
         <div>
             <PromoVideoBox />
         </div>
@@ -196,7 +212,7 @@ const Dashboard = ({ setModalState }) => {
                 <IncomeSummary income={income} user={user} />
             </div>
 
-            {/* 🔥 2. Monthly Reward Box (Ab UNCOMMENTED hai aur live chalega) */}
+            {/* 🔥 2. Monthly Reward Box */}
             <div>
                 <MonthlyRewardBox />
             </div>
@@ -234,7 +250,6 @@ const Dashboard = ({ setModalState }) => {
                                  />
                                  <div>
                                      <span className="block font-black text-slate-700 text-sm capitalize leading-tight">{u.name || "User"}</span>
-                                     {/* 🔥 YAHAN UPDATE KIYA HAI: User ID masking (Start me **) */}
                                      <span className="text-[10px] font-bold text-slate-400">
                                          #{u.userId ? (String(u.userId).length > 2 ? '**' + String(u.userId).substring(2) : '**') : ''}
                                      </span>

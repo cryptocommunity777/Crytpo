@@ -81,7 +81,7 @@ const WithdrawCctModal = ({
     <>
       {!successOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-hidden">
-          <div className="bg-white w-full max-w-md flex flex-col rounded-3xl border border-slate-200 shadow-2xl overflow-hidden relative max-h-[90vh] animate-in zoom-in duration-300">
+          <div className="bg-white w-full max-w-md flex flex-col rounded-3xl border border-slate-200 shadow-2xl overflow-hidden relative max-h-[70vh] animate-in zoom-in duration-300">
             
             {/* Header */}
             <div className="bg-slate-50 border-b border-slate-200 p-3 md:p-4 flex justify-between items-center z-20 shrink-0">

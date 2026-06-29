@@ -125,7 +125,7 @@ router.post('/stake', authMiddleware, async (req, res) => {
         }
 
         // 🛑 RULE 3: 15-DAY TIME LIMIT CHECK
-        const STAKING_START_DATE = new Date("2026-06-28T00:00:00+05:30"); 
+         const STAKING_START_DATE = new Date("2026-07-01T00:01:00+05:30");
         const STAKING_WINDOW_DAYS = 15;
         const userTopUpDate = targetUser.topUpDate || targetUser.createdAt; 
         
@@ -206,27 +206,40 @@ router.post('/stake', authMiddleware, async (req, res) => {
                     // ============================================
                     // A. NORMAL LEVEL INCOME LOGIC (Level 2 to 20)
                     // ============================================
-                    if (currentLevel >= 2 && currentLevel <= 20) {
-                        if (upline.isToppedUp && upline.isStaked) {
-                            const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
+                    // ============================================
+                    // B. LEADER BREAKAWAY BONUS 5% LOGIC (Modified)
+                    // ============================================
+                    if (currentLevel >= 2 && isCurrentUplineLeader) {
+                        // 🔥 CHANGE: Leader ko stake karne ki zaroorat nahi, bas Top-Up check kiya
+                        if (upline.isToppedUp) {
                             const calculationAmount = Math.min(upline.totalCctStaked || 0, stakeAmt);
-                            const levelBonus = (calculationAmount * percentage) / 100;
+                            
+                            // Agar Leader ka stake 0 hai (kyunki usne nahi kiya), toh calculations 
+                            // ke liye hum 'stakeAmt' (downline ka stake) hi lenge taaki bonus mile.
+                            const effectiveAmount = upline.totalCctStaked > 0 
+                                ? Math.min(upline.totalCctStaked, stakeAmt) 
+                                : stakeAmt; 
 
-                            if (levelBonus > 0) {
-                                // 🔥 YAHAN NEW WALLET FIELD AAYA: cctStakingLevelIncome
+                            const leaderBonusAmount = (effectiveAmount * 5) / 100; 
+                            
+                            if (leaderBonusAmount > 0) {
                                 await User.updateOne(
                                     { _id: upline._id }, 
-                                    { $inc: { cctStakingLevelIncome: levelBonus } }
+                                    { $inc: { cctBalance: leaderBonusAmount } }
                                 );
-
+                                
                                 await Transaction.create({
-                                    userId: upline.userId, type: "staking_level_income", source: "cct_level", amount: levelBonus,
+                                    userId: upline.userId, type: "credit", source: "system", amount: leaderBonusAmount,
                                     fromUserId: targetUser.userId, 
-                                    description: `Level ${currentLevel} Staking Income (${percentage}%) from ${targetUser.name}`, 
-                                    status: 'success', date: new Date()
+                                    description: `5% Instant Leader Staking Bonus (No Stake Req.) added to CCT Wallet (Level ${currentLevel})`,
+                                    status: "success", date: new Date()
                                 });
                             }
                         }
+                        
+                        // 🔥 BREAKAWAY WALL HIT!
+                        // Leader ne apna 5% le liya, ab chain yahan ruk jayegi.
+                        leaderBonusGiven = true; 
                     }
 
                     // ============================================

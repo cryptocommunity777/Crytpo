@@ -5,8 +5,8 @@ const Transaction = require('../models/Transaction');
 
 const startStakingCron = () => {
     // Har raat 12:10 AM IST par chalega
-cron.schedule('47 16 * * *', async () => {
-            try {
+cron.schedule('30 0 * * *', async () => {
+                try {
             console.log("⏳ [CRON] Running CCT Staking Daily 1% Distribution...");
             
             // Unko dhoondo jinka isStaked true hai aur earned cap se kam hai

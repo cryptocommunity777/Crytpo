@@ -767,10 +767,10 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
       const walletFee = walletShare * 0.10;     
 
       const netWithdrawAmount = withdrawShare - withdrawFee; // User ke address pe jayega
-      const netWalletAmount = walletShare - walletFee;       // User ke Top-up wallet me aayega
+      const netWalletAmount = walletShare - walletFee;       // User ke CCT wallet me aayega
 
-      // Add to Main Top-up Wallet
-      user.walletBalance = (user.walletBalance || 0) + netWalletAmount;
+      // 🔥 YAHAN CHANGE KIYA HAI: Top-up wallet (walletBalance) ki jagah CCT Wallet (cctBalance) me credit kar rahe hain
+      user.cctBalance = (user.cctBalance || 0) + netWalletAmount;
       user.totalWithdrawn = (user.totalWithdrawn || 0) + amt; 
 
       // Create Record for Crypto Withdrawal
@@ -795,13 +795,13 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
         status: "pending"
       });
 
-      // 2. Re-credit to wallet log
+      // 2. Re-credit to wallet log (Description updated to say CCT Wallet)
       await Transaction.create({
         userId: user.userId,
         type: "credit",
         source: "system",
         amount: netWalletAmount,
-        description: `Wallet Credit from ${descriptionName}`, 
+        description: `CCT Wallet Credit from ${descriptionName} (after 10% fee)`, 
         status: "success"
       });
     }
@@ -812,7 +812,7 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
     // Normal Success Message
     return res.json({ 
       success: true, 
-      message: "Withdrawal request submitted successfully." 
+      message: "Withdrawal request submitted successfully. Half amount credited to CCT Wallet." 
     });
 
   } catch (err) {

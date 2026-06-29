@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import FastTrackTimerBanner from "./FastTrackTimerBanner"; // Import yahan se ho raha hai
 
 const TotalSystemUsers = ({ user, totalRealUsersFromDB = 0, globalFakeCount = 0 }) => {
   const [totalSystemUsers, setTotalSystemUsers] = useState(0);
@@ -39,8 +38,7 @@ const TotalSystemUsers = ({ user, totalRealUsersFromDB = 0, globalFakeCount = 0 
         </div>
       </div>
 
-      {/* 🔥 SMART TIMER BANNER: Yeh sirf valid users ko dikhega */}
-      <FastTrackTimerBanner user={user} />
+     
       
     </div>
   );
