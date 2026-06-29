@@ -8,13 +8,27 @@ const Withdrawal = require('../models/Withdrawal'); // Ye top par add kar lena
 // 1. Get Staking Stats
 router.get('/stats', authMiddleware, async (req, res) => {
     try {
-        const user = await User.findOne({ userId: req.user.userId }).select('walletBalance cctBalance cctStakingIncome totalCctStaked stakedMaxCap stakedEarned isStaked');
-        res.json({ success: true, data: user });
+        const user = await User.findOne({ userId: req.user.userId });
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        res.json({
+            success: true,
+            data: {
+                walletBalance: user.walletBalance || 0,
+                cctBalance: user.cctBalance || 0,
+                cctStakingIncome: user.cctStakingIncome || 0,
+                cctStakingDirectIncome: user.cctStakingDirectIncome || 0, // 🔥 ADD KIYA
+                cctStakingLevelIncome: user.cctStakingLevelIncome || 0,   // 🔥 ADD KIYA
+                totalCctStaked: user.totalCctStaked || 0,
+                stakedMaxCap: user.stakedMaxCap || 0,
+                stakedEarned: user.stakedEarned || 0,
+                isStaked: user.isStaked || false
+            }
+        });
     } catch (err) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.status(500).json({ message: 'Server error' });
     }
 });
-
 // 2. Convert Wallet Balance to CCT (100% conversion)
 router.post('/convert', authMiddleware, async (req, res) => {
     try {
@@ -106,21 +120,19 @@ router.post('/stake', authMiddleware, async (req, res) => {
         // 🛑 RULE 4: LEADER CANNOT STAKE ON THEIR OWN ID
         if (targetUser.role === 'leader' && String(targetUser.userId) === String(user.userId)) {
             return res.status(403).json({ 
-                message: "You are not allowed to stake on their own ID." 
+                message: "You are not allowed to stake on your own ID." 
             });
         }
 
-        // 🛑 RULE 3: 15-DAY TIME LIMIT CHECK (Starts from 28 June 2026 IST)
+        // 🛑 RULE 3: 15-DAY TIME LIMIT CHECK
         const STAKING_START_DATE = new Date("2026-06-28T00:00:00+05:30"); 
         const STAKING_WINDOW_DAYS = 15;
         const userTopUpDate = targetUser.topUpDate || targetUser.createdAt; 
         
         let stakingDeadline;
         if (userTopUpDate < STAKING_START_DATE) {
-            // Purane users ko 28 June se 15 din milenge
             stakingDeadline = new Date(STAKING_START_DATE.getTime() + (STAKING_WINDOW_DAYS * 24 * 60 * 60 * 1000));
         } else {
-            // Naye users ko unke Top-up date se 15 din milenge
             stakingDeadline = new Date(userTopUpDate.getTime() + (STAKING_WINDOW_DAYS * 24 * 60 * 60 * 1000));
         }
 
@@ -150,38 +162,37 @@ router.post('/stake', authMiddleware, async (req, res) => {
         });
 
         // =======================================================
-        // 🔥 BACKGROUND MLM ENGINE FOR STAKING (WITH BREAKAWAY)
+        // 🔥 BACKGROUND MLM ENGINE FOR STAKING (SEPARATE WALLETS)
         // =======================================================
         (async () => {
             try {
-                // ✅ 1. DIRECT INCOME LOGIC (25% WITH CAPPING)
+                // ✅ 1. DIRECT INCOME LOGIC
                 if (targetUser.sponsorId) {
                     const sponsor = await User.findOne({ userId: targetUser.sponsorId });
                     
                     if (sponsor && sponsor.isToppedUp && sponsor.isStaked) {
-                        // 🔥 CAPPING RULE: Jo amount chota hoga (Sponsor ka Stake ya Downline ka Stake), us par percentage niklegi
                         const calculationAmount = Math.min(sponsor.totalCctStaked || 0, stakeAmt);
-                        
-                        const STAKING_DIRECT_PERCENT = 10; // 10% Direct Income
+                        const STAKING_DIRECT_PERCENT = 10; 
                         const directBonus = (calculationAmount * STAKING_DIRECT_PERCENT) / 100; 
 
                         if (directBonus > 0) {
-                            sponsor.cctStakingIncome = (sponsor.cctStakingIncome || 0) + directBonus;
+                            // 🔥 YAHAN NEW WALLET FIELD AAYA: cctStakingDirectIncome
+                            sponsor.cctStakingDirectIncome = (sponsor.cctStakingDirectIncome || 0) + directBonus;
                             await sponsor.save();
 
                             await Transaction.create({
-                                userId: sponsor.userId, type: "staking_direct_income", source: "direct", amount: directBonus, 
+                                userId: sponsor.userId, type: "staking_direct_income", source: "cct_direct", amount: directBonus, 
                                 fromUserId: targetUser.userId,
-                                description: `Direct Bonus (25%) from ${targetUser.name}'s Stake (Calculated on Capped Amt: ${calculationAmount} CCT)`, 
+                                description: `Direct Bonus (10%) from ${targetUser.name}'s Stake (Calculated on Capped Amt: ${calculationAmount} CCT)`, 
                                 status: 'success', date: new Date()
                             });
                         }
                     } else if (sponsor) {
-                        console.log(`[FLUSHED] Staking Direct Income flushed. Sponsor ${sponsor.userId} is Inactive or NOT Staked.`);
+                        console.log(`[FLUSHED] Staking Direct Income flushed.`);
                     }
                 }
 
-                // ✅ 2. UNIFIED 100-LEVEL ENGINE (LEVEL INCOME + LEADER BREAKAWAY)
+                // ✅ 2. UNIFIED 100-LEVEL ENGINE
                 const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
                 let currentUplineId = targetUser.sponsorId; 
                 let currentLevel = 1;
@@ -193,72 +204,63 @@ router.post('/stake', authMiddleware, async (req, res) => {
                     const isCurrentUplineLeader = (upline.role === 'leader');
 
                     // ============================================
-                    // A. NORMAL LEVEL INCOME LOGIC (Level 2 se 20 tak)
+                    // A. NORMAL LEVEL INCOME LOGIC (Level 2 to 20)
                     // ============================================
                     if (currentLevel >= 2 && currentLevel <= 20) {
                         if (upline.isToppedUp && upline.isStaked) {
                             const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
-                            
-                            // 🔥 CAPPING RULE APPLIED FOR LEVEL INCOME
                             const calculationAmount = Math.min(upline.totalCctStaked || 0, stakeAmt);
                             const levelBonus = (calculationAmount * percentage) / 100;
 
                             if (levelBonus > 0) {
+                                // 🔥 YAHAN NEW WALLET FIELD AAYA: cctStakingLevelIncome
                                 await User.updateOne(
                                     { _id: upline._id }, 
-                                    { $inc: { cctStakingIncome: levelBonus } }
+                                    { $inc: { cctStakingLevelIncome: levelBonus } }
                                 );
 
                                 await Transaction.create({
-                                    userId: upline.userId, type: "staking_level_income", source: "level", amount: levelBonus,
+                                    userId: upline.userId, type: "staking_level_income", source: "cct_level", amount: levelBonus,
                                     fromUserId: targetUser.userId, 
-                                    description: `Level ${currentLevel} Staking Income (${percentage}%) from ${targetUser.name} on Capped Amt: ${calculationAmount} CCT`, 
+                                    description: `Level ${currentLevel} Staking Income (${percentage}%) from ${targetUser.name}`, 
                                     status: 'success', date: new Date()
                                 });
                             }
-                        } else {
-                            console.log(`[FLUSHED] Staking Level ${currentLevel} income flushed for Upline ${upline.userId} (Inactive/Unstaked).`);
                         }
                     }
 
                     // ============================================
-                    // B. LEADER BREAKAWAY BONUS 5% LOGIC (Level 2 to 100)
+                    // B. LEADER BREAKAWAY BONUS 5% LOGIC
+                    // ============================================
+                    // ============================================
+                    // B. LEADER BREAKAWAY BONUS 5% LOGIC
                     // ============================================
                     if (currentLevel >= 2 && isCurrentUplineLeader) {
-                        // Leader ko tabhi milega jab wo khud Active aur Staked ho
                         if (upline.isToppedUp && upline.isStaked) {
-                            
-                            // 🔥 CAPPING RULE APPLIED FOR LEADER BONUS
                             const calculationAmount = Math.min(upline.totalCctStaked || 0, stakeAmt);
-                            const leaderBonusAmount = (calculationAmount * 5) / 100; // 5% Leader Staking Bonus
+                            const leaderBonusAmount = (calculationAmount * 5) / 100; 
                             
                             if (leaderBonusAmount > 0) {
+                                // 🔥 YAHAN CHANGE KIYA HAI: Ab ye direct CCT Balance (Main Wallet) me jayega
                                 await User.updateOne(
                                     { _id: upline._id }, 
-                                    { $inc: { cctStakingIncome: leaderBonusAmount } }
+                                    { $inc: { cctBalance: leaderBonusAmount } }
                                 );
                                 
                                 await Transaction.create({
-                                    userId: upline.userId, type: "staking_leader_bonus", source: "leader_bonus", amount: leaderBonusAmount,
+                                    userId: upline.userId, type: "credit", source: "system", amount: leaderBonusAmount,
                                     fromUserId: targetUser.userId, 
-                                    description: `5% Leader Staking Bonus from Downline (Level ${currentLevel}) on Capped Amt: ${calculationAmount} CCT`,
+                                    description: `5% Instant Leader Staking Bonus directly added to CCT Wallet (Level ${currentLevel})`,
                                     status: "success", date: new Date()
                                 });
                             }
-                        } else {
-                            console.log(`[FLUSHED] Leader Bonus flushed. Leader ${upline.userId} is Inactive or NOT Staked.`);
                         }
-
-                        // 🔥 THE ULTIMATE LEADER BREAKAWAY WALL 🔥
-                        // Chahe leader ko paisa mila ho ya flush hua ho, chain yahi block ho jayegi!
-                        console.log(`[STAKING MLM ENGINE] Breakaway hit at Leader ${upline.userId} (Level ${currentLevel}). Distribution stopped.`);
                         break; 
                     }
 
                     currentUplineId = upline.sponsorId;
                     currentLevel++;
                 }
-
             } catch (bgError) {
                 console.error("Background Staking MLM Engine Error:", bgError);
             }
@@ -274,94 +276,139 @@ router.post('/stake', authMiddleware, async (req, res) => {
 // 4. Withdraw CCT Income (50-50 Split Rule)
 router.post('/withdraw', authMiddleware, async (req, res) => {
     try {
-        const { amount, transactionPassword } = req.body;
+        const { items, transactionPassword } = req.body;
         const user = await User.findOne({ userId: req.user.userId });
 
-        // 🛑 UPDATED: Role Check - Generic message taaki 'Leader' role ka pata na chale
+        // 🛑 Role Check
         if (user.role === 'leader') {
             return res.status(403).json({ message: "Withdrawal is restricted for your account status." });
         }
 
-        // 🛑 Wallet Address Check - Profile update karna mandatory hai
+        // 🛑 Wallet Address Check (Profile BEP20)
         if (!user.walletAddress || user.walletAddress.trim() === "") {
             return res.status(400).json({ message: "Please update your wallet address from your profile first." });
         }
 
-        // 🛡️ BASIC SECURITY CHECKS
+        // 🛡️ SECURITY CHECKS
         if (user.transactionPassword.toLowerCase() !== transactionPassword.toLowerCase()) {
             return res.status(400).json({ message: "Invalid Transaction Password" });
         }
-        if (amount < 10) {
-            return res.status(400).json({ message: "Minimum withdrawal is $10" });
-        }
-        if (amount % 10 !== 0) {
-            return res.status(400).json({ message: `Withdrawal amount must be in multiples of $10. Your amount is $${amount}.` });
-        }
-        if (user.cctStakingIncome < amount) {
-            return res.status(400).json({ message: "Insufficient Staking Income" });
+
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ message: "No withdrawal items provided." });
         }
 
-        const withdrawAmt = Number(amount);
-        
-        // 💎 50-50 SPLIT RULE
-        const cryptoWithdrawShare = withdrawAmt * 0.50; // 50% withdrawal request (Admin ke paas jayega)
-        const cctWalletShare = withdrawAmt * 0.50;      // 50% instant CCT wallet me jayega
+        // 💰 CALCULATE TOTAL AMOUNT
+        let totalAmt = 0;
+        for (let item of items) {
+            const amt = Math.floor(parseFloat(item.amount));
+            if (amt <= 0) return res.status(400).json({ message: "Invalid amount detected." });
+            totalAmt += amt;
+        }
 
-        // 🛑 10% FEE ON BOTH
-        const cryptoWithdrawFee = cryptoWithdrawShare * 0.10;
-        const cctWalletFee = cctWalletShare * 0.10;
-
-        const netCryptoWithdraw = cryptoWithdrawShare - cryptoWithdrawFee; 
-        const netCctWallet = cctWalletShare - cctWalletFee;                
+        // ✨ MULTIPLE OF 10 & MINIMUM $10 CHECK (Sab mila kar)
+        if (totalAmt < 10) {
+            return res.status(400).json({ message: "Minimum total withdrawal amount is $10." });
+        }
+        if (totalAmt % 10 !== 0) {
+            return res.status(400).json({ message: `Total withdrawal amount must be in multiples of $10. Your total is $${totalAmt}.` });
+        }
 
         // =========================================================
-        // 🔥 REAL DEDUCTION & DATABASE RECORDS
+        // 🔥 STEP 1: PRE-CHECK BALANCES
         // =========================================================
+        let simStakingWallet = user.cctStakingIncome || 0;
+        let simStakingDirectWallet = user.cctStakingDirectIncome || 0;
+        let simStakingLevelWallet = user.cctStakingLevelIncome || 0;
 
-        // 1. Deduct full requested amount from CCT Staking Income
-        user.cctStakingIncome -= withdrawAmt;
-        
-        // 2. Add 50% (after fee) to CCT Balance instantly
-        user.cctBalance += netCctWallet; 
-        user.totalWithdrawn = (user.totalWithdrawn || 0) + withdrawAmt; 
+        for (let item of items) {
+            const amt = Math.floor(parseFloat(item.amount));
 
-        // 3. Create Pending Withdrawal Record for Admin
-        await Withdrawal.create({
-            userId: user.userId,
-            source: "cct_staking", 
-            grossAmount: cryptoWithdrawShare,
-            fee: cryptoWithdrawFee, 
-            netAmount: netCryptoWithdraw,
-            walletAddress: user.walletAddress, 
-            status: "pending",
-            date: new Date()
-        });
+            if (item.source === "cct_staking") {
+                if (simStakingWallet < amt) return res.status(400).json({ message: "Insufficient Staking ROI Balance." });
+                simStakingWallet -= amt;
+            } else if (item.source === "cct_direct") {
+                if (simStakingDirectWallet < amt) return res.status(400).json({ message: "Insufficient Staking Direct Balance." });
+                simStakingDirectWallet -= amt;
+            } else if (item.source === "cct_level") {
+                if (simStakingLevelWallet < amt) return res.status(400).json({ message: "Insufficient Staking Level Balance." });
+                simStakingLevelWallet -= amt;
+            } else {
+                return res.status(400).json({ message: `Unknown source: ${item.source}` });
+            }
+        }
 
-        // 4. Create Transaction Log for Pending Withdrawal
-        await Transaction.create({
-            userId: user.userId, 
-            type: 'withdrawal', 
-            source: "cct_staking",
-            amount: cryptoWithdrawShare, 
-            status: 'pending',
-            description: `Pending Withdrawal from CCT Staking Income`
-        });
+        // =========================================================
+        // 🔥 STEP 2: ACTUAL DEDUCTION & SPLIT RULE (50-50)
+        // =========================================================
+        let finalCryptoPending = 0;
+        let finalCctAdded = 0;
 
-        // 5. Create Transaction Log for CCT Credit
-        await Transaction.create({
-            userId: user.userId, 
-            type: 'credit', 
-            source: "system",
-            amount: netCctWallet, 
-            status: 'success',
-            description: `CCT Wallet Credit from Staking Income (after 10% fee)`
-        });
+        for (let item of items) {
+            const amt = Math.floor(parseFloat(item.amount));
+            let descriptionName = "";
+
+            // Wallet Minus
+            if (item.source === "cct_staking") {
+                user.cctStakingIncome -= amt;
+                descriptionName = "Staking ROI Income";
+            } else if (item.source === "cct_direct") {
+                user.cctStakingDirectIncome -= amt;
+                descriptionName = "Staking Direct Income";
+            } else if (item.source === "cct_level") {
+                user.cctStakingLevelIncome -= amt;
+                descriptionName = "Staking Level Income";
+            }
+
+            // 💎 50-50 SPLIT RULE
+            const cryptoWithdrawShare = amt * 0.50; // Admin panel jayega
+            const cctWalletShare = amt * 0.50;      // Instant CCT wallet me jayega
+
+            // 🛑 10% FEE
+            const cryptoWithdrawFee = cryptoWithdrawShare * 0.10;
+            const cctWalletFee = cctWalletShare * 0.10;
+
+            const netCryptoWithdraw = cryptoWithdrawShare - cryptoWithdrawFee; 
+            const netCctWallet = cctWalletShare - cctWalletFee;                
+
+            // Overall Tracker
+            finalCryptoPending += netCryptoWithdraw;
+            finalCctAdded += netCctWallet;
+
+            // Instant Add to Main Wallet
+            user.cctBalance = (user.cctBalance || 0) + netCctWallet;
+            user.totalWithdrawn = (user.totalWithdrawn || 0) + amt;
+
+            // Database Entry - Withdrawal List
+            await Withdrawal.create({
+                userId: user.userId,
+                source: item.source, 
+                grossAmount: cryptoWithdrawShare,
+                fee: cryptoWithdrawFee, 
+                netAmount: netCryptoWithdraw,
+                walletAddress: user.walletAddress, 
+                status: "pending",
+                date: new Date()
+            });
+
+            // Database Entry - History (Pending Crypto)
+            await Transaction.create({
+                userId: user.userId, type: 'withdrawal', source: item.source, amount: cryptoWithdrawShare, 
+                status: 'pending', description: `Pending Withdrawal from ${descriptionName}`
+            });
+
+            // Database Entry - History (Instant CCT Add)
+            await Transaction.create({
+                userId: user.userId, type: 'credit', source: "system", amount: netCctWallet, 
+                status: 'success', description: `CCT Wallet Credit from ${descriptionName} (after 10% fee)`
+            });
+        }
 
         await user.save();
 
         res.json({ 
             success: true, 
-            message: `Withdrawal request submitted! $${netCryptoWithdraw} is pending for payout, and ${netCctWallet} CCT added to your CCT Wallet.` 
+            message: `Withdrawal request submitted! $${finalCryptoPending.toFixed(2)} is pending for payout, and ${finalCctAdded.toFixed(2)} CCT added to your Wallet.` 
         });
 
     } catch (err) {
@@ -369,5 +416,4 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Server processing error.' });
     }
 });
-
 module.exports = router;

@@ -9,10 +9,13 @@ import StakeCctModal from '../../components/modals/StakeCctModal';
 import WithdrawCctModal from '../../components/modals/WithdrawCctModal';
 
 const StakingProgram = () => {
+    // 🔥 NAYE WALLETS ADD KIYE HAIN YAHAN
     const [stats, setStats] = useState({ 
         walletBalance: 0, 
         cctBalance: 0, 
         cctStakingIncome: 0, 
+        cctStakingDirectIncome: 0, // 🔥 NAYA ADD KIYA
+        cctStakingLevelIncome: 0,  // 🔥 NAYA ADD KIYA
         totalCctStaked: 0, 
         stakedMaxCap: 0, 
         stakedEarned: 0, 
@@ -55,8 +58,6 @@ const StakingProgram = () => {
                     <StatCard label="Main Wallet" value={`$${stats.walletBalance.toFixed(2)}`} color="bg-blue-50 text-blue-700 border-blue-200" />
                     <StatCard label="Available CCT" value={`${stats.cctBalance.toFixed(2)}`} color="bg-yellow-50 text-yellow-700 border-yellow-200" />
                     <StatCard label="Total Staked" value={`${stats.totalCctStaked.toFixed(2)}`} color="bg-indigo-50 text-indigo-700 border-indigo-200" />
-                    
-                    {/* 🔥 YAHAN CHANGE KIYA HAI: cctStakingIncome ki jagah stakedEarned lagaya hai */}
                     <StatCard label="Total Staking Income" value={`${stats.stakedEarned.toFixed(2)}`} color="bg-green-50 text-green-700 border-green-200" />
                 </div>
 
@@ -104,8 +105,17 @@ const StakingProgram = () => {
             {isConvertOpen && <ConvertCctModal isOpen={isConvertOpen} onClose={() => setIsConvertOpen(false)} walletBalance={stats.walletBalance} onSuccess={fetchStats} />}
             {isStakeOpen && <StakeCctModal isOpen={isStakeOpen} onClose={() => setIsStakeOpen(false)} cctBalance={stats.cctBalance} onSuccess={fetchStats} />}
             
-            {/* Withdrawal Modal ko abhi bhi 'cctStakingIncome' hi bhejenge, taaki user sirf bacha hua fund nikal sake */}
-            {isWithdrawOpen && <WithdrawCctModal isOpen={isWithdrawOpen} onClose={() => setIsWithdrawOpen(false)} cctStakingIncome={stats.cctStakingIncome} onSuccess={fetchStats} />}
+            {/* 🔥 YAHAN CHANGE KIYA HAI: Teeno wallets ka data naye WithdrawCctModal ko pass kar diya gaya hai */}
+            {isWithdrawOpen && (
+                <WithdrawCctModal 
+                    isOpen={isWithdrawOpen} 
+                    onClose={() => setIsWithdrawOpen(false)} 
+                    cctStakingIncome={stats.cctStakingIncome} 
+                    cctStakingDirectIncome={stats.cctStakingDirectIncome} 
+                    cctStakingLevelIncome={stats.cctStakingLevelIncome} 
+                    onSuccess={fetchStats} 
+                />
+            )}
         </div>
     );
 };

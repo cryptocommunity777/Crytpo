@@ -128,14 +128,17 @@ const userSchema = new mongoose.Schema({
 
 
 
-//   // models/User.js ke andar Schema mein add karein:
+ 
+
+// models/User.js ke andar CCT section:
 cctBalance: { type: Number, default: 0 },
 cctStakingIncome: { type: Number, default: 0 },
+cctStakingDirectIncome: { type: Number, default: 0 }, // 🔥 NAYA: Direct Income Wallet
+cctStakingLevelIncome: { type: Number, default: 0 },  // 🔥 NAYA: Level Income Wallet
 totalCctStaked: { type: Number, default: 0 },
-stakedMaxCap: { type: Number, default: 0 }, // 3x, 4x, ya 5x ki limit yahan save hogi
-stakedEarned: { type: Number, default: 0 }, // Kitna kama chuka hai
-isStaked: { type: Boolean, default: false }, // Ek id par ek hi baar stake limit
-
+stakedMaxCap: { type: Number, default: 0 },
+stakedEarned: { type: Number, default: 0 },
+isStaked: { type: Boolean, default: false },
   // 🔥 Ye lines User schema mein hona zaroori hain
   editProfileOtp: { type: String },
   editProfileOtpExpiry: { type: Date },
