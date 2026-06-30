@@ -15,7 +15,7 @@ import SuccessModal from "../../components/modals/SuccessModal";
 import TelegramPopup from "../../components/TelegramPopup";
 import PromoVideoBox from "../../components/dashboard/PromoVideoBox"; 
 import FastTrackTimerBanner from "../../components/dashboard/FastTrackTimerBanner"; // Import yahan se ho raha hai
-//import StakingPopup from "../../components/StakingPopup";
+import StakingPopup from "../../components/StakingPopup";
 // 🔥 MONTHLY REWARD BOX IMPORT
 import MonthlyRewardBox from "../../components/MonthlyRewardBox";
 
@@ -172,9 +172,9 @@ const Dashboard = ({ setModalState }) => {
 
       {/* 🔥 WALLET POPUP */}
       {showWallet && <WalletPopup onClose={handleCloseWallet} />}
-      {/* {showStakingPopup && (
+      {showStakingPopup && (
   <StakingPopup onClose={() => setShowStakingPopup(false)} />
-)} */}
+)}
 
       <div className="space-y-6 md:space-y-8 relative z-10">
         
