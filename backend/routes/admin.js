@@ -1852,6 +1852,110 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
 
 
 
+// 🟢 GET STAKING STATS FOR ADMIN
+router.get('/staking-stats', verifyAdmin, async (req, res) => {
+    try {
+        const { fromDate, toDate } = req.query;
+
+        // 🔥 DATE FILTER LOGIC
+        let dateFilter = {};
+        if (fromDate || toDate) {
+            dateFilter.date = {}; 
+            if (fromDate) dateFilter.date.$gte = new Date(`${fromDate}T00:00:00+05:30`);
+            if (toDate) dateFilter.date.$lte = new Date(`${toDate}T23:59:59+05:30`);
+        }
+
+        const amountToNumber = { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } };
+
+        const stats = await User.aggregate([
+            {
+                $project: {
+                    userId: 1,
+                    name: 1,
+                    role: 1, 
+                    cctBalance: { $ifNull: ["$cctBalance", 0] },
+                    totalCctStaked: { $ifNull: ["$totalCctStaked", 0] },
+                    cctStakingIncome: { $ifNull: ["$cctStakingIncome", 0] },
+                    cctStakingDirectIncome: { $ifNull: ["$cctStakingDirectIncome", 0] },
+                    cctStakingLevelIncome: { $ifNull: ["$cctStakingLevelIncome", 0] }
+                }
+            },
+            {
+                // 🔥 TRANSACTIONS BREAKDOWN CALCULATION 🔥
+                $lookup: {
+                    from: "transactions", 
+                    let: { uid: "$userId" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ["$userId", "$$uid"] },
+                                ...(dateFilter.date ? { date: dateFilter.date } : {})
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                convertedToCCT: {
+                                    $sum: {
+                                        $cond: [
+                                            { $and: [
+                                                { $eq: ["$type", "convert_to_cct"] },
+                                                { $in: ["$status", ["success", "completed", "approved"]] }
+                                            ]}, amountToNumber, 0
+                                        ]
+                                    }
+                                },
+                                stakingWithdrawals: {
+                                    $sum: {
+                                        $cond: [
+                                            { $and: [
+                                                { $in: ["$type", ["withdrawal", "withdraw", "payout"]] },
+                                                { $in: ["$source", ["cct_staking", "cct_direct", "cct_level"]] } // Sirf Staking ke withdrawals
+                                            ]}, amountToNumber, 0
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    as: "txStats"
+                }
+            },
+            {
+                // 🔥 MAIN ADD FIELDS 
+                $addFields: {
+                    convertedToCCT: { $ifNull: [{ $arrayElemAt: ["$txStats.convertedToCCT", 0] }, 0] },
+                    stakingWithdrawals: { $ifNull: [{ $arrayElemAt: ["$txStats.stakingWithdrawals", 0] }, 0] }
+                }
+            },
+            {
+                $project: { txStats: 0 } 
+            },
+            {
+                // Unhi ko dikhao jinka kuch Staking ya CCT activity hai
+                $match: {
+                    $or: [
+                        { cctBalance: { $gt: 0 } },
+                        { totalCctStaked: { $gt: 0 } },
+                        { convertedToCCT: { $gt: 0 } },
+                        { stakingWithdrawals: { $gt: 0 } },
+                        { cctStakingIncome: { $gt: 0 } },
+                        { cctStakingDirectIncome: { $gt: 0 } },
+                        { cctStakingLevelIncome: { $gt: 0 } }
+                    ]
+                }
+            },
+            { $sort: { totalCctStaked: -1 } } // Sabse zyada staking wale top par
+        ]);
+
+        res.json({ success: true, data: stats });
+    } catch (error) {
+        console.error("Staking Stats Error:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+
 // ========================================================
 // 📊 PAGE 1: USER DIRECTS REPORT (NORMAL USERS ONLY)
 // ========================================================

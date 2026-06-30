@@ -172,6 +172,11 @@ const Sidebar = () => {
               <FaChartPie className="inline-block mr-2 text-purple-500" /> Wallet & Directs
             </NavLink>
 
+<NavLink to={`${BASE_PATH}/staking-stats`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/staking-stats`)}>
+    <FaCoins className="inline-block mr-2 text-amber-500" /> Staking Analytics
+</NavLink>
+            
+
             <NavLink to={`${BASE_PATH}/user-fund-overview`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/user-fund-overview`)}>
               <FaPiggyBank className="inline-block mr-2 text-pink-500" /> Fund Overview
             </NavLink>

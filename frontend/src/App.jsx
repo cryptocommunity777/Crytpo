@@ -78,6 +78,7 @@ import BoosterOfferPage from './pages/admin/BoosterOfferPage.jsx';
 import AdminManageUsers from './pages/admin/AdminManageUsers.jsx';
 import MonthlyRewardReport from './pages/admin/MonthlyRewardReport.jsx';
 import WalletDirectStats from './pages/admin/WalletDirectStats'; 
+import StakingStats from './pages/admin/StakingStats';
  import UserDirectsReport from './pages/admin/UserDirectsReport';
 import UserLifetimeTxReport from './pages/admin/UserLifetimeTxReport';
 import LeaderAutoWithdraw from './pages/admin/LeaderAutoWithdraw';
@@ -171,6 +172,7 @@ function AppContent() {
               <Route path="blocked-users" element={<BlockedUsers />} />
               <Route path="transactions" element={<AdminTransactions />} />
               <Route path="wallet-direct-stats" element={<WalletDirectStats />} />
+              <Route path="staking-stats" element={<StakingStats /> } />
               <Route path="user-directs" element={<UserDirectsReport />} />
               <Route path="user-lifetime-tx" element={<UserLifetimeTxReport />} />
               <Route path="leader-auto-withdraw" element={<LeaderAutoWithdraw />} />

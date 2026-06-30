@@ -125,7 +125,7 @@ router.post('/stake', authMiddleware, async (req, res) => {
         }
 
         // 🛑 RULE 3: 15-DAY TIME LIMIT CHECK
-         const STAKING_START_DATE = new Date("2026-07-01T00:01:00+05:30");
+        const STAKING_START_DATE = new Date("2026-07-01T00:01:00+05:30");
         const STAKING_WINDOW_DAYS = 15;
         const userTopUpDate = targetUser.topUpDate || targetUser.createdAt; 
         
@@ -146,15 +146,28 @@ router.post('/stake', authMiddleware, async (req, res) => {
         else if (stakeAmt >= 500 && stakeAmt <= 999) maxCap = stakeAmt * 4;
         else if (stakeAmt >= 1000 && stakeAmt <= 1999) maxCap = stakeAmt * 5;
 
-        // 🔹 DEDUCT FROM SENDER & APPLY TO TARGET
-        user.cctBalance -= stakeAmt;
-        if (user.userId !== targetUser.userId) await user.save(); 
+        // =======================================================
+        // 🔥 FIX: CORRECT CCT DEDUCTION LOGIC
+        // =======================================================
+        if (String(user.userId) === String(targetUser.userId)) {
+            // Case 1: Agar user KHUD ki ID par stake kar raha hai
+            targetUser.cctBalance -= stakeAmt;
+            targetUser.isStaked = true;
+            targetUser.totalCctStaked = stakeAmt;
+            targetUser.stakedMaxCap = maxCap;
+            targetUser.stakedEarned = 0;
+            await targetUser.save();
+        } else {
+            // Case 2: Agar user KISI AUR ki ID par stake kar raha hai
+            user.cctBalance -= stakeAmt;
+            await user.save(); 
 
-        targetUser.isStaked = true;
-        targetUser.totalCctStaked = stakeAmt;
-        targetUser.stakedMaxCap = maxCap;
-        targetUser.stakedEarned = 0;
-        await targetUser.save();
+            targetUser.isStaked = true;
+            targetUser.totalCctStaked = stakeAmt;
+            targetUser.stakedMaxCap = maxCap;
+            targetUser.stakedEarned = 0;
+            await targetUser.save();
+        }
 
         await Transaction.create({
             userId: user.userId, type: 'cct_stake_send', amount: stakeAmt, status: 'success',
@@ -176,7 +189,6 @@ router.post('/stake', authMiddleware, async (req, res) => {
                         const directBonus = (calculationAmount * STAKING_DIRECT_PERCENT) / 100; 
 
                         if (directBonus > 0) {
-                            // 🔥 YAHAN NEW WALLET FIELD AAYA: cctStakingDirectIncome
                             sponsor.cctStakingDirectIncome = (sponsor.cctStakingDirectIncome || 0) + directBonus;
                             await sponsor.save();
 
@@ -196,6 +208,7 @@ router.post('/stake', authMiddleware, async (req, res) => {
                 const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
                 let currentUplineId = targetUser.sponsorId; 
                 let currentLevel = 1;
+                let leaderBonusGiven = false;
 
                 while (currentUplineId && currentLevel <= 100) {
                     const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp isStaked sponsorId role totalCctStaked');
@@ -206,16 +219,33 @@ router.post('/stake', authMiddleware, async (req, res) => {
                     // ============================================
                     // A. NORMAL LEVEL INCOME LOGIC (Level 2 to 20)
                     // ============================================
-                    // ============================================
-                    // B. LEADER BREAKAWAY BONUS 5% LOGIC (Modified)
-                    // ============================================
-                    if (currentLevel >= 2 && isCurrentUplineLeader) {
-                        // 🔥 CHANGE: Leader ko stake karne ki zaroorat nahi, bas Top-Up check kiya
-                        if (upline.isToppedUp) {
+                    if (currentLevel >= 2 && currentLevel <= 20) {
+                        if (upline.isToppedUp && upline.isStaked) {
+                            const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
                             const calculationAmount = Math.min(upline.totalCctStaked || 0, stakeAmt);
-                            
-                            // Agar Leader ka stake 0 hai (kyunki usne nahi kiya), toh calculations 
-                            // ke liye hum 'stakeAmt' (downline ka stake) hi lenge taaki bonus mile.
+                            const levelBonus = (calculationAmount * percentage) / 100;
+
+                            if (levelBonus > 0) {
+                                await User.updateOne(
+                                    { _id: upline._id }, 
+                                    { $inc: { cctStakingLevelIncome: levelBonus } }
+                                );
+
+                                await Transaction.create({
+                                    userId: upline.userId, type: "staking_level_income", source: "cct_level", amount: levelBonus,
+                                    fromUserId: targetUser.userId, 
+                                    description: `Level ${currentLevel} Staking Income (${percentage}%) from ${targetUser.name}`, 
+                                    status: 'success', date: new Date()
+                                });
+                            }
+                        }
+                    }
+
+                    // ============================================
+                    // B. LEADER BREAKAWAY BONUS 5% LOGIC
+                    // ============================================
+                    if (currentLevel >= 2 && isCurrentUplineLeader && !leaderBonusGiven) {
+                        if (upline.isToppedUp) {
                             const effectiveAmount = upline.totalCctStaked > 0 
                                 ? Math.min(upline.totalCctStaked, stakeAmt) 
                                 : stakeAmt; 
@@ -237,38 +267,8 @@ router.post('/stake', authMiddleware, async (req, res) => {
                             }
                         }
                         
-                        // 🔥 BREAKAWAY WALL HIT!
-                        // Leader ne apna 5% le liya, ab chain yahan ruk jayegi.
+                        // Breakaway hit! 
                         leaderBonusGiven = true; 
-                    }
-
-                    // ============================================
-                    // B. LEADER BREAKAWAY BONUS 5% LOGIC
-                    // ============================================
-                    // ============================================
-                    // B. LEADER BREAKAWAY BONUS 5% LOGIC
-                    // ============================================
-                    if (currentLevel >= 2 && isCurrentUplineLeader) {
-                        if (upline.isToppedUp && upline.isStaked) {
-                            const calculationAmount = Math.min(upline.totalCctStaked || 0, stakeAmt);
-                            const leaderBonusAmount = (calculationAmount * 5) / 100; 
-                            
-                            if (leaderBonusAmount > 0) {
-                                // 🔥 YAHAN CHANGE KIYA HAI: Ab ye direct CCT Balance (Main Wallet) me jayega
-                                await User.updateOne(
-                                    { _id: upline._id }, 
-                                    { $inc: { cctBalance: leaderBonusAmount } }
-                                );
-                                
-                                await Transaction.create({
-                                    userId: upline.userId, type: "credit", source: "system", amount: leaderBonusAmount,
-                                    fromUserId: targetUser.userId, 
-                                    description: `5% Instant Leader Staking Bonus directly added to CCT Wallet (Level ${currentLevel})`,
-                                    status: "success", date: new Date()
-                                });
-                            }
-                        }
-                        break; 
                     }
 
                     currentUplineId = upline.sponsorId;
@@ -285,7 +285,6 @@ router.post('/stake', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Server error during staking' });
     }
 });
-
 // 4. Withdraw CCT Income (50-50 Split Rule)
 router.post('/withdraw', authMiddleware, async (req, res) => {
     try {
