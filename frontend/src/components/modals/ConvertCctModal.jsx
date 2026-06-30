@@ -86,14 +86,7 @@ const ConvertCctModal = ({ onClose, onSuccess, walletBalance }) => {
               </div>
 
               {/* 🔥 LEADER ALERT BOX */}
-              {isLeaderUser && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 flex gap-2 shadow-sm items-center">
-                   <AlertCircle size={16} className="text-amber-600 shrink-0" />
-                   <div className="text-[9px] text-amber-800 font-bold leading-snug">
-                     Your $30 package balance is locked. You can only convert amounts earned above $30.
-                   </div>
-                </div>
-              )}
+              
 
               <div className="space-y-1">
                 <label className="text-[9px] md:text-[10px] font-bold text-black uppercase tracking-widest ml-1">Amount to Convert ($)</label>
