@@ -114,7 +114,7 @@ function EditProfile() {
           {step === 2 && (
             <div className="text-center space-y-4 animate-in fade-in slide-in-from-right-4">
               <h2 className="text-xl font-black text-slate-800 uppercase">Enter OTP</h2>
-              <p className="text-sm font-bold text-slate-500">Enter the 6-digit OTP sent to your email.</p>
+              <p className="text-sm font-bold text-slate-500">Enter the 6-digit OTP sent to your email...</p>
               <input 
                 type="text" 
                 maxLength="6"
