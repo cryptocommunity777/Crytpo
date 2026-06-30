@@ -244,8 +244,8 @@ router.post('/stake', authMiddleware, async (req, res) => {
                     // ============================================
                     // B. LEADER BREAKAWAY BONUS 5% LOGIC
                     // ============================================
-                    if (currentLevel >= 2 && isCurrentUplineLeader && !leaderBonusGiven) {
-                        if (upline.isToppedUp) {
+if (currentLevel >= 1 && isCurrentUplineLeader && !leaderBonusGiven) {
+                            if (upline.isToppedUp) {
                             const effectiveAmount = upline.totalCctStaked > 0 
                                 ? Math.min(upline.totalCctStaked, stakeAmt) 
                                 : stakeAmt; 
