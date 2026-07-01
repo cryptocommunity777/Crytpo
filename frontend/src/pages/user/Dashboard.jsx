@@ -20,7 +20,7 @@ import StakingPopup from "../../components/StakingPopup";
 import MonthlyRewardBox from "../../components/MonthlyRewardBox";
 
 // 🔥 WALLET POPUP IMPORT
-import WalletPopup from "../../components/WalletPopup";
+// import WalletPopup from "../../components/WalletPopup";
 
 // 🔥 STAKING PROGRAM IMPORT (Naya Add Kiya)
 import StakingProgram from "./StakingProgram";
@@ -171,7 +171,7 @@ const Dashboard = ({ setModalState }) => {
       {loading && <SpinnerOverlay />}
 
       {/* 🔥 WALLET POPUP */}
-      {showWallet && <WalletPopup onClose={handleCloseWallet} />}
+    {/* {showWallet && <WalletPopup onClose={handleCloseWallet} />} */}
       {showStakingPopup && (
   <StakingPopup onClose={() => setShowStakingPopup(false)} />
 )}

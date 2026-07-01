@@ -25,7 +25,7 @@ import ResetPassword from './pages/auth/ResetPassword.jsx';
 import Dashboard from './pages/user/Dashboard.jsx';
 import UserProfile from './pages/user/UserProfile.jsx';
 import FAQPage from './pages/user/FAQPage.jsx';
-import EditProfile from './pages/user/EditProfile';
+// import EditProfile from './pages/user/EditProfile';
 import UserWithdrawalHistory from './pages/user/UserWithdrawalHistory.jsx';
 import WalletHistory from './pages/user/WalletHistory.jsx';
 import AllTeamPage from './pages/user/AllTeamPage.jsx';
@@ -206,10 +206,10 @@ function AppContent() {
     element={<RequireUserAuth><UserLayout><UserProfile /></UserLayout></RequireUserAuth>} 
 />
 
-<Route 
+{/* <Route 
     path="/edit-profile" 
     element={<RequireUserAuth><UserLayout><EditProfile /></UserLayout></RequireUserAuth>} 
-/>
+/> */}
 <Route 
     path="/faq" 
     element={<RequireUserAuth><UserLayout><FAQPage /></UserLayout></RequireUserAuth>} 
