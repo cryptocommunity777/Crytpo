@@ -113,24 +113,24 @@ const DepositTable = () => {
     alert(`Copied: ${text}`); 
   };
 
-  const handleLoginAsUser = async (targetUserId) => {
-    try {
-      const adminToken = localStorage.getItem('adminToken');
-      const res = await api.post('/admin/impersonate', { userId: targetUserId }, {
-        headers: { Authorization: `Bearer ${adminToken}` }
-      });
-      const { token: userToken, user: impersonatedUser } = res.data;
-      const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
+  // const handleLoginAsUser = async (targetUserId) => {
+  //   try {
+  //     const adminToken = localStorage.getItem('adminToken');
+  //     const res = await api.post('/admin/impersonate', { userId: targetUserId }, {
+  //       headers: { Authorization: `Bearer ${adminToken}` }
+  //     });
+  //     const { token: userToken, user: impersonatedUser } = res.data;
+  //     const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
       
-      let targetBaseUrl = window.location.hostname.includes("localhost") || window.location.hostname === "127.0.0.1" 
-                          ? "http://localhost:5173" : "https://cryptocommunity.live"; 
+  //     let targetBaseUrl = window.location.hostname.includes("localhost") || window.location.hostname === "127.0.0.1" 
+  //                         ? "http://localhost:5173" : "https://cryptocommunity.live"; 
 
-      const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
-      window.open(mainWebsiteUrl, '_blank', 'noopener,noreferrer');
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to login as this user.");
-    }
-  };
+  //     const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
+  //     window.open(mainWebsiteUrl, '_blank', 'noopener,noreferrer');
+  //   } catch (err) {
+  //     alert(err.response?.data?.message || "Failed to login as this user.");
+  //   }
+  // };
 
   return (
     <div className="bg-slate-50 min-h-screen p-4 md:p-6 lg:p-8 pt-16 md:pt-20 text-slate-800">
@@ -240,8 +240,12 @@ const DepositTable = () => {
                             <span className="font-black text-slate-800">#{deposit.userId || 'N/A'}</span>
                             <div className="flex items-center gap-1 bg-white border border-slate-200 rounded p-0.5 shadow-sm">
                               <button onClick={() => handleCopy((deposit.userId||"").toString())} className="text-slate-400 hover:text-slate-700 transition p-1" title="Copy ID"><Copy size={13}/></button>
-                              <button onClick={() => handleLoginAsUser(deposit.userId)} className="text-indigo-600 hover:text-indigo-800 transition p-1" title="Login"><LogIn size={13} /></button>
+                             
+                             
+                              {/* <button onClick={() => handleLoginAsUser(deposit.userId)} className="text-indigo-600 hover:text-indigo-800 transition p-1" title="Login"><LogIn size={13} /></button>
+                           */}
                             </div>
+
                           </div>
                         </td>
                         <td className="px-4 py-3 font-bold text-slate-700 capitalize truncate max-w-[150px]" title={deposit.name}>

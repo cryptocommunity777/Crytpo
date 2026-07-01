@@ -56,29 +56,29 @@ const AdminManageUsers = () => {
   };
 
   // 🔥 DIRECT LOGIN LOGIC 
-  const handleLoginAsUser = async (targetUserId) => {
-    try {
-      const adminToken = localStorage.getItem('adminToken');
-      if (!adminToken) return toast.error("Admin not authorized");
+  // const handleLoginAsUser = async (targetUserId) => {
+  //   try {
+  //     const adminToken = localStorage.getItem('adminToken');
+  //     if (!adminToken) return toast.error("Admin not authorized");
 
-      const res = await api.post('/admin/impersonate', { userId: targetUserId }, {
-        headers: { Authorization: `Bearer ${adminToken}` }
-      });
+  //     const res = await api.post('/admin/impersonate', { userId: targetUserId }, {
+  //       headers: { Authorization: `Bearer ${adminToken}` }
+  //     });
 
-      const { token: userToken, user: impersonatedUser } = res.data;
-      const userDataStr = JSON.stringify(impersonatedUser);
+  //     const { token: userToken, user: impersonatedUser } = res.data;
+  //     const userDataStr = JSON.stringify(impersonatedUser);
       
-      const targetBaseUrl = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
-        ? "http://localhost:3000" 
-        : "https://cryptocommunity.live"; 
+  //     const targetBaseUrl = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
+  //       ? "http://localhost:3000" 
+  //       : "https://cryptocommunity.live"; 
 
-      const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${encodeURIComponent(userDataStr)}`;
-      window.open(mainWebsiteUrl, '_blank', 'noopener,noreferrer');
+  //     const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${encodeURIComponent(userDataStr)}`;
+  //     window.open(mainWebsiteUrl, '_blank', 'noopener,noreferrer');
       
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to login as this user.");
-    }
-  };
+  //   } catch (err) {
+  //     toast.error(err.response?.data?.message || "Failed to login as this user.");
+  //   }
+  // };
 
   // 🔥 UPDATE ROLE LOGIC
   const handleUpdateRole = async (e) => {
@@ -178,7 +178,9 @@ const AdminManageUsers = () => {
                       <td className="px-4 py-2 border">
                         <div className="flex justify-center gap-2">
                           <button onClick={() => openRoleModal(u)} className="bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1"><UserCog size={14} /> Edit Role</button>
-                          <button onClick={() => handleLoginAsUser(u.userId)} className="bg-green-100 text-green-700 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1"><LogIn size={14} /> Login</button>
+{/*                         
+                        <button onClick={() => handleLoginAsUser(u.userId)} className="bg-green-100 text-green-700 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1"><LogIn size={14} /> Login</button>
+                        */}
                         </div>
                       </td>
                     </tr>

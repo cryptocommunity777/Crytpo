@@ -22,64 +22,59 @@ const AdminWithdrawalTable = () => {
   
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'asc' }); 
   const [currentPage, setCurrentPage] = useState(1);
-  const [copiedHash, setCopiedHash] = useState('');
-  const [copiedAddress, setCopiedAddress] = useState('');
-  
   const [fromDate, setFromDate] = useState(''); 
   const [toDate, setToDate] = useState('');
-  
   const [statusFilter, setStatusFilter] = useState('pending'); 
   const [loading, setLoading] = useState(false);
 
   // ----------------- 0. Impersonate User -----------------
-  const handleImpersonate = async (userId) => {
-    const result = await Swal.fire({
-      title: 'Login as User?',
-      text: `Do you want to log in to the account with User ID: ${userId}?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, Login'
-    });
+  // const handleImpersonate = async (userId) => {
+  //   const result = await Swal.fire({
+  //     title: 'Login as User?',
+  //     text: `Do you want to log in to the account with User ID: ${userId}?`,
+  //     icon: 'question',
+  //     showCancelButton: true,
+  //     confirmButtonText: 'Yes, Login'
+  //   });
 
-    if (!result.isConfirmed) return;
+  //   if (!result.isConfirmed) return;
 
-    try {
-      Swal.fire({ title: 'Logging in...', didOpen: () => { Swal.showLoading(); } });
+  //   try {
+  //     Swal.fire({ title: 'Logging in...', didOpen: () => { Swal.showLoading(); } });
       
-      const res = await api.post('/admin/impersonate', { userId }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+  //     const res = await api.post('/admin/impersonate', { userId }, {
+  //       headers: { Authorization: `Bearer ${token}` }
+  //     });
 
-      if (res.data.token) {
-        Swal.close();
-        
-        const { token: userToken, user: impersonatedUser } = res.data;
-        const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
+  //     if (res.data.token) {
+  //       Swal.close();
+  //       const { token: userToken, user: impersonatedUser } = res.data;
+  //       const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
 
-        let targetBaseUrl = "";
-        const currentHost = window.location.hostname;
+  //       let targetBaseUrl = "";
+  //       const currentHost = window.location.hostname;
 
-        if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
-          targetBaseUrl = "http://localhost:5173"; 
-        } else {
-          targetBaseUrl = "https://cryptocommunity.live"; 
-        }
+  //       if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
+  //         targetBaseUrl = "http://localhost:5173"; 
+  //       } else {
+  //         targetBaseUrl = "https://cryptocommunity.live"; 
+  //       }
 
-        const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
+  //       const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
 
-        const link = document.createElement('a');
-        link.href = mainWebsiteUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer'; 
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-    } catch (error) {
-      console.error("Impersonation error:", error);
-      Swal.fire('Error', error.response?.data?.message || "Failed to impersonate user", 'error');
-    }
-  };
+  //       const link = document.createElement('a');
+  //       link.href = mainWebsiteUrl;
+  //       link.target = '_blank';
+  //       link.rel = 'noopener noreferrer'; 
+  //       document.body.appendChild(link);
+  //       link.click();
+  //       document.body.removeChild(link);
+  //     }
+  //   } catch (error) {
+  //     console.error("Impersonation error:", error);
+  //     Swal.fire('Error', error.response?.data?.message || "Failed to impersonate user", 'error');
+  //   }
+  // };
 
   // ----------------- 1. Professional Blockchain Approve -----------------
   const handleBlockchainApprove = async (item) => {
@@ -152,7 +147,6 @@ const AdminWithdrawalTable = () => {
 
       Swal.fire('Success!', 'Payment has been sent successfully.', 'success');
       
-      // 🔥 FAST UI FIX: Firse load karne ki jagah local data update kar do (Instant Speed!)
       setWithdrawals(prev => prev.map(w => 
         idsToUpdate.includes(w._id) ? { ...w, status: 'approved', txnHash: receipt.transactionHash } : w
       ));
@@ -167,7 +161,7 @@ const AdminWithdrawalTable = () => {
     }
   };
 
-  // ----------------- 2. Modern Update Status (Dummy/Reject) -----------------
+  // ----------------- 2. Modern Update Status -----------------
   const updateStatus = async (item, status) => {
     if (status === 'approved') {
       const result = await Swal.fire({
@@ -216,7 +210,6 @@ const AdminWithdrawalTable = () => {
 
       Swal.fire('Updated', 'Status changed!!!.', 'success');
       
-      // 🔥 FAST UI FIX: Firse API call nahi hogi, direct local state me update ho jayega!
       const mappedStatus = status === 'dummy' ? 'approved' : 'rejected';
       setWithdrawals(prev => prev.map(w => 
         idsToUpdate.includes(w._id) ? { ...w, status: mappedStatus, txnHash: txnHash } : w
@@ -291,6 +284,7 @@ const AdminWithdrawalTable = () => {
         txnHash: w.txnHash ?? '-',
         status: w.status ?? 'pending',
         createdAt,
+        isFirstWithdrawal: w.isFirstWithdrawal // 🔥 Backend se bheja hua flag yahan map hoga
       };
     });
 
@@ -475,6 +469,7 @@ const AdminWithdrawalTable = () => {
                 <tr><td colSpan={11} className="text-center py-10 font-bold text-gray-400">NO WITHDRAWALS FOUND.</td></tr>
               ) : (
                 paginatedData.map((w, idx) => (
+                  // 🔥 Yahan Check Karein: FIRST or REPEAT ka color logic
                   <tr key={w._id} className="hover:bg-blue-50/50 transition">
                     <td className="px-4 py-3 font-bold text-gray-500">{(currentPage-1)*entriesPerPage + idx + 1}</td>
                      <td className="px-4 py-3">
@@ -484,17 +479,32 @@ const AdminWithdrawalTable = () => {
                        </div>
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        {/* 🔥 RED/GREEN Highlight */}
                         <button
                           onClick={() => handleImpersonate(w.userId)}
-                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-black hover:underline"
+                          className={`flex items-center gap-1 font-black px-2 py-1 rounded shadow-sm border transition ${
+                            w.isFirstWithdrawal 
+                            ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' 
+                            : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                          }`}
                           title="Login as this User"
                         >
                           #{w.userId}
-                          <ExternalLink size={14} className="opacity-50" />
+                         
+                          {/* <ExternalLink size={14} className="opacity-60" />
+                         */}
                         </button>
+                        
+                        {/* 🔥 BADGE for extra clarity */}
+                        {w.isFirstWithdrawal ? (
+                            <span className="text-[8px] font-black tracking-widest text-white bg-red-500 px-1.5 py-0.5 rounded shadow-sm animate-pulse">FIRST</span>
+                        ) : (
+                            <span className="text-[8px] font-black tracking-widest text-white bg-green-500 px-1.5 py-0.5 rounded shadow-sm">REPEAT</span>
+                        )}
+
                         <FaCopy 
-                          className="cursor-pointer text-gray-400 hover:text-gray-800 transition" 
+                          className="cursor-pointer text-gray-400 hover:text-gray-800 transition ml-1" 
                           onClick={() => handleCopy(w.userId)} 
                           title="Copy User ID"
                         />
@@ -525,8 +535,6 @@ const AdminWithdrawalTable = () => {
                         w.status==='approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'
                       }`}>{w.status}</span>
                     </td>
-                    
-                   
                     
                     <td className="px-4 py-3">
                       {w.status==='pending' && (

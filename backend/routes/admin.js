@@ -31,42 +31,42 @@ const tokenABI = [
  
 // Admin impersonate user
 // 🔹 IMPERSONATE USER (Login as User from Admin Panel)
-router.post('/impersonate', adminAuth, async (req, res) => {
-  try {
-    const { userId } = req.body; // Frontend se userId body me aayega
+// router.post('/impersonate', adminAuth, async (req, res) => {
+//   try {
+//     const { userId } = req.body; // Frontend se userId body me aayega
 
-    // 1. Find the target user
-    const user = await User.findOne({ userId: Number(userId) }).lean();
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+//     // 1. Find the target user
+//     const user = await User.findOne({ userId: Number(userId) }).lean();
+//     if (!user) {
+//       return res.status(404).json({ message: 'User not found' });
+//     }
 
-    // 🔥 NOTE: Hum yahan "user.isBlocked" check NAHI kar rahe hain.
-    // Iska matlab Admin ek blocked user ke account me bhi easily login kar sakta hai.
+//     // 🔥 NOTE: Hum yahan "user.isBlocked" check NAHI kar rahe hain.
+//     // Iska matlab Admin ek blocked user ke account me bhi easily login kar sakta hai.
 
-    // 2. Generate Token (Same format as normal login)
-    const userToken = jwt.sign(
-      { id: user._id }, // Normal login me _id use hoti hai token me
-      process.env.JWT_SECRET ,
-      { expiresIn: '30m' }
-    );
+//     // 2. Generate Token (Same format as normal login)
+//     const userToken = jwt.sign(
+//       { id: user._id }, // Normal login me _id use hoti hai token me
+//       process.env.JWT_SECRET ,
+//       { expiresIn: '30m' }
+//     );
 
-    // 3. Sensitive data hide karein frontend pe bhejte time
-    delete user.password;
-    delete user.transactionPassword;
+//     // 3. Sensitive data hide karein frontend pe bhejte time
+//     delete user.password;
+//     delete user.transactionPassword;
 
-    // 4. Send token and user data back to frontend
-    res.json({ 
-      message: "Impersonation successful",
-      token: userToken, 
-      user 
-    });
+//     // 4. Send token and user data back to frontend
+//     res.json({ 
+//       message: "Impersonation successful",
+//       token: userToken, 
+//       user 
+//     });
 
-  } catch (err) {
-    console.error("Impersonation Error:", err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+//   } catch (err) {
+//     console.error("Impersonation Error:", err);
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// });
 
 // Dashboard summary
 // Dashboard summary (UPDATED FOR ALL CARDS)
@@ -468,35 +468,35 @@ router.put('/update-role/:userId', verifyAdmin, async (req, res) => {
 // =======================================================
 // 3. DIRECT LOGIN (Impersonation)
 // =======================================================
-router.post('/direct-login/:userId', verifyAdmin, async (req, res) => {
-  try {
-    const targetUser = await User.findOne({ userId: req.params.userId });
-    if (!targetUser) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
+// router.post('/direct-login/:userId', verifyAdmin, async (req, res) => {
+//   try {
+//     const targetUser = await User.findOne({ userId: req.params.userId });
+//     if (!targetUser) {
+//       return res.status(404).json({ success: false, message: "User not found" });
+//     }
 
-    // Generate token for the target user
-    const token = jwt.sign(
-      { userId: targetUser.userId, role: targetUser.role },
-      process.env.JWT_SECRET, 
-      { expiresIn: '12h' }
-    );
+//     // Generate token for the target user
+//     const token = jwt.sign(
+//       { userId: targetUser.userId, role: targetUser.role },
+//       process.env.JWT_SECRET, 
+//       { expiresIn: '12h' }
+//     );
 
-    res.json({ 
-      success: true, 
-      token, 
-      user: {
-        userId: targetUser.userId,
-        name: targetUser.name,
-        email: targetUser.email,
-        role: targetUser.role
-      } 
-    });
-  } catch (error) {
-    console.error("Direct Login Error:", error);
-    res.status(500).json({ success: false, message: "Direct login failed" });
-  }
-});
+//     res.json({ 
+//       success: true, 
+//       token, 
+//       user: {
+//         userId: targetUser.userId,
+//         name: targetUser.name,
+//         email: targetUser.email,
+//         role: targetUser.role
+//       } 
+//     });
+//   } catch (error) {
+//     console.error("Direct Login Error:", error);
+//     res.status(500).json({ success: false, message: "Direct login failed" });
+//   }
+// });
 
 
 
@@ -2693,7 +2693,7 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
   try {
     const showAll = req.query.all === 'true';
 
-    // 🔹 1. Date Parsing Logic (Same as before)
+    // 🔹 1. Date Parsing Logic
     const parseDate = (str) => {
       if (!str) return null;
       const [d, m, y] = str.split('-').map(Number);
@@ -2718,21 +2718,19 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
     // 🔹 2. FAST DB QUERY: Filter directly in MongoDB instead of RAM
     let withdrawalQuery = {};
     if (!showAll) {
-        // Sirf selected date range ka data hi uthao
         withdrawalQuery.createdAt = { $gte: fromDate, $lte: endOfDayToDate };
     }
 
     const withdrawals = await Withdrawal.find(withdrawalQuery).sort({ createdAt: -1 }).lean();
 
     // 🔹 3. SMART USER FETCHING: Fetch only the users present in current withdrawals
-    const uniqueUserIds = [...new Set(withdrawals.map(w => w.userId))]; // Get unique IDs only
+    const uniqueUserIds = [...new Set(withdrawals.map(w => w.userId))]; 
     
     const users = await User.find(
-        { userId: { $in: uniqueUserIds } }, // Sirf inhi users ko uthao
+        { userId: { $in: uniqueUserIds } }, 
         { userId: 1, name: 1, walletAddress: 1 }
     ).lean();
 
-    // userId → name, wallet (Same as before)
     const userMap = users.reduce((acc, u) => {
       acc[String(u.userId)] = {
         name: u.name || '-',
@@ -2741,14 +2739,33 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
       return acc;
     }, {});
 
+    // =========================================================================
+    // 🔹 3.5 🔥 NEW LOGIC: FIND FIRST WITHDRAWAL FOR EACH USER
+    // =========================================================================
+    // Hum har user ki sabse purani (oldest) withdrawal ka ID nikal rahe hain.
+    const firstWithdrawals = await Withdrawal.aggregate([
+        { $match: { userId: { $in: uniqueUserIds } } },
+        { $sort: { createdAt: 1 } }, // 1 means oldest first
+        { $group: { _id: "$userId", firstWithdrawalId: { $first: "$_id" } } }
+    ]);
+
+    const firstWithdrawalMap = {};
+    firstWithdrawals.forEach(item => {
+        firstWithdrawalMap[String(item._id)] = String(item.firstWithdrawalId);
+    });
+    // =========================================================================
+
     const isInRange = (date) => {
       const d = normalizeDate(new Date(date));
       return d >= fromDate && d <= toDate;
     };
 
-    // 🔹 4. FORMATTING LOGIC (Exact same to same)
+    // 🔹 4. FORMATTING LOGIC
     const flattened = withdrawals.flatMap((w) => {
       const userKey = String(w.userId);
+
+      // 🔥 Check if this specific withdrawal is the user's VERY FIRST withdrawal
+      const isFirstWithdrawal = (firstWithdrawalMap[userKey] === String(w._id));
 
       // NAME RESOLVE
       const resolvedName =
@@ -2801,6 +2818,7 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
             date: dateObj,
             txnHash: w.txnHash || '',
             isInRange: isInRange(dateObj),
+            isFirstWithdrawal // 🔥 Ye frontend jayega
           };
         });
       }
@@ -2822,6 +2840,7 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
         date: dateObj,
         txnHash: w.txnHash || '',
         isInRange: isInRange(dateObj),
+        isFirstWithdrawal // 🔥 Ye frontend jayega
       }];
     });
 
@@ -3190,8 +3209,8 @@ router.get('/user/:userId', verifyAdmin, async (req, res) => {
 });
 
 
-// routes/admin.js ke andar
-// routes/admin.js ke andar
+ // routes/admin.js ke andar
+
 router.get('/search-user/:userId', verifyAdmin, async (req, res) => {
   try {
     // 1. Pehle user ko dhundo

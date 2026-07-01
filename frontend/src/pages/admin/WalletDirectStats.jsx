@@ -147,24 +147,24 @@ const WalletDirectStats = () => {
     saveAs(blob, `wallet-breakdown-report-${getISTDateStr(new Date())}.csv`);
   };
 
-  const handleLoginAsUser = async (targetUserId) => {
-    try {
-      const adminToken = localStorage.getItem('adminToken');
-      const res = await api.post('/admin/impersonate', { userId: targetUserId }, {
-        headers: { Authorization: `Bearer ${adminToken}` }
-      });
-      const { token: userToken, user: impersonatedUser } = res.data;
-      const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
+  // const handleLoginAsUser = async (targetUserId) => {
+  //   try {
+  //     const adminToken = localStorage.getItem('adminToken');
+  //     const res = await api.post('/admin/impersonate', { userId: targetUserId }, {
+  //       headers: { Authorization: `Bearer ${adminToken}` }
+  //     });
+  //     const { token: userToken, user: impersonatedUser } = res.data;
+  //     const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
       
-      let targetBaseUrl = window.location.hostname.includes("localhost") || window.location.hostname === "127.0.0.1" 
-                          ? "http://localhost:5173" : "https://cryptocommunity.live"; 
+  //     let targetBaseUrl = window.location.hostname.includes("localhost") || window.location.hostname === "127.0.0.1" 
+  //                         ? "http://localhost:5173" : "https://cryptocommunity.live"; 
 
-      const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
-      window.open(mainWebsiteUrl, '_blank', 'noopener,noreferrer');
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to login as this user.");
-    }
-  };
+  //     const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
+  //     window.open(mainWebsiteUrl, '_blank', 'noopener,noreferrer');
+  //   } catch (err) {
+  //     alert(err.response?.data?.message || "Failed to login as this user.");
+  //   }
+  // };
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
@@ -306,7 +306,9 @@ const WalletDirectStats = () => {
                            <span className={`font-black ${isLeader ? 'text-red-700' : 'text-gray-800'}`}>#{user.userId}</span>
                            <div className={`flex items-center gap-1 border rounded p-0.5 shadow-sm ${isLeader ? 'bg-red-100 border-red-200' : 'bg-white border-gray-200'}`}>
                              <button onClick={() => handleCopy(user.userId.toString())} className={`transition p-1 ${isLeader ? 'text-red-500 hover:text-red-700' : 'text-gray-400 hover:text-gray-700'}`} title="Copy ID"><Copy size={11}/></button>
-                             <button onClick={() => handleLoginAsUser(user.userId)} className={`transition p-1 ${isLeader ? 'text-red-600 hover:text-red-900' : 'text-indigo-600 hover:text-indigo-800'}`} title="Login"><LogIn size={11} /></button>
+                           
+                             {/* <button onClick={() => handleLoginAsUser(user.userId)} className={`transition p-1 ${isLeader ? 'text-red-600 hover:text-red-900' : 'text-indigo-600 hover:text-indigo-800'}`} title="Login"><LogIn size={11} /></button>
+                            */}
                            </div>
                         </div>
                       </td>

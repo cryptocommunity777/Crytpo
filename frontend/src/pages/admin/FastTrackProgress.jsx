@@ -37,48 +37,48 @@ const FastTrackProgress = () => {
     };
 
     // ----------------- 🔥 IMPERSONATE (LOGIN) LOGIC -----------------
-    const handleImpersonate = async (targetId) => {
-        const result = await Swal.fire({
-            title: 'Login as User?',
-            text: `Do you want to log in to the account with User ID: #${targetId}?`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, Login'
-        });
+    // const handleImpersonate = async (targetId) => {
+    //     const result = await Swal.fire({
+    //         title: 'Login as User?',
+    //         text: `Do you want to log in to the account with User ID: #${targetId}?`,
+    //         icon: 'question',
+    //         showCancelButton: true,
+    //         confirmButtonText: 'Yes, Login'
+    //     });
 
-        if (!result.isConfirmed) return;
+    //     if (!result.isConfirmed) return;
 
-        try {
-            Swal.fire({ title: 'Logging in...', didOpen: () => { Swal.showLoading(); } });
-            const token = localStorage.getItem('adminToken');
+    //     try {
+    //         Swal.fire({ title: 'Logging in...', didOpen: () => { Swal.showLoading(); } });
+    //         const token = localStorage.getItem('adminToken');
             
-            const res = await api.post('/admin/impersonate', { userId: targetId }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+    //         const res = await api.post('/admin/impersonate', { userId: targetId }, {
+    //             headers: { Authorization: `Bearer ${token}` }
+    //         });
 
-            if (res.data.token) {
-                Swal.close();
-                const { token: userToken, user: impersonatedUser } = res.data;
-                const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
+    //         if (res.data.token) {
+    //             Swal.close();
+    //             const { token: userToken, user: impersonatedUser } = res.data;
+    //             const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
 
-                let targetBaseUrl = window.location.hostname.includes("localhost") || window.location.hostname === "127.0.0.1" 
-                    ? "http://localhost:5173" 
-                    : "https://cryptocommunity.live";
+    //             let targetBaseUrl = window.location.hostname.includes("localhost") || window.location.hostname === "127.0.0.1" 
+    //                 ? "http://localhost:5173" 
+    //                 : "https://cryptocommunity.live";
 
-                const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
+    //             const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
 
-                const link = document.createElement('a');
-                link.href = mainWebsiteUrl;
-                link.target = '_blank';
-                link.rel = 'noopener noreferrer'; 
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-        } catch (error) {
-            Swal.fire('Error', error.response?.data?.message || "Failed to log in", 'error');
-        }
-    };
+    //             const link = document.createElement('a');
+    //             link.href = mainWebsiteUrl;
+    //             link.target = '_blank';
+    //             link.rel = 'noopener noreferrer'; 
+    //             document.body.appendChild(link);
+    //             link.click();
+    //             document.body.removeChild(link);
+    //         }
+    //     } catch (error) {
+    //         Swal.fire('Error', error.response?.data?.message || "Failed to log in", 'error');
+    //     }
+    // };
 
     // Calculate Time Left
     const getTimeLeft = (deadlineStr) => {
@@ -291,7 +291,8 @@ const FastTrackProgress = () => {
                                                     title="Login as this User"
                                                 >
                                                     #{user.userId}
-                                                    <ExternalLink size={12} className="opacity-70" />
+                                                    {/* <ExternalLink size={12} className="opacity-70" />
+                                                     */}
                                                 </button>
                                             </td>
                                             

@@ -49,62 +49,62 @@ const TotalTopUpPage = () => {
   const [itemsPerPage, setItemsPerPage] = useState(20); 
 
   // ----------------- 🔥 IMPERSONATE (LOGIN) LOGIC -----------------
-  const handleImpersonate = async (targetId) => {
-    // 🔥 FIX: Agar target "Self" ya "System" hai toh function wahi ruk jayega
-    const idStr = String(targetId || "").toLowerCase();
-    if (!targetId || idStr.includes("system") || idStr === "self") return;
+  // const handleImpersonate = async (targetId) => {
+  //   // 🔥 FIX: Agar target "Self" ya "System" hai toh function wahi ruk jayega
+  //   const idStr = String(targetId || "").toLowerCase();
+  //   if (!targetId || idStr.includes("system") || idStr === "self") return;
 
-    const match = String(targetId).match(/\d+/);
-    const cleanUserId = match ? match[0] : targetId;
+  //   const match = String(targetId).match(/\d+/);
+  //   const cleanUserId = match ? match[0] : targetId;
 
-    const result = await Swal.fire({
-      title: 'Login as User?',
-      text: `Do you want to log in to the account with User ID: #${cleanUserId}?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, Login'
-    });
+  //   const result = await Swal.fire({
+  //     title: 'Login as User?',
+  //     text: `Do you want to log in to the account with User ID: #${cleanUserId}?`,
+  //     icon: 'question',
+  //     showCancelButton: true,
+  //     confirmButtonText: 'Yes, Login'
+  //   });
 
-    if (!result.isConfirmed) return;
+  //   if (!result.isConfirmed) return;
 
-    try {
-      Swal.fire({ title: 'Logging in...', didOpen: () => { Swal.showLoading(); } });
-      const token = localStorage.getItem('adminToken');
+  //   try {
+  //     Swal.fire({ title: 'Logging in...', didOpen: () => { Swal.showLoading(); } });
+  //     const token = localStorage.getItem('adminToken');
       
-      const res = await api.post('/admin/impersonate', { userId: cleanUserId }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+  //     const res = await api.post('/admin/impersonate', { userId: cleanUserId }, {
+  //       headers: { Authorization: `Bearer ${token}` }
+  //     });
 
-      if (res.data.token) {
-        Swal.close();
+  //     if (res.data.token) {
+  //       Swal.close();
         
-        const { token: userToken, user: impersonatedUser } = res.data;
-        const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
+  //       const { token: userToken, user: impersonatedUser } = res.data;
+  //       const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
 
-        let targetBaseUrl = "";
-        const currentHost = window.location.hostname;
+  //       let targetBaseUrl = "";
+  //       const currentHost = window.location.hostname;
 
-        if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
-          targetBaseUrl = "http://localhost:5173"; 
-        } else {
-          targetBaseUrl = "https://cryptocommunity.live"; 
-        }
+  //       if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
+  //         targetBaseUrl = "http://localhost:5173"; 
+  //       } else {
+  //         targetBaseUrl = "https://cryptocommunity.live"; 
+  //       }
 
-        const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
+  //       const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
 
-        const link = document.createElement('a');
-        link.href = mainWebsiteUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer'; 
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-    } catch (error) {
-      console.error("Impersonation error:", error);
-      Swal.fire('Error', error.response?.data?.message || "Failed to impersonate user", 'error');
-    }
-  };
+  //       const link = document.createElement('a');
+  //       link.href = mainWebsiteUrl;
+  //       link.target = '_blank';
+  //       link.rel = 'noopener noreferrer'; 
+  //       document.body.appendChild(link);
+  //       link.click();
+  //       document.body.removeChild(link);
+  //     }
+  //   } catch (error) {
+  //     console.error("Impersonation error:", error);
+  //     Swal.fire('Error', error.response?.data?.message || "Failed to impersonate user", 'error');
+  //   }
+  // };
   // --------------------------------------------------------------
 
   useEffect(() => {
@@ -331,10 +331,9 @@ const TotalTopUpPage = () => {
                       <button
                         onClick={() => handleImpersonate(u.userId)}
                         className="flex items-center gap-1 hover:text-indigo-800 hover:underline transition-all"
-                        title="Login as this User"
-                      >
+                       >
                         #{u.userId}
-                        <ExternalLink size={12} className="opacity-70" />
+                        {/* <ExternalLink size={12} className="opacity-70" /> */}
                       </button>
                     </td>
 
@@ -361,11 +360,11 @@ const TotalTopUpPage = () => {
                          <button 
                            onClick={() => handleImpersonate(u.topUpBy)}
                            className={`flex items-center gap-1.5 px-2 py-1 rounded border w-max transition-all ${u.initiatorRole === 'leader' ? 'bg-white border-red-200 hover:bg-red-100 text-red-600' : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:text-indigo-600 text-gray-700'}`}
-                           title="Login as Sender"
-                         >
+                          >
+                          
                            <ArrowRightCircle size={14} className={u.initiatorRole === 'leader' ? 'text-red-400' : 'text-gray-400'} />
                            <span className="text-xs font-bold transition-colors">{u.topUpBy}</span>
-                           <ExternalLink size={12} className="opacity-70" />
+                           {/* <ExternalLink size={12} className="opacity-70" /> */}
                          </button>
                        )}
                     </td>

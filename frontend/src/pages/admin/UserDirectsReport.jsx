@@ -124,15 +124,15 @@ const UserDirectsReport = () => {
   const handleNext = () => { if (validPage < totalPages) setCurrentPage(p => p + 1); };
   const handlePrev = () => { if (validPage > 1) setCurrentPage(p => p - 1); };
 
-  const handleLoginAsUser = async (targetUserId) => {
-    try {
-      const adminToken = localStorage.getItem('adminToken');
-      const res = await api.post('/admin/impersonate', { userId: targetUserId }, { headers: { Authorization: `Bearer ${adminToken}` } });
-      const { token: userToken, user: impersonatedUser } = res.data;
-      const targetBaseUrl = window.location.hostname.includes("localhost") ? "http://localhost:5173" : "https://cryptocommunity.live"; 
-      window.open(`${targetBaseUrl}/login?token=${userToken}&user=${encodeURIComponent(JSON.stringify(impersonatedUser))}`, '_blank');
-    } catch (err) { alert(err.response?.data?.message || "Login failed"); }
-  };
+  // const handleLoginAsUser = async (targetUserId) => {
+  //   try {
+  //     const adminToken = localStorage.getItem('adminToken');
+  //     const res = await api.post('/admin/impersonate', { userId: targetUserId }, { headers: { Authorization: `Bearer ${adminToken}` } });
+  //     const { token: userToken, user: impersonatedUser } = res.data;
+  //     const targetBaseUrl = window.location.hostname.includes("localhost") ? "http://localhost:5173" : "https://cryptocommunity.live"; 
+  //     window.open(`${targetBaseUrl}/login?token=${userToken}&user=${encodeURIComponent(JSON.stringify(impersonatedUser))}`, '_blank');
+  //   } catch (err) { alert(err.response?.data?.message || "Login failed"); }
+  // };
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
@@ -296,7 +296,9 @@ const UserDirectsReport = () => {
                            <span className={`font-black ${isLeader ? 'text-red-700' : 'text-slate-800'}`}>#{u.userId}</span>
                            <div className="flex items-center gap-1 border rounded p-0.5 shadow-sm bg-white">
                              <button onClick={() => handleCopy(u.userId.toString())} className="p-1 text-slate-400 hover:text-black"><Copy size={11}/></button>
-                             <button onClick={() => handleLoginAsUser(u.userId)} className="p-1 text-indigo-600 hover:text-indigo-900"><LogIn size={11}/></button>
+                           
+                             {/* <button onClick={() => handleLoginAsUser(u.userId)} className="p-1 text-indigo-600 hover:text-indigo-900"><LogIn size={11}/></button>
+                            */}
                            </div>
                         </div>
                       </td>

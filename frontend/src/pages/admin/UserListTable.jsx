@@ -114,35 +114,35 @@ const UserListTable = () => {
   };
 
   // ✅ Handle Login As User (Impersonation)
-  const handleLoginAsUser = async (targetUserId) => {
-    try {
-      const adminToken = localStorage.getItem('adminToken');
-      if (!adminToken) return alert("Admin not authorized");
+  // const handleLoginAsUser = async (targetUserId) => {
+  //   try {
+  //     const adminToken = localStorage.getItem('adminToken');
+  //     if (!adminToken) return alert("Admin not authorized");
 
-      const res = await api.post('/admin/impersonate', { userId: targetUserId }, {
-        headers: { Authorization: `Bearer ${adminToken}` }
-      });
+  //     const res = await api.post('/admin/impersonate', { userId: targetUserId }, {
+  //       headers: { Authorization: `Bearer ${adminToken}` }
+  //     });
 
-      const { token: userToken, user: impersonatedUser } = res.data;
-      const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
+  //     const { token: userToken, user: impersonatedUser } = res.data;
+  //     const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
       
-      let targetBaseUrl = "";
-      const currentHost = window.location.hostname;
+  //     let targetBaseUrl = "";
+  //     const currentHost = window.location.hostname;
 
-      if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
-        targetBaseUrl = "http://localhost:5173"; 
-      } else {
-        targetBaseUrl = "https://cryptocommunity.live"; 
-      }
+  //     if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
+  //       targetBaseUrl = "http://localhost:5173"; 
+  //     } else {
+  //       targetBaseUrl = "https://cryptocommunity.live"; 
+  //     }
 
-      const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
-      window.open(mainWebsiteUrl, '_blank', 'noopener,noreferrer');
+  //     const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
+  //     window.open(mainWebsiteUrl, '_blank', 'noopener,noreferrer');
       
-    } catch (err) {
-      console.error("Impersonation failed:", err);
-      alert(err.response?.data?.message || "Failed to login as this user.");
-    }
-  };
+  //   } catch (err) {
+  //     console.error("Impersonation failed:", err);
+  //     alert(err.response?.data?.message || "Failed to login as this user.");
+  //   }
+  // };
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);

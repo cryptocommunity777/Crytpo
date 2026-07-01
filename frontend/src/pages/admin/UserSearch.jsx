@@ -62,32 +62,32 @@ function UserSearch() {
     }
   };
 
-  const handleImpersonate = async () => {
-    const token = getAdminToken();
-    if (!token) return setMessage("Admin not authenticated");
+  // const handleImpersonate = async () => {
+  //   const token = getAdminToken();
+  //   if (!token) return setMessage("Admin not authenticated");
 
-    try {
-      const res = await api.post(`/admin/impersonate`, { userId: user.userId });
-      const { token: userToken, user: impersonatedUser } = res.data;
-      const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
+  //   try {
+  //     const res = await api.post(`/admin/impersonate`, { userId: user.userId });
+  //     const { token: userToken, user: impersonatedUser } = res.data;
+  //     const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
 
-      let targetBaseUrl = "";
-      const currentHost = window.location.hostname;
+  //     let targetBaseUrl = "";
+  //     const currentHost = window.location.hostname;
 
-      if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
-        targetBaseUrl = "http://localhost:5173"; 
-      } else {
-        targetBaseUrl = "https://cryptocommunity.live"; 
-      }
+  //     if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
+  //       targetBaseUrl = "http://localhost:5173"; 
+  //     } else {
+  //       targetBaseUrl = "https://cryptocommunity.live"; 
+  //     }
 
-      const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
-      window.open(mainWebsiteUrl, "_blank", "noopener,noreferrer");
+  //     const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
+  //     window.open(mainWebsiteUrl, "_blank", "noopener,noreferrer");
 
-    } catch (err) {
-      console.error(err);
-      setMessage(err.response?.data?.message || "Failed to impersonate user");
-    }
-  };
+  //   } catch (err) {
+  //     console.error(err);
+  //     setMessage(err.response?.data?.message || "Failed to impersonate user");
+  //   }
+  // };
 
   const handleResetTelegram = async () => {
     if (!window.confirm("Are you sure you want to unlink this user's Telegram? They will need to verify again.")) return;
@@ -311,13 +311,13 @@ function UserSearch() {
               Save Changes
             </button>
 
-            <button
+            {/* <button
               onClick={handleImpersonate}
               className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded flex items-center font-medium shadow-sm transition-colors"
             >
               <LogIn size={16} className="inline mr-1" />
               Login as User
-            </button>
+            </button> */}
 
             {user.isTelegramJoined ? (
               <button
