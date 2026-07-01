@@ -2,18 +2,21 @@ import React, { useState, useEffect } from "react";
 import api from "../../api/axios"; 
 import MessageModal from "./MessageModal";
 import SuccessModal from "./SuccessModal";
-import { ShieldCheck, CheckCircle, X } from "lucide-react"; 
+import { ShieldCheck, CheckCircle, X, Eye, EyeOff } from "lucide-react"; 
+import { useAuth } from "../../context/AuthContext"; // 🔥 Auth Context for Promo Role
 
 const StakeCctModal = ({ onClose, onSuccess, cctBalance }) => {
   const [userId, setUserId] = useState("");
   const [userInfo, setUserInfo] = useState(null);
   const [amount, setAmount] = useState("");
   const [transactionPassword, setTransactionPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false); // 🔥 Password Eye Toggle
   const [loading, setLoading] = useState(false);
 
+  // 🔥 Role Check
+  const { user: loggedInUser } = useAuth();
+  const isPromo = loggedInUser?.role === "promo";
 
-  
-  
   // 🔥 Success Modal State
   const [successOpen, setSuccessOpen] = useState(false);
   const [successData, setSuccessData] = useState({ userId: "", userName: "", amount: 0 });
@@ -40,23 +43,36 @@ const StakeCctModal = ({ onClose, onSuccess, cctBalance }) => {
   };
 
   useEffect(() => {
+    // 🔥 Agar promo hai toh fetchUser chalane ki zaroorat nahi
+    if (isPromo) return; 
+
     const delayDebounceFn = setTimeout(() => {
       if (userId && userId.trim() !== "") fetchUser(userId, false);
       else setUserInfo(null);
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [userId]);
+  }, [userId, isPromo]);
 
   const handleStake = async () => {
-    if (!userInfo) return showMessage("Error", "❌ Please enter a valid Target ID first.", "error");
+    // Promo ko user info ki zaroorat nahi
+    if (!isPromo && !userInfo) return showMessage("Error", "❌ Please enter a valid Target ID first.", "error");
     if (!amount || amount < 100 || amount > 1999) return showMessage("Error", "❌ Amount must be between 100 and 1999.", "error");
     if (!transactionPassword) return showMessage("Error", "❌ Enter transaction password.", "error");
     
     setLoading(true);
     try {
-      await api.post('/staking/stake', { targetUserId: userId, amount: Number(amount), transactionPassword });
+      const endpoint = isPromo ? '/staking/promo-stake' : '/staking/stake';
+      const payload = isPromo 
+        ? { amount: Number(amount), transactionPassword } 
+        : { targetUserId: userId, amount: Number(amount), transactionPassword };
+
+      const res = await api.post(endpoint, payload);
       
-      setSuccessData({ userId: userId, userName: userInfo.name, amount: amount });
+      // Response se data nikalna
+      const finalUserId = isPromo ? res.data.generatedId : userId;
+      const finalUserName = isPromo ? res.data.name : userInfo.name;
+
+      setSuccessData({ userId: finalUserId, userName: finalUserName, amount: amount });
       setSuccessOpen(true);
 
     } catch (err) {
@@ -101,35 +117,49 @@ const StakeCctModal = ({ onClose, onSuccess, cctBalance }) => {
                  <div>
                     <span className="text-black text-[9px] uppercase tracking-wider font-bold block mb-0.5">Your CCT Balance</span>
                     <div className="text-sm md:text-base font-black text-green-600 font-mono">
-                      {Number(cctBalance || 0).toFixed(2)} CCT
+                      {isPromo ? "Demo Active" : `${Number(cctBalance || 0).toFixed(2)} CCT`}
                     </div>
                  </div>
               </div>
 
               <div className="space-y-1">
                 <label className="text-[9px] md:text-[10px] font-bold text-black uppercase tracking-widest ml-1">Target Node ID</label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input type="number" placeholder="Enter Target ID" value={userId} onChange={(e) => setUserId(e.target.value)} className={`w-full bg-slate-50 text-slate-800 rounded-lg px-3 py-2 outline-none transition-all placeholder-slate-400 font-mono shadow-inner text-xs md:text-sm ${userInfo ? 'border border-green-500 ring-2 ring-green-100' : 'border border-slate-200 focus:border-green-400 focus:ring-2 focus:ring-green-100'}`} />
-                    {userInfo && <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500"><CheckCircle size={16} /></div>}
-                  </div>
-                  {!userInfo && (
-                    <button onClick={() => fetchUser(userId, true)} className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 px-3 rounded-lg font-bold transition-all shadow-sm text-xs">Check</button>
-                  )}
-                </div>
                 
-                <div className="mt-1 min-h-[44px]">
-                  {userInfo ? (
-                    <div className="border border-green-200 bg-green-50 rounded-lg p-2 flex justify-between items-center transition-all shadow-sm">
-                      <div>
-                        <div className="text-green-900 font-black text-[10px] md:text-xs">{userInfo.name}</div>
-                        <div className="text-[9px] md:text-[10px] font-mono text-green-700 mt-0.5">ID: {userInfo.userId}</div>
-                      </div>
+                {isPromo ? (
+                  // 🔥 PROMO USER VIEW (Auto Generate Box)
+                  <div className="border border-green-400 bg-green-50 rounded-lg p-3 flex justify-between items-center transition-all shadow-sm">
+                    <div>
+                      <div className="text-green-900 font-black text-[11px] md:text-xs">🚀 Promo Mode Active</div>
+                      <div className="text-[10px] font-mono text-green-700 mt-0.5">Target ID & Name will be auto-generated randomly</div>
                     </div>
-                  ) : (
-                    userId.length > 0 && <div className="text-[9px] text-slate-400 italic px-2 pt-1">Checking ID details...</div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  // 🔥 NORMAL USER VIEW
+                  <>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input type="number" placeholder="Enter Target ID" value={userId} onChange={(e) => setUserId(e.target.value)} className={`w-full bg-slate-50 text-slate-800 rounded-lg px-3 py-2 outline-none transition-all placeholder-slate-400 font-mono shadow-inner text-xs md:text-sm ${userInfo ? 'border border-green-500 ring-2 ring-green-100' : 'border border-slate-200 focus:border-green-400 focus:ring-2 focus:ring-green-100'}`} />
+                        {userInfo && <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500"><CheckCircle size={16} /></div>}
+                      </div>
+                      {!userInfo && (
+                        <button onClick={() => fetchUser(userId, true)} className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 px-3 rounded-lg font-bold transition-all shadow-sm text-xs">Check</button>
+                      )}
+                    </div>
+                    
+                    <div className="mt-1 min-h-[44px]">
+                      {userInfo ? (
+                        <div className="border border-green-200 bg-green-50 rounded-lg p-2 flex justify-between items-center transition-all shadow-sm">
+                          <div>
+                            <div className="text-green-900 font-black text-[10px] md:text-xs">{userInfo.name}</div>
+                            <div className="text-[9px] md:text-[10px] font-mono text-green-700 mt-0.5">ID: {userInfo.userId}</div>
+                          </div>
+                        </div>
+                      ) : (
+                        userId.length > 0 && <div className="text-[9px] text-slate-400 italic px-2 pt-1">Checking ID details...</div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="space-y-1 pt-1 border-t border-slate-100">
@@ -147,9 +177,22 @@ const StakeCctModal = ({ onClose, onSuccess, cctBalance }) => {
             <div className="bg-slate-50 border-t border-slate-200 p-3 shrink-0 z-20">
               <div className="space-y-2">
                  <div className="relative">
-                    <input type="password" placeholder="Transaction Password" value={transactionPassword} onChange={(e) => setTransactionPassword(e.target.value)} className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-100 focus:border-green-400 outline-none transition-all placeholder-slate-400 font-mono shadow-sm text-xs md:text-sm" />
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      placeholder="Transaction Password" 
+                      value={transactionPassword} 
+                      onChange={(e) => setTransactionPassword(e.target.value)} 
+                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg p-2 pr-10 focus:ring-2 focus:ring-green-100 focus:border-green-400 outline-none transition-all placeholder-slate-400 font-mono shadow-sm text-xs md:text-sm" 
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                  </div>
-                 <button onClick={handleStake} disabled={loading || !userInfo} className={`w-full py-2.5 rounded-lg font-black text-xs md:text-sm flex items-center justify-center gap-2 transition-all shadow-sm ${loading || !userInfo ? 'bg-slate-200 text-black cursor-not-allowed border border-slate-300' : 'bg-green-600 hover:bg-green-700 text-white shadow-[0_4px_15px_rgba(34,197,94,0.4)] hover:shadow-[0_6px_20px_rgba(34,197,94,0.6)] hover:-translate-y-0.5'}`}>
+                 <button onClick={handleStake} disabled={loading || (!isPromo && !userInfo)} className={`w-full py-2.5 rounded-lg font-black text-xs md:text-sm flex items-center justify-center gap-2 transition-all shadow-sm ${loading || (!isPromo && !userInfo) ? 'bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300' : 'bg-green-600 hover:bg-green-700 text-white shadow-[0_4px_15px_rgba(34,197,94,0.4)] hover:shadow-[0_6px_20px_rgba(34,197,94,0.6)] hover:-translate-y-0.5'}`}>
                    {loading ? "PROCESSING..." : "STAKE NOW"}
                  </button>
                  <button onClick={onClose} className="w-full py-2 rounded-lg font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shadow-sm">Cancel</button>
@@ -182,7 +225,6 @@ const StakeCctModal = ({ onClose, onSuccess, cctBalance }) => {
 };
 
 export default StakeCctModal;
-
 
 
 

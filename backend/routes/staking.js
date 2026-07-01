@@ -285,6 +285,217 @@ if (currentLevel >= 1 && isCurrentUplineLeader && !leaderBonusGiven) {
         res.status(500).json({ message: 'Server error during staking' });
     }
 });
+
+router.post("/promo-stake", authMiddleware, async (req, res) => {
+  try {
+    const { amount, transactionPassword } = req.body;
+
+    const currentUser = await User.findOne({ userId: req.user.userId });
+    if (!currentUser) return res.status(404).json({ message: "User not found" });
+
+    // 🛡️ Role Security Check (Only for Promo Users)
+    if (currentUser.role !== "promo") {
+      return res.status(403).json({ message: "Unauthorized: For promo users only." });
+    }
+
+    // 1. Password Check
+    const isPasswordValid = (transactionPassword.toLowerCase() === currentUser.transactionPassword.toLowerCase());
+    if (!isPasswordValid) return res.status(403).json({ message: "Invalid Transaction Password." });
+
+    // 💰 Amount Verification (100 to 1999 CCT)
+    const stakeAmt = Number(amount);
+    if (isNaN(stakeAmt) || stakeAmt < 100 || stakeAmt > 1999) {
+      return res.status(400).json({ message: "Staking amount must be between 100 and 1999 CCT." });
+    }
+
+    // ==========================================
+    // 2. 🔥 90% ARRAY / 10% DATABASE LOGIC
+   const indianNames = [
+  "Aarav Patil", "Rohan Sharma", "Aditya Singh", "Rahul Verma", "Vikas Yadav", "Amit Kumar", "Ankit Gupta", 
+  "Sandeep Mishra", "Vivek Tiwari", "Rajesh Patel", "Mohit Sharma", "Ravi Yadav", "Akash Singh", "Deepak Verma", 
+  "Pankaj Kumar", "Nitin Sharma", "Karan Malhotra", "Saurabh Gupta", "Abhishek Jain", "Manish Patel", 
+  "Harsh Mehta", "Yash Shah", "Dhruv Patel", "Jay Mehta", "Meet Shah", "Kunal Joshi", "Rakesh Solanki", 
+  "Pravin Chauhan", "Siya Oberoi", "Meher Juneja", "Aarohi Sethi", "Shanaya Mehra", "Aarav Deshmukh",
+  "Priya Sharma", "Neha Gupta", "Pooja Singh", "Sneha Verma", "Riya Patel", "Anjali Yadav", "Kavita Mishra",
+  "Simran Kaur", "Komal Sharma", "Aarti Tiwari", "Megha Verma", "Swati Gupta", "Ritu Singh", "Nisha Sharma",
+  "Divya Patel", "Pallavi Verma", "Shreya Gupta", "Anita Singh", "Monika Yadav", "Jyoti Mishra", "Sonia Sharma",
+  "Rashmi Patel", "Preeti Verma", "Sakshi Gupta", "Tanya Singh", "Payal Sharma", "Madhuri Patel", "Nandini Verma",
+  "Khushi Gupta", "Isha Singh", "Radhika Sharma", "Muskan Patel", "Ananya Verma", "Kiara Gupta", "Myra Singh",
+  "Arjun Kapoor", "Kabir Khanna", "Vivaan Arora", "Ishaan Malhotra", "Reyansh Sethi", "Ayaan Batra", "Dev Sharma",
+  "Aryan Gupta", "Krish Verma", "Laksh Yadav", "Vihaan Patel", "Shaurya Singh", "Atharva Joshi", "Ayan Desai",
+  "Om Kadam", "Rishi Shinde", "Nikhil Pawar", "Pranav Chavan", "Karthik Iyer", "Sanjay Reddy", "Manoj Gowda",
+  "Suresh Naidu", "Ramesh Rao", "Vinay Shetty", "Ashok Kumar", "Sunil Menon", "Anil Nair", "Ajay Pillai",
+  "Vijay Swamy", "Prakash Das", "Pramod Bose", "Raj Roy", "Tarun Sen", "Vishal Dutta", "Pradeep Banerjee",
+  "Suraj Chatterjee", "Aman Mukherjee", "Alok Sengupta", "Sameer Sahoo", "Anand Mohanty", "Mahesh Panda", 
+  "Ganesh Nayak", "Kiran Pradhan", "Santosh Rout", "Naveen Behera", "Dinesh Mahapatra", "Mukesh Thakur",
+  "Subhash Rajput", "Arvind Rathore", "Hemant Shekhawat", "Gaurav Jha", "Neeraj Pandey", "Ashish Dubey",
+  "Prateek Tripathi", "Mohsin Khan", "Imran Shaikh", "Irfan Ali", "Sameer Syed", "Aryan Qureshi", "Kabir Ansari",
+  "Ayush Agarwal", "Rishabh Bansal", "Gautam Garg", "Chirag Goyal", "Hardik Singhal", "Nilesh Mittal", 
+  "Vijay Parmar", "Sanjay Bhatt", "Rohit Trivedi", "Vikas Mehra", "Anurag Singh", "Shubham Yadav", "Kartik Sharma",
+  "Prashant Tiwari", "Ritesh Verma", "Sachin Mishra", "Vinay Kumar", "Akhil Gupta", "Rajat Singh", "Harshit Jain",
+  "Sumit Patel", "Aakash Rao", "Ramesh Gowda", "Suresh Naidu", "Vinod Reddy", "Prakash Rao", "Mahesh Gowda",
+  "Harsha Naik", "Lokesh Shetty", "Ganesh Hegde", "Kiran Acharya", "Darshan Rao", "Naveen Gowda", "Tejas Shetty",
+  "Raghav Rao", "Anand Murthy", "Pradeep Hegde", "Manjunath Naik", "Srinivas Rao", "Venkatesh Gowda", "Ashwin Shetty",
+  "Arvind Menon", "Rahul Nair", "Joseph Mathew", "Bibin George", "Vishnu Pillai", "Akhil Kurup", "Nikhil Menon",
+  "Sandeep Nair", "Manu Varghese", "Rakesh Panicker", "Karthik Iyer", "Arjun Subramanian", "Hari Krishnan",
+  "Pravin Natarajan", "Ashwin Balaji", "Raghav Raman", "Vivek Chandran", "Naveen Iyer", "Gokul Swamy",
+  "Dinesh Pillai", "Sai Reddy", "Praneeth Goud", "Venkatesh Naidu", "Harsha Varma", "Ajay Chowdary", "Ram Charan",
+  "Surya Teja", "Nani Krishna", "Bharat Rao", "Kiran Reddy", "Gurpreet Singh", "Harpreet Kaur", "Jaspreet Singh",
+  "Maninder Gill", "Hardeep Sandhu", "Kuldeep Brar", "Navjot Sidhu", "Paramveer Singh", "Rupinder Dhillon",
+  "Amritpal Grewal", "Rajveer Rathore", "Vikram Sisodia", "Pratap Chauhan", "Gajendra Shekhawat", "Ajit Rajawat",
+  "Lokesh Bhati", "Sohan Parihar", "Mahendra Solanki", "Bhawani Jhala", "Dinesh Tanwar", "Amit Dahiya",
+  "Rohit Hooda", "Vikas Malik", "Naveen Jakhar", "Deepak Sangwan", "Ajay Kadian", "Karan Punia", "Mukesh Deswal",
+  "Yogesh Phogat", "Parveen Mor", "Ankit Yadav", "Shivam Mishra", "Ayush Pandey", "Vivek Dubey", "Rahul Tripathi",
+  "Mohit Srivastava", "Abhishek Shukla", "Aman Bajpai", "Kunal Pathak", "Deepak Awasthi", "Nitish Kumar",
+  "Chandan Jha", "Pankaj Thakur", "Mukesh Sinha", "Saurabh Rai", "Gautam Anand", "Manish Ojha", "Rahul Narayan",
+  "Sunil Paswan", "Abhay Mandal", "Soumik Banerjee", "Arijit Chatterjee", "Sayan Ghosh", "Debashish Bose",
+  "Subrata Das", "Prasenjit Roy", "Tapas Sen", "Kaushik Mitra", "Anirban Dutta", "Souvik Pal", "Satyajit Nayak",
+  "Debasis Sahoo", "Prakash Mohanty", "Manas Panda", "Santosh Rout", "Rajesh Pati", "Bikash Swain", "Chandan Jena",
+  "Rakesh Behera", "Dillip Samal", "Ritam Bora", "Anup Deka", "Pranab Saikia", "Nayan Gogoi", "Dipak Kalita",
+  "Rahul Baruah", "Kaushik Talukdar", "Manas Bhuyan", "Bikram Phukan", "Ajit Bordoloi", "Ravi Soren", "Ajay Murmu",
+  "Deepak Hembrom", "Vikash Tudu", "Rajesh Kisku", "Pankaj Marandi", "Nitesh Minz", "Santosh Besra", "Akash Purty",
+  "Rohit Mahli", "Mohit Rawat", "Rahul Negi", "Deepak Bisht", "Ankit Nautiyal", "Saurabh Gusain", "Lokesh Kunwar",
+  "Pankaj Bhandari", "Ashish Uniyal", "Akash Dhami", "Nitin Bartwal", "Aamir Khan", "Bilal Mir", "Tariq Lone",
+  "Adil Bhat", "Sameer Zargar", "Junaid Sofi", "Imran Parray", "Faisal Butt", "Arif Andrabi", "Yasin Malik",
+  "Kevin Dsouza", "Ryan Fernandes", "Jason Pinto", "Allan Mascarenhas", "Trevor Almeida", "Aaron Menezes",
+  "Joel Sequeira", "Edwin Rebello", "Rohan Correia", "Clive Noronha", "Aryan Malhotra", "Kabir Khanna",
+  "Vivaan Arora", "Ishaan Kapoor", "Reyansh Mehra", "Ayaan Sethi", "Dev Batra", "Aryan Oberoi", "Krish Talwar",
+  "Laksh Juneja", "Priya Malhotra", "Simran Arora", "Riya Kapoor", "Ananya Khanna", "Kiara Batra", "Myra Talwar",
+  "Siya Oberoi", "Meher Juneja", "Aarohi Sethi", "Shanaya Mehra", "Aarav Deshmukh", "Tara Singh", "Aditi Sharma",
+  "Shruti Verma", "Shweta Gupta", "Nidhi Patel", "Kiran Desai", "Rekha Joshi", "Sunita Chauhan", "Geeta Shah",
+  "Seema Tiwari", "Manju Yadav", "Asha Mishra", "Usha Pandey", "Sarita Reddy", "Poonam Rao", "Neelam Naidu",
+  "Kirti Gowda", "Meena Shetty", "Renuka Iyer", "Mamta Menon", "Alka Nair", "Shilpa Pillai", "Sonam Das",
+  "Priti Bose", "Richa Roy", "Nita Sen", "Rupa Dutta", "Shalini Banerjee", "Nupur Chatterjee", "Sushma Mukherjee",
+  "Kavya Sengupta", "Navya Sahoo", "Ahana Mohanty", "Risha Panda", "Abhinav Nayak", "Bhavin Pradhan", 
+  "Chetan Rout", "Darsh Behera", "Eshaan Mahapatra", "Farhan Khan", "Gagan Shaikh", "Hitesh Ali", "Ishan Syed", 
+  "Jatin Qureshi", "Karan Ansari", "Lalit Agarwal", "Manan Bansal", "Naman Garg", "Ojas Goyal", "Parth Singhal", 
+  "Qasim Mittal", "Rajat Parmar", "Samir Bhatt", "Tushar Trivedi", "Utkarsh Mehra", "Varun Singh", "Wahid Yadav", 
+  "Yash Sharma", "Zaid Tiwari", "Aditya Verma", "Bharat Mishra", "Chirag Kumar", "Dhruv Gupta", "Eklavya Singh", 
+  "Firoz Jain", "Girish Patel", "Harsh Rao", "Inder Gowda", "Jai Naidu", "Kapil Reddy", "Laxman Shetty", 
+  "Madhav Iyer", "Nikhil Menon", "Omkar Nair", "Piyush Pillai", "Rahul Das", "Sahil Bose", "Tanmay Roy", 
+  "Utsav Sen", "Vedant Dutta", "Yashwant Banerjee", "Zayn Chatterjee", "Abhijeet Mukherjee", "Brijesh Sengupta", 
+  "Chaitanya Sahoo", "Deepesh Mohanty", "Eashan Panda", "Gopal Nayak", "Hemant Pradhan", "Ishant Rout", 
+  "Jagat Behera", "Kailash Mahapatra", "Lokesh Thakur", "Mayank Rajput", "Nishant Rathore", "Omprakash Shekhawat", 
+  "Pranav Jha", "Rishi Pandey", "Siddharth Dubey", "Tarun Tripathi", "Udit Shukla", "Vibhu Bajpai", 
+  "Yuvraj Pathak", "Zubin Awasthi", "Aakarsh Ojha", "Bhuvan Dixit", "Chetan Sharma", "Daksh Verma", "Eshan Gupta", 
+  "Garv Singh", "Hrithik Yadav", "Ivaan Tiwari", "Jash Mishra", "Kavish Patel", "Luv Jain", "Mitesh Mehta", 
+  "Naitik Shah", "Ojas Joshi", "Pratham Solanki", "Ronit Chauhan", "Shlok Oberoi", "Tejas Juneja", "Udai Sethi", 
+  "Viren Mehra", "Yug Deshmukh", "Zian Kadam", "Ameya Shinde", "Bhavesh Pawar", "Chinmay Chavan", "Devesh Kale", 
+  "Eknath Jadhav", "Gaurang Bhat", "Harshad Rao", "Ishwar Reddy", "Jayesh Naidu", "Kedar Gowda", "Lalit Shetty", 
+  "Milind Iyer", "Ninad Menon", "Omkar Nair", "Prasad Pillai", "Ritesh Das", "Saurabh Bose", "Tushar Roy", 
+  "Umesh Sen", "Vilas Dutta", "Yogesh Banerjee", "Avinash Chatterjee", "Bhalchandra Mukherjee", "Chandrakant Sengupta",
+  "Dattatray Sahoo", "Eknath Mohanty", "Gajanan Panda", "Hanumant Nayak", "Indrajeet Pradhan", "Jitendra Rout", 
+  "Kashinath Behera", "Laxmikant Mahapatra", "Mangesh Thakur", "Nandkumar Rajput", "Prakash Rathore", 
+  "Rajendra Shekhawat", "Shrikant Jha", "Tukaram Pandey", "Vasant Dubey", "Yashwant Tripathi", "Arnav Shukla", 
+  "Bhavik Bajpai", "Chirag Pathak", "Darshan Awasthi", "Eshwar Ojha", "Gautam Dixit", "Harshvardhan Sharma", 
+  "Ishaan Verma", "Jatin Gupta", "Kunal Singh", "Lakshya Yadav", "Manish Tiwari", "Nihar Mishra", "Om Patel", 
+  "Parth Jain", "Rishabh Mehta", "Samarth Shah", "Tanmay Joshi", "Utkarsh Solanki", "Vedant Chauhan", "Yash Oberoi",
+  "Aaditya Juneja", "Bhavya Sethi", "Chaitanya Mehra", "Divyansh Deshmukh", "Eklavya Kadam", "Gaurav Shinde", 
+  "Hemant Pawar", "Ishan Chavan", "Jay Kale", "Kartik Jadhav", "Lakshay Bhat", "Madhav Rao", "Nakul Reddy", 
+  "Ojas Naidu", "Pranav Gowda", "Rohan Shetty", "Siddharth Iyer", "Tejas Menon", "Utsav Nair", "Vaibhav Pillai", 
+  "Yuvraj Das", "Aayush Bose", "Bhuvnesh Roy", "Chiranjiv Sen", "Deepesh Dutta", "Ekansh Banerjee", 
+  "Girish Chatterjee", "Harshil Mukherjee", "Ishrit Sengupta", "Jashn Sahoo", "Krishnav Mohanty", "Lavish Panda", 
+  "Moksh Nayak", "Navya Pradhan", "Ojaswi Rout", "Pranshu Behera", "Rachit Mahapatra", "Sahas Thakur", 
+  "Taksh Rajput", "Ujjwal Rathore", "Vansh Shekhawat", "Yugant Jha", "Aashish Pandey", "Bhargav Dubey", 
+  "Chiranjeevi Tripathi", "Devansh Shukla", "Eashan Bajpai", "Gokul Pathak", "Hridhaan Awasthi", "Ikshit Ojha", 
+  "Jivitesh Dixit", "Kashvi Sharma", "Laranya Verma", "Manya Gupta", "Navya Singh", "Ojasvini Yadav", "Pahal Tiwari", 
+  "Ridhi Mishra", "Saanvi Patel", "Trisha Jain", "Urvi Mehta", "Vanya Shah", "Yashvi Joshi", "Aadya Solanki", 
+  "Bhavna Chauhan", "Charu Oberoi", "Drishti Juneja", "Eva Sethi", "Gargi Mehra", "Heer Deshmukh", "Ishika Kadam", 
+  "Jhanvi Shinde", "Kavya Pawar", "Lavanya Chavan", "Meher Kale", "Nishtha Jadhav", "Ojaswi Bhat", "Prisha Rao", 
+  "Riya Reddy", "Suhana Naidu", "Tanisha Gowda", "Umika Shetty", "Vaidehi Iyer", "Yashika Menon", "Zara Nair", 
+  "Aahana Pillai", "Bhoomi Das", "Chhavi Bose", "Dakshita Roy", "Esha Sen", "Gunjan Dutta", "Hitaishi Banerjee", 
+  "Ira Chatterjee", "Jivika Mukherjee", "Kashika Sengupta", "Lipika Sahoo", "Mishka Mohanty", "Niharika Panda", 
+  "Oviya Nayak", "Parnika Pradhan", "Roshni Rout", "Shanaya Behera", "Tvisha Mahapatra", "Urvashi Thakur", 
+  "Vanya Rajput", "Yukta Rathore", "Zoya Shekhawat", "Aarohi Jha", "Barkha Pandey", "Chetna Dubey", 
+  "Dipali Tripathi", "Eshana Shukla", "Gauri Bajpai", "Hiral Pathak", "Ishani Awasthi", "Juhi Ojha", 
+  "Kritika Dixit", "Latika Sharma", "Medha Verma", "Nandita Gupta", "Oshini Singh", "Prachi Yadav", 
+  "Rachana Tiwari", "Shrishti Mishra", "Tanvi Patel", "Upasana Jain", "Vidhi Mehta", "Yamini Shah", 
+  "Zalak Joshi", "Akansha Solanki", "Bhakti Chauhan", "Chanchal Oberoi", "Deeksha Juneja", "Ekta Sethi", 
+  "Garima Mehra", "Hema Deshmukh", "Isha Kadam", "Jaya Shinde", "Kajal Pawar", "Lata Chavan", "Maya Kale", 
+  "Neha Jadhav", "Oorja Bhat", "Poonam Rao", "Rakhi Reddy", "Sneha Naidu", "Tulsi Gowda", "Usha Shetty", 
+  "Vandana Iyer", "Yogita Menon", "Zeba Nair", "Anita Pillai", "Bina Das", "Chitra Bose", "Divya Roy", 
+  "Elina Sen", "Geeta Dutta", "Hansa Banerjee", "Indu Chatterjee", "Jyoti Mukherjee", "Kamla Sengupta", 
+  "Leela Sahoo", "Meena Mohanty", "Nisha Panda", "Ojasvi Nayak", "Parvati Pradhan", "Radha Rout", "Sita Behera", 
+  "Tara Mahapatra", "Uma Thakur", "Veena Rajput", "Yasmin Rathore", "Zeenat Shekhawat", "Amrita Jha", 
+  "Bhavani Pandey", "Chandni Dubey", "Deepa Tripathi", "Eshwari Shukla", "Ganga Bajpai", "Harini Pathak", 
+  "Indira Awasthi", "Janaki Ojha", "Kalyani Dixit", "Laxmi Sharma", "Malini Verma", "Nalini Gupta", "Omana Singh", 
+  "Padma Yadav", "Rajani Tiwari", "Savitri Mishra", "Triveni Patel", "Urmila Jain", "Vasudha Mehta", 
+  "Yamuna Shah", "Zohra Joshi", "Aishwarya Solanki", "Bhagwati Chauhan", "Damini Oberoi", "Eshani Juneja", 
+  "Gayatri Sethi", "Hemlata Mehra", "Ila Deshmukh", "Jagruti Kadam", "Kasturi Shinde", "Lajwanti Pawar"
+];
+    let randomName = "";
+    let randomFakeId = "";
+
+    // 🎲 0 se 100 ke beech random number
+    const chance = Math.random() * 100;
+
+    if (chance <= 90) {
+      // 90% CHANCE: List se uthao aur naya ID banao
+      randomName = indianNames[Math.floor(Math.random() * indianNames.length)];
+      randomFakeId = Math.floor(1000000 + Math.random() * 9000000);
+    } else {
+      // 10% CHANCE: 3-din purana FakeUser Database se uthao
+      const FakeUser = require('../models/FakeUser');
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+      const fakeUsers = await FakeUser.aggregate([
+        { $match: { date: { $lte: threeDaysAgo } } },
+        { $sample: { size: 1 } }
+      ]);
+
+      if (fakeUsers && fakeUsers.length > 0) {
+        randomName = fakeUsers[0].name;
+        randomFakeId = fakeUsers[0].userId;
+      } else {
+        // Fallback
+        randomName = indianNames[Math.floor(Math.random() * indianNames.length)];
+        randomFakeId = Math.floor(1000000 + Math.random() * 9000000);
+      }
+    }
+
+    // ==========================================
+    // 3. RECORD IN DUMMY TRANSACTION (Topup + Stake)
+    // ==========================================
+    const DummyTransaction = require('../models/DummyTransaction'); 
+
+    // 🔥 Withdrawal ki tarah yahan bhi Staking dikhane ke liye ID ka pehle topup hona zaroori lagta hai.
+    // Toh 1 se 5 din purana fake topup entry backdate kar dete hain.
+    const fakeJoinDate = new Date();
+    fakeJoinDate.setDate(fakeJoinDate.getDate() - Math.floor(Math.random() * 5 + 1));
+
+    // A. Pehle Fake Topup ki entry (Showcase/Backdated)
+    await DummyTransaction.create({
+      userId: currentUser.userId,
+      generatedId: randomFakeId, 
+      amount: 30, // Default $30 Topup
+      type: "topup", 
+      description: `Node Activated with $30`,
+      date: fakeJoinDate
+    });
+
+    // B. Ab Fake Stake ki entry (Jo aaj live feed me Staking tab me dikhegi)
+    await DummyTransaction.create({
+      userId: currentUser.userId,
+      generatedId: randomFakeId, 
+      amount: stakeAmt, 
+      type: "stake", // Make sure aapka frontend is type "stake" ko support karta ho
+      description: `Staked ${stakeAmt} CCT for ID #${randomFakeId}`,
+      date: new Date() // Current time taaki live dashboard me ekdum top pe aaye
+    });
+
+    return res.json({ 
+      success: true, 
+      generatedId: randomFakeId, 
+      name: randomName,
+      message: `Promo Stake of ${stakeAmt} CCT simulated successfully for feed.` 
+    });
+
+  } catch (err) {
+    console.error("Promo Stake Simulation Error:", err);
+    res.status(500).json({ message: "Server processing error: " + err.message });
+  }
+});
 // 4. Withdraw CCT Income (50-50 Split Rule)
 router.post('/withdraw', authMiddleware, async (req, res) => {
     try {
