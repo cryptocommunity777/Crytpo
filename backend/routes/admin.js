@@ -3220,15 +3220,16 @@ router.get('/search-user/:userId', verifyAdmin, async (req, res) => {
 // 🔐 Admin update user (FINAL - Updated to Plain Text Password)
 // C:\Users\HP\Desktop\Cryptocommunity\backend\routes\admin.js
 
-router.put('/:userId', async (req, res) => { // Agar verifyAdmin middleware hai toh wo laga lena
+// 🔥 FIX: ADDED verifyAdmin MIDDLEWARE 🔥
+router.put('/:userId', verifyAdmin, async (req, res) => { 
   try {
     // 🔥 FRONTEND SE AANE WALE 'HISTORY' FIELDS KO ALAG NIKAL LIYA TAARI OVERWRITE NA HO 🔥
     const { 
         password, 
         transactionPassword, 
         walletAddress, 
-        walletAddressHistory, // 👈 Isko alag nikal liya
-        walletAddressChangeCount, // 👈 Isko bhi alag nikal liya
+        walletAddressHistory, 
+        walletAddressChangeCount, 
         walletAddressChangeWindowStart,
         _id, 
         __v, 
@@ -3250,7 +3251,6 @@ router.put('/:userId', async (req, res) => { // Agar verifyAdmin middleware hai 
 
     // 🔥 3. WALLET HISTORY LOGIC 🔥
     if (walletAddress && walletAddress.trim() !== user.walletAddress) {
-      // Agar purana address exist karta tha, toh usko history mein daalo
       if (user.walletAddress && user.walletAddress.trim() !== "") {
           if (!user.walletAddressHistory) {
              user.walletAddressHistory = [];
@@ -3260,11 +3260,9 @@ router.put('/:userId', async (req, res) => { // Agar verifyAdmin middleware hai 
               changedAt: new Date()
           });
       }
-      // Naya address set karo
       user.walletAddress = walletAddress.trim();
     }
 
-    // User ko save kar do
     const updatedUser = await user.save();
 
     // 🔥 ONLY PENDING WITHDRAWALS UPDATE
