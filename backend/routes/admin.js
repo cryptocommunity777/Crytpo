@@ -2743,15 +2743,16 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
     // 🔹 3.5 🔥 NEW LOGIC: FIND FIRST WITHDRAWAL FOR EACH USER
     // =========================================================================
     // Hum har user ki sabse purani (oldest) withdrawal ka ID nikal rahe hain.
-    const firstWithdrawals = await Withdrawal.aggregate([
+   const firstWithdrawals = await Withdrawal.aggregate([
         { $match: { userId: { $in: uniqueUserIds } } },
-        { $sort: { createdAt: 1 } }, // 1 means oldest first
-        { $group: { _id: "$userId", firstWithdrawalId: { $first: "$_id" } } }
+        { $sort: { createdAt: 1 } }, // Oldest first
+        { $group: { _id: "$userId", firstWithdrawalTime: { $first: "$createdAt" } } }
     ]);
 
-    const firstWithdrawalMap = {};
+    const firstTimeMap = {};
     firstWithdrawals.forEach(item => {
-        firstWithdrawalMap[String(item._id)] = String(item.firstWithdrawalId);
+        // Time ko milliseconds mein save kar rahe hain fast calculation ke liye
+        firstTimeMap[String(item._id)] = new Date(item.firstWithdrawalTime).getTime();
     });
     // =========================================================================
 
@@ -2763,16 +2764,14 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
     // 🔹 4. FORMATTING LOGIC
     const flattened = withdrawals.flatMap((w) => {
       const userKey = String(w.userId);
+      const currentTxnTime = new Date(w.createdAt).getTime();
 
-      // 🔥 Check if this specific withdrawal is the user's VERY FIRST withdrawal
-      const isFirstWithdrawal = (firstWithdrawalMap[userKey] === String(w._id));
+      // 🔥 NAYA CHECK: Agar request pehli request ke 2 minute (120000 ms) ke andar aayi hai, toh use FIRST hi maano
+      const userFirstTime = firstTimeMap[userKey];
+      const isFirstWithdrawal = userFirstTime && (currentTxnTime - userFirstTime <= 120000);
 
       // NAME RESOLVE
-      const resolvedName =
-        w.name && String(w.name).trim() !== '-'
-          ? w.name
-          : userMap[userKey]?.name || '-';
-
+      const resolvedName = w.name && String(w.name).trim() !== '-' ? w.name : userMap[userKey]?.name || '-';
       // NON-SCHEDULE WALLET (parent)
       const parentWallet =
         w.status === 'approved'
