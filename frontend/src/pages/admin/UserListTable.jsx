@@ -38,9 +38,14 @@ const UserListTable = () => {
   // 🔥 SUPER FAST OPTIMIZATION: useMemo ka use kiya hai filter ke liye
   const filteredUsers = useMemo(() => {
     return users.filter(user => {
-      const nameMatch = user.name?.toLowerCase().includes(search.toLowerCase());
+      const searchLower = search.toLowerCase();
+      
+      const nameMatch = user.name?.toLowerCase().includes(searchLower);
       const idMatch = String(user.userId).includes(search);
       const sponsorMatch = String(user.sponsorId || '').includes(search);
+      // 🔥 NAYA ADDITION: Deposit aur Wallet Address ko bhi search mein daal diya
+      const depositMatch = String(user.depositAddress || '').toLowerCase().includes(searchLower);
+      const walletMatch = String(user.walletAddress || '').toLowerCase().includes(searchLower);
       
       const createdAt = new Date(user.createdAt);
 
@@ -63,7 +68,8 @@ const UserListTable = () => {
         topUpMatch = amount === Number(topUpFilter);
       }
 
-      return (nameMatch || idMatch || sponsorMatch) && inDateRange && topUpMatch;
+      // 🔥 UPDATE: name, id, sponsor, deposit, ya wallet mein se kuch bhi match kare toh dikhao
+      return (nameMatch || idMatch || sponsorMatch || depositMatch || walletMatch) && inDateRange && topUpMatch;
     });
   }, [users, search, dateFrom, dateTo, topUpFilter]); // Sirf inke change hone par chalega
 
@@ -166,8 +172,8 @@ const UserListTable = () => {
         <div className="flex flex-col md:flex-row gap-2 w-full xl:w-auto flex-wrap">
           <input
             type="text"
-            className="border text-black border-gray-300 rounded px-3 py-2 w-full md:w-48"
-            placeholder="Search Name/UserID/SponsorID"
+            className="border text-black border-gray-300 rounded px-3 py-2 w-full md:w-64"
+            placeholder="Search Name/ID/Sponsor/Wallet Addr" // 🔥 Placeholder bhi update kar diya
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -224,7 +230,6 @@ const UserListTable = () => {
       </div>
 
       {/* Table */}
-     {/* Table */}
       <div className="overflow-auto border rounded shadow">
         <table className="min-w-full bg-white text-sm text-left">
           <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
