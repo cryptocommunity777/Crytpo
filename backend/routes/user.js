@@ -247,17 +247,69 @@ router.get('/:userId', getUserById);
 
 // 1. Send OTP to Email (SECURED)
 // Ab authMiddleware laga diya hai, aur req.body.userId nahi balki token se userId nikal rahe hain.
+// router.post('/send-edit-otp', authMiddleware, async (req, res) => {
+//     try {
+//         const user = await User.findOne({ userId: req.user.userId }); // 🔥 ALWAYS use req.user.userId
+//         if (!user) return res.status(404).json({ message: "User not found" });
+
+//         // Generate 6 digit OTP
+//         const otp = Math.floor(100000 + Math.random() * 900000).toString();
+//         user.editProfileOtp = otp;
+//         user.editProfileOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+//         await user.save();
+
+//         const mailOptions = {
+//             from: `"${process.env.APP_NAME}" <${process.env.EMAIL_USER}>`,
+//             to: user.email,
+//             subject: 'OTP for Profile Update',
+//             html: `<h3>Your Profile Edit OTP</h3>
+//                    <p>Your OTP to unlock profile editing is: <b style="font-size:20px; color:green;">${otp}</b></p>
+//                    <p>This OTP is valid for 10 minutes. Do not share it with anyone.</p>`
+//         };
+
+//         // Note: Assumes transporter is defined elsewhere in your file
+//         await transporter.sendMail(mailOptions);
+//         res.json({ success: true, message: "OTP sent to your registered email." });
+//     } catch (error) {
+//         console.error("OTP Error:", error);
+//         res.status(500).json({ success: false, message: "Failed to send OTP." });
+//     }
+// });
+
 router.post('/send-edit-otp', authMiddleware, async (req, res) => {
     try {
         const user = await User.findOne({ userId: req.user.userId }); // 🔥 ALWAYS use req.user.userId
         if (!user) return res.status(404).json({ message: "User not found" });
 
-        // Generate 6 digit OTP
+        // 🕒 RATE LIMITING LOGIC: Din mein sirf 3 OTP
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Aaj raat 12:00 AM ka time
+
+        // Agar last OTP request aaj se pehle ki hai (kal ki ya purani), toh count 0 kardo (Reset)
+        if (!user.lastOtpRequestDate || user.lastOtpRequestDate < startOfToday) {
+            user.otpRequestCount = 0; 
+        }
+
+        // Limit Check: Agar count 3 ya usse zyada hai, toh error de do
+        if (user.otpRequestCount >= 3) {
+            return res.status(429).json({ 
+                success: false, 
+                message: "Daily limit exceeded. You can only request OTP 3 times a day." 
+            });
+        }
+
+        // 🔐 Generate 6 digit OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         user.editProfileOtp = otp;
         user.editProfileOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+
+        // Update limit count aur date
+        user.otpRequestCount += 1; 
+        user.lastOtpRequestDate = now;
+
         await user.save();
 
+        // 📧 SEND REAL EMAIL (Ab bypass hٹا diya gaya hai)
         const mailOptions = {
             from: `"${process.env.APP_NAME}" <${process.env.EMAIL_USER}>`,
             to: user.email,
@@ -269,7 +321,10 @@ router.post('/send-edit-otp', authMiddleware, async (req, res) => {
 
         // Note: Assumes transporter is defined elsewhere in your file
         await transporter.sendMail(mailOptions);
+        
+        // Success response (Clean)
         res.json({ success: true, message: "OTP sent to your registered email." });
+        
     } catch (error) {
         console.error("OTP Error:", error);
         res.status(500).json({ success: false, message: "Failed to send OTP." });

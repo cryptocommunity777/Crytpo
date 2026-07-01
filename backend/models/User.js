@@ -124,7 +124,9 @@ const userSchema = new mongoose.Schema({
     }
   ],
 
-
+// User Schema mein yeh do lines add karein:
+otpRequestCount: { type: Number, default: 0 },
+lastOtpRequestDate: { type: Date },
 
 
 
