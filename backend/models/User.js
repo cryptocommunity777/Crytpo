@@ -128,7 +128,9 @@ const userSchema = new mongoose.Schema({
 otpRequestCount: { type: Number, default: 0 },
 lastOtpRequestDate: { type: Date },
 
-
+// User Schema ke andar add karein:
+passwordResetCount: { type: Number, default: 0 },
+lastPasswordResetDate: { type: Date },
 
  
 
