@@ -17,7 +17,7 @@ const FakeUser = require('../models/FakeUser');
 const BlockedDevice = require('../models/BlockedDevice'); 
 const { bot } = require('../utils/telegramBot');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'yoursecretkey';
+const JWT_SECRET = process.env.JWT_SECRET ;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://178.128.20.53';
 
 // 📌 Helper: Get Real IP Address (Smart Version)

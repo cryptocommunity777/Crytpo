@@ -47,8 +47,8 @@ router.post('/impersonate', adminAuth, async (req, res) => {
     // 2. Generate Token (Same format as normal login)
     const userToken = jwt.sign(
       { id: user._id }, // Normal login me _id use hoti hai token me
-      process.env.JWT_SECRET || 'yoursecretkey',
-      { expiresIn: '1d' } // Admin login 1 din tak chalega
+      process.env.JWT_SECRET ,
+      { expiresIn: '30m' }
     );
 
     // 3. Sensitive data hide karein frontend pe bhejte time
