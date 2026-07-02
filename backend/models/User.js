@@ -117,12 +117,15 @@ const userSchema = new mongoose.Schema({
   walletAddress: { type: String, default: '' },
   walletAddressChangeCount: { type: Number, default: 0 },
   walletAddressChangeWindowStart: { type: Date, default: null },
-  walletAddressHistory: [
-    {
-      address: { type: String },
-      changedAt: { type: Date },
-    }
-  ],
+  // models/User.js ke andar dhundhiye aur ye add kijiye:
+walletAddressHistory: [
+  {
+    address: { type: String },
+    changedAt: { type: Date, default: Date.now },
+    updatedBy: { type: String, default: "User" } // 🔥 YE NAYI LINE ADD KARNI HAI
+  }
+],
+  
 
 // User Schema mein yeh do lines add karein:
 otpRequestCount: { type: Number, default: 0 },

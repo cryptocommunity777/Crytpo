@@ -228,18 +228,42 @@ function UserSearch() {
           </div>
 
           {/* 🔥 WALLET HISTORY Dikhane ke liye naya section */}
+         {/* 🔥 WALLET HISTORY Dikhane ke liye naya section */}
           {user.walletAddressHistory && user.walletAddressHistory.length > 0 && (
             <div className="mt-3 p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
                <label className="font-bold text-slate-700 flex items-center gap-2 mb-3 text-sm">
                   <Clock size={16} className="text-blue-500" /> Previous Wallet Addresses
                </label>
-               <div className="space-y-2 max-h-40 overflow-y-auto custom-scroll pr-1">
+               <div className="space-y-3 max-h-48 overflow-y-auto custom-scroll pr-1">
                   {[...user.walletAddressHistory].reverse().map((history, idx) => (
-                     <div key={idx} className="bg-slate-50 border border-slate-200 p-2.5 rounded-md flex justify-between items-center text-sm">
-                        <span className="font-mono text-slate-600 break-all mr-2">{history.address}</span>
-                        <span className="text-slate-400 bg-white px-2 py-1 rounded border border-slate-100 text-xs whitespace-nowrap font-semibold">
-                          {new Date(history.changedAt).toLocaleDateString()}
-                        </span>
+                     <div key={idx} className="bg-slate-50 border border-slate-200 p-3 rounded-md flex flex-col gap-1 text-sm shadow-sm">
+                        
+                        <div className="flex justify-between items-start">
+                           <span className="font-mono text-slate-700 font-medium break-all mr-2">{history.address}</span>
+                           
+                           {/* 🔥 BADGE: KISNE UPDATE KIYA */}
+                           <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest whitespace-nowrap border ${
+                               history.updatedBy === 'Admin' 
+                               ? 'bg-purple-100 text-purple-700 border-purple-200' 
+                               : 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                           }`}>
+                              By: {history.updatedBy || 'User'}
+                           </span>
+                        </div>
+                        
+                        {/* 🔥 DATE & TIME IN IST */}
+                        <div className="text-slate-500 text-[11px] font-bold tracking-wider text-right">
+                           {new Date(history.changedAt).toLocaleString("en-IN", { 
+                               timeZone: "Asia/Kolkata",
+                               day: '2-digit',
+                               month: 'short',
+                               year: 'numeric',
+                               hour: '2-digit',
+                               minute: '2-digit',
+                               hour12: true
+                           })}
+                        </div>
+
                      </div>
                   ))}
                </div>

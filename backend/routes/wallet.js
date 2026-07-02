@@ -1398,10 +1398,15 @@ router.get("/topup-history/:userId", async (req, res) => {
 // ✅ FINAL ROUTE: Get User Wallet & Income Stats
 // (Isko file mein sabse NEECHE rakho)
 // ==========================================
-router.get("/:userId", async (req, res) => {
+router.get("/:userId", authMiddleware, async (req, res) => {
   try {
-    const userId = Number(req.params.userId);
+    const requestedUserId = Number(req.params.userId);
+    const loggedInUserId = Number(req.user.userId); // Token se nikala ID
 
+    // 🔥 SECURITY LOCK: Sirf Admin ya wahi user apna data dekh sake
+    if (req.user.role !== 'admin' && requestedUserId !== loggedInUserId) {
+      return res.status(403).json({ success: false, message: "Unauthorized access: You can only view your own profile." });
+    }
     // 1. User validation
     const user = await User.findOne({ userId }).select('-password -txnPassword -__v');
     if (!user) {

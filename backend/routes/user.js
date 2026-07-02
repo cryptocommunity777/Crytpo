@@ -140,8 +140,9 @@ router.put('/unblock/:id', unblockUser);
  
 // 🔍 Get User By ID (Dashboard data, real + fake count yahan se jayega)
 // ⚠️ ISE SABSE NEECHE HI RAKHNA HAI
-router.get('/:id', getUserById);
-// ---------------------------
+router.get('/:userId', authMiddleware, getUserById); // Ye to sabse pehle hona chahiye
+// 
+// // ---------------------------
 // Helper: Check if target is in downline
 const isUserInDownline = async (rootUserId, targetUserId) => {
   const visited = new Set();
@@ -403,11 +404,15 @@ router.put('/update-profile-secure', authMiddleware, async (req, res) => {
                 return res.status(400).json({ success: false, message: "Wallet address change limit (3 times) exceeded." });
             }
 
-            if (currentWallet !== '') {
+           if (currentWallet !== '') {
                 if (!user.walletAddressHistory) {
                     user.walletAddressHistory = [];
                 }
-                user.walletAddressHistory.push({ address: currentWallet, changedAt: new Date() });
+                user.walletAddressHistory.push({ 
+                    address: currentWallet, 
+                    changedAt: new Date(),
+                    updatedBy: "User" // 🔥 NAYI LINE
+                });
             }
 
             user.walletAddress = newWallet;
@@ -1957,8 +1962,8 @@ router.get('/reward-stats/:userId', async (req, res) => {
 
 const mongoose = require('mongoose');
 
-router.get('/:userId', async (req, res) => {
-  try {
+router.get('/:userId', authMiddleware, async (req, res) => {
+    try {
     const rawUserId = req.params.userId;
 
     // 🛡️ 1. Validation

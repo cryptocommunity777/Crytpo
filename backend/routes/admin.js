@@ -2596,7 +2596,7 @@ router.get('/wallet-summary', verifyAdmin, async (req, res) => {
 //   ]
 // }
 
-router.post("/credit", async (req, res) => {
+router.post("/credit",verifyAdmin , async (req, res) => {
   try {
     const { userId, credits, transactionPassword } = req.body;
 
@@ -3189,6 +3189,45 @@ router.put('/admin/update-password/:userId', verifyAdmin, async (req, res) => {
 });
 
 
+// 📍 Backend Route: Admin Wallet History (Add this in your Admin Routes file)
+
+// 📍 Backend Route: Admin Wallet History (Updated with verifyAdmin)
+
+router.get('/wallet-update-history', verifyAdmin, async (req, res) => {
+    try {
+        // Sirf un users ko fetch karo jinhone kabhi apna wallet update kiya hai
+        const users = await User.find({
+            'walletAddressHistory.0': { $exists: true } 
+        })
+        .select('userId name walletAddress walletAddressHistory')
+        .lean();
+
+        // Data ko frontend ke liye format aur sort karna
+        const formattedData = users.map(user => {
+            // History array hamesha purane se naya hota hai, toh last element sabse latest change hai
+            const latestChange = user.walletAddressHistory[user.walletAddressHistory.length - 1];
+            
+            return {
+                _id: user._id,
+                userId: user.userId,
+                name: user.name,
+                currentWallet: user.walletAddress,
+                latestUpdateAt: latestChange ? latestChange.changedAt : null,
+                latestUpdatedBy: latestChange ? latestChange.updatedBy : 'Unknown',
+                history: user.walletAddressHistory.reverse() // Reverse karke naya sabse upar
+            };
+        });
+
+        // Sabse naya update sabse upar aayega (Descending order by Date)
+        formattedData.sort((a, b) => new Date(b.latestUpdateAt) - new Date(a.latestUpdateAt));
+
+        res.json({ success: true, data: formattedData });
+    } catch (err) {
+        console.error("Wallet History Error:", err);
+        res.status(500).json({ success: false, message: "Server error fetching history" });
+    }
+});
+
 
 // ✅ Corrected Route for Admin User Search (Added here)
 // Isse admin kisi bhi ek user ko search karega toh usko plain text password dikhega
@@ -3268,6 +3307,7 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
     if (transactionPassword) user.transactionPassword = transactionPassword;
 
     // 🔥 3. WALLET HISTORY LOGIC 🔥
+   // 🔥 3. WALLET HISTORY LOGIC 🔥
     if (walletAddress && walletAddress.trim() !== user.walletAddress) {
       if (user.walletAddress && user.walletAddress.trim() !== "") {
           if (!user.walletAddressHistory) {
@@ -3275,12 +3315,12 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
           }
           user.walletAddressHistory.push({
               address: user.walletAddress,
-              changedAt: new Date()
+              changedAt: new Date(),
+              updatedBy: "Admin" // 🔥 NAYI LINE
           });
       }
       user.walletAddress = walletAddress.trim();
     }
-
     const updatedUser = await user.save();
 
     // 🔥 ONLY PENDING WITHDRAWALS UPDATE
