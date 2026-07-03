@@ -311,7 +311,7 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     // BEP20 address typically starts with 0x and is 42 characters long
    if (!/^0x[a-fA-F0-9]{28,48}$/.test(walletAddress)) {
     return res.status(400).json({ 
-        message: 'Invalid USDT BEP20 Address format. It must start with 0x and be between 30 to 50 characters long.' 
+        message: 'Invalid USDT BEP20 Address format. It must start with 0x .' 
     });
 }
 

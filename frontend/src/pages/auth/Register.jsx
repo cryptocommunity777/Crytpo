@@ -106,7 +106,7 @@ function Register() {
     // 🔥 4. FRONTEND WALLET VALIDATION (BEP20)
    // 🔥 Updated Flexible Wallet Validation (30 to 50 characters)
 if (!/^0x[a-fA-F0-9]{28,48}$/.test(cleanWallet)) {
-  setErrorMsg('Invalid Wallet Address. It must start with "0x" and be between 30 to 50 characters long.');
+  setErrorMsg('Invalid Wallet Address. It must start with "0x" ');
   return;
 }
 
