@@ -121,9 +121,9 @@ const startGlobalGrowthCron = () => {
     // =========================================================================
     // HAR 1 MINUTE WALI CRON
     // =========================================================================
-    cron.schedule('* * * * *', async () => {
+   cron.schedule('* * * * *', async () => {
         try {
-           // 🔥 PART A: Aapka purana 100 users wala normal system (Mixed Countries)
+            // 🔥 PART A: Aapka purana 100 users wala normal system (Mixed Countries)
             // (Isko aise hi rehne dijiye, yeh 24 ghante thoda-thoda chalta rahega)
             const shouldAddFakeUser = Math.random() < (100 / 1440); 
             if (shouldAddFakeUser) {
@@ -139,30 +139,60 @@ const startGlobalGrowthCron = () => {
             const currentISTHour = istTime.getHours(); // 0 se 23 (24-hour format)
 
             // =======================================================
-            // 🔥 PART B: Admin ka "India Boost" (7 AM se 11 PM IST)
+            // 🔥 PART B: Admin ka "Country-Wise Boost" (7 AM se 11 PM IST)
             // =======================================================
             const stat = await SystemStat.findOne({});
-            const extraIndiaTarget = stat?.extraIndiaDailyTarget || 0; 
             
-            // Check condition: Target 0 se bada ho AND Time 7 baje se raat 11 baje (23) ke beech ho
-            if (extraIndiaTarget > 0 && currentISTHour >= 7 && currentISTHour < 23) {
-                
+            // Database se alag-alag countries ke targets fetch karo
+            const extraIndiaTarget = stat?.extraIndiaDailyTarget || 0; 
+            const extraNigeriaTarget = stat?.extraNigeriaDailyTarget || 0;     // 🔥 NIGERIA ADDED
+            const extraSouthAfricaTarget = stat?.extraSouthAfricaDailyTarget || 0; // 🔥 SOUTH AFRICA ADDED
+            
+            // Check condition: Time 7 baje se raat 11 baje (23) ke beech ho
+            if (currentISTHour >= 7 && currentISTHour < 23) {
                 // 16 Ghante ki active window (16 * 60 = 960 minutes)
                 const activeMinutes = 960; 
-                const usersPerMinute = extraIndiaTarget / activeMinutes; 
-                
-                // Fix users per minute
-                let usersToAddThisMinute = Math.floor(usersPerMinute); 
-                
-                // Bacha hua fraction chance
-                const fractionalChance = usersPerMinute - usersToAddThisMinute; 
-                if (Math.random() < fractionalChance) {
-                    usersToAddThisMinute += 1; 
+
+                // ----------------------------------------------------
+                // 🚀 1. INDIA (IN) BOOST LOGIC
+                // ----------------------------------------------------
+                if (extraIndiaTarget > 0) {
+                    const usersPerMinuteIN = extraIndiaTarget / activeMinutes; 
+                    let usersToAddThisMinuteIN = Math.floor(usersPerMinuteIN); 
+                    const fractionalChanceIN = usersPerMinuteIN - usersToAddThisMinuteIN; 
+                    if (Math.random() < fractionalChanceIN) usersToAddThisMinuteIN += 1; 
+
+                    for (let i = 0; i < usersToAddThisMinuteIN; i++) {
+                        await processFakeGrowth("IN"); 
+                    }
                 }
 
-                // Jitne users require hain, utni baar 'IN' user banayega
-                for (let i = 0; i < usersToAddThisMinute; i++) {
-                    await processFakeGrowth("IN"); 
+                // ----------------------------------------------------
+                // 🚀 2. NIGERIA (NG) BOOST LOGIC
+                // ----------------------------------------------------
+                if (extraNigeriaTarget > 0) {
+                    const usersPerMinuteNG = extraNigeriaTarget / activeMinutes; 
+                    let usersToAddThisMinuteNG = Math.floor(usersPerMinuteNG); 
+                    const fractionalChanceNG = usersPerMinuteNG - usersToAddThisMinuteNG; 
+                    if (Math.random() < fractionalChanceNG) usersToAddThisMinuteNG += 1; 
+
+                    for (let i = 0; i < usersToAddThisMinuteNG; i++) {
+                        await processFakeGrowth("NG"); 
+                    }
+                }
+
+                // ----------------------------------------------------
+                // 🚀 3. SOUTH AFRICA (ZA) BOOST LOGIC
+                // ----------------------------------------------------
+                if (extraSouthAfricaTarget > 0) {
+                    const usersPerMinuteZA = extraSouthAfricaTarget / activeMinutes; 
+                    let usersToAddThisMinuteZA = Math.floor(usersPerMinuteZA); 
+                    const fractionalChanceZA = usersPerMinuteZA - usersToAddThisMinuteZA; 
+                    if (Math.random() < fractionalChanceZA) usersToAddThisMinuteZA += 1; 
+
+                    for (let i = 0; i < usersToAddThisMinuteZA; i++) {
+                        await processFakeGrowth("ZA"); 
+                    }
                 }
             }
             

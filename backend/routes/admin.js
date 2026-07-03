@@ -2360,12 +2360,17 @@ const SystemStat = require('../models/SystemStat');
 // ==========================================
 // 1. GET CURRENT INDIA BOOST TARGET
 // ==========================================
+// ==========================================
+// 1. GET SYSTEM SETTINGS (All Countries)
+// ==========================================
 router.get('/system-settings', verifyAdmin, async (req, res) => {
     try {
         const stat = await SystemStat.findOne({});
         res.json({ 
             success: true, 
-            extraIndiaDailyTarget: stat?.extraIndiaDailyTarget || 0 
+            extraIndiaDailyTarget: stat?.extraIndiaDailyTarget || 0,
+            extraNigeriaDailyTarget: stat?.extraNigeriaDailyTarget || 0,
+            extraSouthAfricaDailyTarget: stat?.extraSouthAfricaDailyTarget || 0
         });
     } catch (error) {
         console.error("Error fetching system settings:", error);
@@ -2374,29 +2379,40 @@ router.get('/system-settings', verifyAdmin, async (req, res) => {
 });
 
 // ==========================================
-// 2. UPDATE INDIA BOOST TARGET
+// 2. UPDATE COUNTRY BOOST TARGETS
 // ==========================================
-router.post('/update-india-boost', verifyAdmin, async (req, res) => {
+router.post('/update-boost-targets', verifyAdmin, async (req, res) => {
     try {
-        const { target } = req.body;
+        const { indiaTarget, nigeriaTarget, southAfricaTarget } = req.body;
 
-        if (target === undefined || isNaN(target) || Number(target) < 0) {
-            return res.status(400).json({ success: false, message: "Invalid target number." });
+        // Validation
+        if (
+            Number(indiaTarget) < 0 || isNaN(indiaTarget) ||
+            Number(nigeriaTarget) < 0 || isNaN(nigeriaTarget) ||
+            Number(southAfricaTarget) < 0 || isNaN(southAfricaTarget)
+        ) {
+            return res.status(400).json({ success: false, message: "Invalid target numbers." });
         }
 
-        // Database mein single document ko update ya create (upsert) karega
+        // Database mein single document ko update karega
         await SystemStat.findOneAndUpdate(
             {},
-            { $set: { extraIndiaDailyTarget: Number(target) } },
+            { 
+                $set: { 
+                    extraIndiaDailyTarget: Number(indiaTarget),
+                    extraNigeriaDailyTarget: Number(nigeriaTarget),
+                    extraSouthAfricaDailyTarget: Number(southAfricaTarget)
+                } 
+            },
             { upsert: true }
         );
 
         res.json({ 
             success: true, 
-            message: `Daily India Extra Boost target successfully set to ${target} users.` 
+            message: `Daily Extra Boost targets successfully updated for all countries.` 
         });
     } catch (error) {
-        console.error("Error updating India boost target:", error);
+        console.error("Error updating boost targets:", error);
         res.status(500).json({ success: false, message: "Server error updating settings." });
     }
 });

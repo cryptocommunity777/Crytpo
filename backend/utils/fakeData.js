@@ -288,7 +288,7 @@ const countryNames = {
         "Ajay Khan", "Sukhvinder Ali", "Bhavesh Shah", "Manpreet Chopra", "Rohan Roy", "Ritu Banerjee",
         "Priya Joshi", "Piyush Kamath", "Tanvi Prasad", "Prateek Raju"
     ],
-    "ZA": [
+   "ZA": [
         "Siyanda Buthelezi", "Veronique Msweli", "Veronique Motaung", "Karabo de Villiers", "Mthobisi Nkosi", "Nkosinathi Mthethwa",
         "Tatenda Mofokeng", "Johan Nzama", "Neo Mokgosi", "Riette Coetzee", "Dalene Masondo", "Dineo van der Merwe",
         "Njabulo Nel", "Leruo Bekker", "Chantelle Ngcobo", "Tendai Khoza", "Tebogo du Plessis", "Ursula Buthelezi",
@@ -372,7 +372,13 @@ const countryNames = {
         "Jan Shabalala", "Njabulo Zulu", "Deon Naudé", "Mpho Louw", "Odette Nkosi", "Sipho Radebe",
         "Nokuthula Zulu", "Jabari Sithole", "Tendai Radebe", "Talitha Swanepoel", "Pieter Nxumalo", "Mbuso Sithole",
         "Njabulo Nkosi", "Andre Sithole", "Wessel du Plessis", "Farai Venter", "Lungile Botha", "Nombuso Potgieter",
-        "Riaan Modise", "Nandi Cele"
+        "Riaan Modise", "Nandi Cele",
+        // 🔥 NEW ADDITIONS (ZA) 🔥
+        "Cyril Ramaphosa", "Jacob Zuma", "Thabo Mbeki", "Julius Malema", "Kgalema Motlanthe", "Pravin Gordhan", "Fikile Mbalula", "Nkosazana Dlamini-Zuma", "Lindiwe Sisulu", "Bheki Cele", "Zweli Mkhize", "Naledi Pandor", "Blade Nzimande", "Aaron Motsoaledi", "Ebrahim Patel", "Gwede Mantashe", "Tito Mboweni", "Angie Motshekga", "Joe Phaahla", "Siyabonga Cwele",
+        "Ayanda Dlodlo", "Mmamoloko Kubayi", "Stella Ndabeni-Abrahams", "Khumbudzo Ntshavheni", "Ronald Lamola", "Senzo Mchunu", "Thandi Modise", "Nathi Mthethwa", "Thulas Nxesi", "Mondli Gungubele", "Patricia de Lille", "Nosiviwe Mapisa-Nqakula", "Thoko Didiza", "Maite Nkoana-Mashabane", "David Mabuza", "Paul Mashatile", "Ronald Lamola", "Zizi Kodwa", "Enoch Godongwana", "Nomalungelo Gina",
+        "John Steenhuisen", "Helen Zille", "Mmusi Maimane", "Herman Mashaba", "Bantu Holomisa", "Pieter Groenewald", "Mangosuthu Holomisa", "Mosiuoa Lekota", "Vuyolwethu Zungula", "Themza Mthembu", "Jabulani Mzobe", "Sanele Zondi", "Mlungisi Ndlela", "Siyabonga Mkhwanazi", "Njabulo Mthembu", "Ndumiso Zungu", "Sibusiso Mchunu", "Mthokozisi Ndlovu", "Bongani Mkhize", "Thamsanqa Zondi",
+        "Siphesihle Mkhize", "Thabiso Ndlela", "Lunga Zungu", "Siyabonga Ndlovu", "Mzwandile Mthembu", "Njabulo Mchunu", "Sanele Ndlela", "Ndumiso Mkhwanazi", "Mthokozisi Zondi", "Bongani Zungu", "Sibusiso Ndlovu", "Siphesihle Mchunu", "Thamsanqa Mthembu", "Mlungisi Zungu", "Siyanda Ndlela", "Jabulani Mkhize", "Themza Mkhwanazi", "Vuyolwethu Ndlovu", "Mzwandile Zondi", "Lunga Mchunu",
+        "Thabiso Mthembu", "Sanele Ndlovu", "Njabulo Zungu", "Mthokozisi Ndlela", "Bongani Mkhwanazi", "Sibusiso Zondi", "Siphesihle Mkhize", "Ndumiso Mthembu", "Thamsanqa Mchunu", "Siyanda Zungu", "Mlungisi Ndlovu", "Jabulani Ndlela", "Themza Mkhwanazi", "Vuyolwethu Mthembu", "Mzwandile Zondi", "Lunga Mkhize", "Thabiso Mchunu", "Sanele Ndlela", "Njabulo Ndlovu", "Mthokozisi Zungu"
     ],
     "NG": [
         "Olumide Obi", "Chinwe Adesipe", "Blessing Ogunrinde", "Folake Nwosu", "Emeka Danjuma", "Akande Obi",
@@ -408,7 +414,13 @@ const countryNames = {
         "Kelechi Adeyemo", "Emeka Ogundiran", "Adebayo Obiora", "Chiamaka Ogunrinde", "Iyabo Usman", "Gbemisola Adegoke",
         "Funmilayo Adegoke", "Ifeoma Ogundiran", "Aduragbemi Adeyemi", "Chukwudi Ezekwe", "Olumide Okoye", "Chukwudi Ogunnowo",
         "Onyemelukwe Nwofor", "Ogechukwu Aliyu", "Gbemisola Ogunrinde", "Kehinde Chukwu", "Aduragbemiga Chukwu", "Onyekachi Ogunnowo",
-        "Chidinma Ogunnowo", "Uche Balogun"
+        "Chidinma Ogunnowo", "Uche Balogun",
+        // 🔥 NEW ADDITIONS (NG) 🔥
+        "Muhammadu Buhari", "Yemi Osinbajo", "Olusegun Obasanjo", "Goodluck Obasanjo", "Atiku Abubakar", "Bola Tinubu", "Peter Obi", "Rabiu Kwankwaso", "Amina Mohammed", "Ngozi Okonjo-Iweala", "Aliko Dangote", "Mike Adenuga", "Femi Otedola", "Abdul Samad Rabiu", "Folorunsho Alakija", "Tony Elumelu", "Jim Ovia", "Ibukun Awosika", "Wizkid Balogun", "Davido Balogun",
+        "Burna Boy", "Tiwa Savage", "Olamide Adedeji", "Don Jazzy", "Genevieve Nnaji", "Omotola Jalade-Ekeinde", "Rita Dominic", "Ramsey Nouah", "Richard Mofe-Damijo", "Pete Edochie", "Olu Jacobs", "Adesua Etomi", "Funke Akindele", "Mercy Johnson", "Ini Edo", "Yul Edochie", "Chinedu Ikedieze", "Osita Iheme", "Nkem Owoh", "John Okafor",
+        "Basketmouth Ajereh", "Don Jazzy", "Phyno Ezege", "Flavour N'abania", "Tekno Miles", "Patoranking Okoye", "Timaya Odon", "Kizz Daniel", "Runtown Ukegbu", "Duncan Mighty", "Zlatan Ibile", "Naira Marley", "Olamide Baddo", "Vector Tha Viper", "Reminisce Alaga", "Phyno Fino", "Illbliss Oga", "Ice Prince", "M.I Abaga", "Jesse Jagz",
+        "Adekunle Gold", "Mayorkun Adewale", "Reekado Banks", "Korede Bello", "Dice Ailes", "Sean Tizzle", "Skales Raoul", "Ycee Aza", "Lil Kesh", "Skuki Peeshaun", "Kcee Okonkwo", "Harrysong Okonkwo", "Iyanya Onoyom", "Banky W", "D'banj Ajereh", "Wande Coal", "Dr SID", "D'Prince", "Tiwa Savage", "Simi Kosoko",
+        "Yemi Alade", "Chidinma Ekile", "Waje Iruobe", "Omawumi Megbele", "Seyi Shay", "Niniola Apata", "Teni Apata", "Cynthia Morgan", "Zendaya Etomi", "Toke Makinwa", "Asa Elemide", "Maka Elemide", "Nneka Egbuna", "Sinach Okoro", "Frank Edwards", "Nathaniel Bassey", "Eben Emmanuel", "Tim Godfrey", "Mercy Chinwo", "Chioma Jesus"
     ],
     "GH": [
         "Afua Afriyie", "Adjoa Amponsah", "Ahenkorah Amankwah", "Gyasi Owusu", "Afia Ampadu", "Akosua Osei",
