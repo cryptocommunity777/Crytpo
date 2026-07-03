@@ -45,15 +45,219 @@ const generateUserId = async () => {
 };
 
 // ====================== REGISTER ======================
+// router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
+//   try {
+//     let { name, mobile, email, country, password, sponsorId, deviceId } = req.body;
+//     const userIP = getClientIP(req);
+
+//     // 🔥 SECURITY LAYER 0: Remove extra spaces (trim) so bots can't trick the system
+//     name = name ? name.trim() : '';
+//     mobile = mobile ? mobile.trim() : '';
+//     email = email ? email.trim() : '';
+
+//     // 🔥 1. STRICT NAME VALIDATION (Sirf A-Z aur spaces allow karega, max 50 characters)
+//     const nameRegex = /^[A-Za-z\s]{3,50}$/;
+//     if (!name || !nameRegex.test(name)) {
+//         return res.status(400).json({ message: 'Invalid Name. Only alphabets are allowed (No symbols or numbers).' });
+//     }
+
+//     // 🔥 2. STRICT MOBILE VALIDATION (Sirf Numbers, 10 se 15 digits)
+//     const mobileRegex = /^[0-9]{10,15}$/;
+//     if (!mobile || !mobileRegex.test(mobile)) {
+//         return res.status(400).json({ message: 'Invalid Mobile Number. Enter 10 to 15 digits only.' });
+//     }
+
+//     // 🔥 3. EMAIL CHECK
+//     if (!email || !email.toLowerCase().endsWith('@gmail.com')) {
+//         return res.status(400).json({ message: 'Registration failed: Only @gmail.com emails are accepted.' });
+//     }
+
+//     // 🔥 4. STRICT PASSWORD VALIDATION (Naya Logic - Blocks @123 etc.)
+//     if (!password || password.length < 8) {
+//         return res.status(400).json({ message: 'Password must be at least 8 characters long.' });
+//     }
+
+//     const lowerPass = password.toLowerCase();
+
+//     // Check A: Repeating characters (e.g., 11111111, aaaaaaaa)
+//     const isRepeating = /^(.)\1+$/.test(password); 
+
+//     // Check B: Common weak substrings anywhere in the password (Blocks Name@123, etc.)
+//     const weakSubstrings = ['@123', '#123', '1234', '9876', 'password', 'qwerty', 'asdf'];
+//     const containsWeakPattern = weakSubstrings.some(pattern => lowerPass.includes(pattern));
+
+//     // Check C: Sequential characters for the whole string (like 12345678, abcdefgh)
+//     let isAscending = true;
+//     let isDescending = true;
+//     for (let i = 0; i < password.length - 1; i++) {
+//         if (password.charCodeAt(i) + 1 !== password.charCodeAt(i + 1)) isAscending = false;
+//         if (password.charCodeAt(i) - 1 !== password.charCodeAt(i + 1)) isDescending = false;
+//     }
+
+//     if (isRepeating || isAscending || isDescending || containsWeakPattern) {
+//         return res.status(400).json({ 
+//             message: 'Weak password detected! Please do not use predictable patterns like @123, 1234, or repeating characters. Choose a unique password.' 
+//         });
+//     }
+
+//     if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
+
+//     // 🔥 5. SPONSOR CHECK LOGIC (Real and Fake)
+//     let actualSponsorId = parseInt(sponsorId);
+//     let sponsorExists = await User.findOne({ userId: actualSponsorId });
+//     let isFakeSponsor = false;
+
+//     if (!sponsorExists) {
+//          sponsorExists = await FakeUser.findOne({ userId: actualSponsorId });
+//         if (sponsorExists) {
+//             isFakeSponsor = true; // Mark as fake sponsor
+//         }
+//     }
+
+//     if (!sponsorExists) return res.status(400).json({ message: 'Invalid Sponsor ID.' });
+
+//     if (!isFakeSponsor && sponsorExists.isSponsorDeactivated) {
+//         return res.status(403).json({
+//           message: 'Policy violation: The provided sponsor link is invalid or deactivated.'
+//         });    
+//     }
+
+//     // ✨ NAYA LOGIC: Agar Sponsor Fake User hai, toh real user ko seedha 100000 wali ID ke direct me daal do!
+//     if (isFakeSponsor) {
+//         const SYSTEM_TOP_ID = 100000; // 🔥 Aapki fix ki hui Main Earning ID
+        
+//         const topUser = await User.findOne({ userId: SYSTEM_TOP_ID }); 
+//         if (topUser) {
+//             actualSponsorId = topUser.userId; 
+//             console.log(`[SYSTEM ATTACH] Fake Sponsor (${sponsorId}) used. Redirecting to Top Earning ID: ${topUser.userId}`);
+//         } else {
+//             console.log(`⚠️ WARNING: Top ID ${SYSTEM_TOP_ID} not found in database!`);
+//         }
+//     }
+
+//     // 🛡️ SMART REGISTRATION LIMIT (5 Accounts Per IP + Admin Block)
+//     const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
+
+//     if (!isLocalIP) {
+//         const rule = await IpRule.findOne({ ipAddress: userIP });
+        
+//         if (rule && rule.isBlocked) {
+//             return res.status(403).json({ message: "Access Denied: Your IP has been blocked by the Administrator." });
+//         }
+//     }
+
+//     // 🚀 DEVICE FINGERPRINT CHECK
+//     if (deviceId) {
+//         const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
+//         if (isDeviceBlocked) {
+//             return res.status(403).json({ message: "Access Denied: Your device has been blocked due to a policy violation." });
+//         }
+//     }
+
+//     // ✨ NAYA LOGIC: 100% Unique ID Check (Real aur Fake dono collection me)
+//     let newUserId;
+//     let isUniqueId = false;
+
+//     while (!isUniqueId) {
+//         newUserId = await generateUserId(); // Temporary ID generate karega
+        
+//         // Check karega ki ye ID kisibhi table me mojood toh nahi hai
+//         const existsInFake = await FakeUser.exists({ userId: newUserId });
+//         const existsInReal = await User.exists({ userId: newUserId });
+
+//         // Agar dono jagah nahi hai, tab isko final manega aur loop todega
+//         if (!existsInFake && !existsInReal) {
+//             isUniqueId = true;
+//         }
+//     }
+
+//     // Ab naya user exactly 100% unique ID ke sath banega
+//     const user = new User({
+//       userId: newUserId, 
+//       name, mobile, email, country,
+//       password, transactionPassword: password,
+//       sponsorId: actualSponsorId, // ✅ Yahan updated sponsor ID aayegi (Real ho ya Admin ki)
+//       role: 'user',
+//       ipAddress: userIP,
+//       deviceId: deviceId || null 
+//     });
+
+//     await user.save();
+
+//     // 👉 EMAIL TEMPLATE
+//     // try {
+//     //     await sendEmail({
+//     //         email: user.email,
+//     //         subject: '🎉 Welcome to Crypto Community!',
+//     //         html: `
+//     //         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea;">
+                
+//     //             <div style="background-color: #2b4450; padding: 40px 20px; text-align: center; color: #ffffff;">
+//     //                 <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🚀 Welcome to Crypto Community</h1>
+//     //                 <p style="margin: 10px 0 0 0; font-size: 15px; color: #cccccc;">Your journey to financial growth starts here</p>
+//     //             </div>
+                
+//     //             <div style="padding: 40px 30px; color: #333333;">
+//     //                 <p style="font-size: 16px; margin-top: 0; margin-bottom: 15px;">Hello <strong>${user.name}</strong>,</p>
+                    
+//     //                 <p style="font-size: 15px; line-height: 1.6; color: #555555; margin-bottom: 20px;">
+//     //                     Congratulations! Your account has been successfully created. Get ready to build your global network, unlock exciting <strong>Single Leg rewards</strong>, and track your daily growth with our secure platform. We are thrilled to have you on board! 🌟
+//     //                 </p>
+//     //                 <p style="font-size: 15px; line-height: 1.6; color: #555555; margin-bottom: 30px;">
+//     //                     Please find your confidential login details below:
+//     //                 </p>
+                    
+//     //                 <div style="background-color: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 35px; border-left: 4px solid #1e88e5;">
+//     //                     <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
+//     //                         <span style="display: inline-block; width: 25px;">👤</span> <strong>User ID:</strong> ${user.userId}
+//     //                     </p>
+//     //                     <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
+//     //                         <span style="display: inline-block; width: 25px;">🔑</span> <strong>Password:</strong> ${user.password}
+//     //                     </p>
+//     //                     <p style="margin: 0; font-size: 16px; color: #333;">
+//     //                         <span style="display: inline-block; width: 25px;">🛡️</span> <strong>Transaction Password:</strong> ${user.transactionPassword}
+//     //                     </p>
+//     //                 </div>
+                    
+//     //                 <div style="text-align: center; margin-bottom: 40px;">
+//     //                     <a href="https://cryptocommunity.live/login" style="display: inline-block; background-color: #1e88e5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(30,136,229,0.3);">🔐 Login to Dashboard</a>
+//     //                 </div>
+                    
+//     //                 <p style="font-size: 14px; color: #d32f2f; margin: 0; background-color: #ffebee; padding: 12px; border-radius: 6px;">
+//     //                     ⚠️ <strong>Security Alert:</strong> Please do not share your login or transaction passwords with anyone for your account's safety.
+//     //                 </p>
+//     //             </div>
+                
+//     //             <div style="background-color: #1a1a1a; padding: 20px; text-align: center; color: #888888; font-size: 13px;">
+//     //                 © 2026 Crypto Community. All rights reserved.<br>
+//     //                 <span style="font-size: 11px;">This is an automated message, please do not reply to this email.</span>
+//     //             </div>
+//     //         </div>
+//     //         ` 
+//     //     });
+//     // } catch (emailErr) { 
+//     //     console.error("Email failed:", emailErr); 
+//     // }
+
+//     res.status(201).json({ message: 'User registered successfully.', userId: user.userId, name: user.name, password: user.password });
+
+//   } catch (err) {
+//     console.error('Register error:', err);
+//     res.status(500).json({ message: 'Server error.' });
+//   }
+// });
+
 router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
   try {
-    let { name, mobile, email, country, password, sponsorId, deviceId } = req.body;
+    // 🔥 1. Yahan `walletAddress` add kiya req.body mein
+    let { name, mobile, email, country, password, sponsorId, deviceId, walletAddress } = req.body;
     const userIP = getClientIP(req);
 
     // 🔥 SECURITY LAYER 0: Remove extra spaces (trim) so bots can't trick the system
     name = name ? name.trim() : '';
     mobile = mobile ? mobile.trim() : '';
     email = email ? email.trim() : '';
+    walletAddress = walletAddress ? walletAddress.trim() : ''; // 🔥 Trim added for wallet
 
     // 🔥 1. STRICT NAME VALIDATION (Sirf A-Z aur spaces allow karega, max 50 characters)
     const nameRegex = /^[A-Za-z\s]{3,50}$/;
@@ -99,6 +303,17 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
             message: 'Weak password detected! Please do not use predictable patterns like @123, 1234, or repeating characters. Choose a unique password.' 
         });
     }
+
+    // 🔥 4.5. USDT BEP20 WALLET VALIDATION (Naya Logic)
+    if (!walletAddress) {
+        return res.status(400).json({ message: 'USDT BEP20 Withdrawal Address is compulsory.' });
+    }
+    // BEP20 address typically starts with 0x and is 42 characters long
+   if (!/^0x[a-fA-F0-9]{28,48}$/.test(walletAddress)) {
+    return res.status(400).json({ 
+        message: 'Invalid USDT BEP20 Address format. It must start with 0x and be between 30 to 50 characters long.' 
+    });
+}
 
     if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
 
@@ -177,67 +392,13 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
       name, mobile, email, country,
       password, transactionPassword: password,
       sponsorId: actualSponsorId, // ✅ Yahan updated sponsor ID aayegi (Real ho ya Admin ki)
+      walletAddress: walletAddress, // 🔥 Yahan wallet address database me save hoga
       role: 'user',
       ipAddress: userIP,
       deviceId: deviceId || null 
     });
 
     await user.save();
-
-    // 👉 EMAIL TEMPLATE
-    // try {
-    //     await sendEmail({
-    //         email: user.email,
-    //         subject: '🎉 Welcome to Crypto Community!',
-    //         html: `
-    //         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea;">
-                
-    //             <div style="background-color: #2b4450; padding: 40px 20px; text-align: center; color: #ffffff;">
-    //                 <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🚀 Welcome to Crypto Community</h1>
-    //                 <p style="margin: 10px 0 0 0; font-size: 15px; color: #cccccc;">Your journey to financial growth starts here</p>
-    //             </div>
-                
-    //             <div style="padding: 40px 30px; color: #333333;">
-    //                 <p style="font-size: 16px; margin-top: 0; margin-bottom: 15px;">Hello <strong>${user.name}</strong>,</p>
-                    
-    //                 <p style="font-size: 15px; line-height: 1.6; color: #555555; margin-bottom: 20px;">
-    //                     Congratulations! Your account has been successfully created. Get ready to build your global network, unlock exciting <strong>Single Leg rewards</strong>, and track your daily growth with our secure platform. We are thrilled to have you on board! 🌟
-    //                 </p>
-    //                 <p style="font-size: 15px; line-height: 1.6; color: #555555; margin-bottom: 30px;">
-    //                     Please find your confidential login details below:
-    //                 </p>
-                    
-    //                 <div style="background-color: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 35px; border-left: 4px solid #1e88e5;">
-    //                     <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
-    //                         <span style="display: inline-block; width: 25px;">👤</span> <strong>User ID:</strong> ${user.userId}
-    //                     </p>
-    //                     <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
-    //                         <span style="display: inline-block; width: 25px;">🔑</span> <strong>Password:</strong> ${user.password}
-    //                     </p>
-    //                     <p style="margin: 0; font-size: 16px; color: #333;">
-    //                         <span style="display: inline-block; width: 25px;">🛡️</span> <strong>Transaction Password:</strong> ${user.transactionPassword}
-    //                     </p>
-    //                 </div>
-                    
-    //                 <div style="text-align: center; margin-bottom: 40px;">
-    //                     <a href="https://cryptocommunity.live/login" style="display: inline-block; background-color: #1e88e5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(30,136,229,0.3);">🔐 Login to Dashboard</a>
-    //                 </div>
-                    
-    //                 <p style="font-size: 14px; color: #d32f2f; margin: 0; background-color: #ffebee; padding: 12px; border-radius: 6px;">
-    //                     ⚠️ <strong>Security Alert:</strong> Please do not share your login or transaction passwords with anyone for your account's safety.
-    //                 </p>
-    //             </div>
-                
-    //             <div style="background-color: #1a1a1a; padding: 20px; text-align: center; color: #888888; font-size: 13px;">
-    //                 © 2026 Crypto Community. All rights reserved.<br>
-    //                 <span style="font-size: 11px;">This is an automated message, please do not reply to this email.</span>
-    //             </div>
-    //         </div>
-    //         ` 
-    //     });
-    // } catch (emailErr) { 
-    //     console.error("Email failed:", emailErr); 
-    // }
 
     res.status(201).json({ message: 'User registered successfully.', userId: user.userId, name: user.name, password: user.password });
 

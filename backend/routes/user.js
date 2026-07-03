@@ -2063,13 +2063,30 @@ router.put('/:userId', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Invalid Transaction Password.' });
     }
 
-    // 🔒 PERMANENT WALLET LOCK LOGIC
+    // 🔒 PERMANENT WALLET LOCK & HISTORY LOGIC
     if (walletAddress && walletAddress.trim() !== '') {
+      
+      // Agar pehle se address hai aur wo change karne ki koshish kar raha hai, toh block karo
       if (user.walletAddress && user.walletAddress.trim() !== '' && walletAddress !== user.walletAddress) {
         return res.status(403).json({ message: 'Wallet Locked: Wallet address cannot be changed once it is set.' });
       }
+      
+      // Agar address khali tha, toh usko update karne do aur History mein daal do
       if (walletAddress !== user.walletAddress) {
-        user.walletAddress = walletAddress;
+        
+        // 🔥 NAYA LOGIC: History array banaiye aur First-time entry daaliye
+        if (!user.walletAddressHistory) {
+            user.walletAddressHistory = [];
+        }
+        
+        user.walletAddressHistory.push({
+            address: walletAddress.trim(), // Jo naya address dala gaya hai
+            changedAt: new Date(),
+            updatedBy: "User" // 👈 User ne khud set kiya hai, ye track ho gaya
+        });
+
+        // Final address database mein save ho raha hai
+        user.walletAddress = walletAddress.trim();
         user.walletAddressChangeCount = (user.walletAddressChangeCount || 0) + 1;
         user.walletAddressChangeWindowStart = new Date();
       }

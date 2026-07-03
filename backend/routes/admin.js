@@ -3195,30 +3195,37 @@ router.put('/admin/update-password/:userId', verifyAdmin, async (req, res) => {
 
 router.get('/wallet-update-history', verifyAdmin, async (req, res) => {
     try {
-        // Sirf un users ko fetch karo jinhone kabhi apna wallet update kiya hai
+        // 🔥 QUERY FIX: Ab hum un users ko bhi lenge jinka walletAddress set hai
         const users = await User.find({
-            'walletAddressHistory.0': { $exists: true } 
+            walletAddress: { $exists: true, $ne: "" } 
         })
-        .select('userId name walletAddress walletAddressHistory')
+        .select('userId name walletAddress walletAddressHistory createdAt')
         .lean();
 
-        // Data ko frontend ke liye format aur sort karna
         const formattedData = users.map(user => {
-            // History array hamesha purane se naya hota hai, toh last element sabse latest change hai
-            const latestChange = user.walletAddressHistory[user.walletAddressHistory.length - 1];
+            // 🔥 LOGIC: Agar history khali hai, toh 'createdAt' (registration time) ko use karo
+            let history = user.walletAddressHistory && user.walletAddressHistory.length > 0 
+                ? [...user.walletAddressHistory] 
+                : [{ 
+                    address: user.walletAddress, 
+                    changedAt: user.createdAt, 
+                    updatedBy: "User (Initial Setup)" 
+                  }];
+
+            const reversedHistory = history.reverse();
+            const latestChange = reversedHistory[0];
             
             return {
                 _id: user._id,
                 userId: user.userId,
                 name: user.name,
-                currentWallet: user.walletAddress,
+                currentWallet: user.walletAddress || "Not Set",
                 latestUpdateAt: latestChange ? latestChange.changedAt : null,
-                latestUpdatedBy: latestChange ? latestChange.updatedBy : 'Unknown',
-                history: user.walletAddressHistory.reverse() // Reverse karke naya sabse upar
+                latestUpdatedBy: latestChange ? (latestChange.updatedBy || 'User (Old Data)') : 'Unknown',
+                history: reversedHistory
             };
         });
 
-        // Sabse naya update sabse upar aayega (Descending order by Date)
         formattedData.sort((a, b) => new Date(b.latestUpdateAt) - new Date(a.latestUpdateAt));
 
         res.json({ success: true, data: formattedData });
@@ -3306,21 +3313,25 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
     if (password) user.password = password;
     if (transactionPassword) user.transactionPassword = transactionPassword;
 
-    // 🔥 3. WALLET HISTORY LOGIC 🔥
-   // 🔥 3. WALLET HISTORY LOGIC 🔥
+    // 🔥 3. WALLET HISTORY LOGIC (FIRST TIME + UPDATES DONO TRACK HOGA) 🔥
     if (walletAddress && walletAddress.trim() !== user.walletAddress) {
-      if (user.walletAddress && user.walletAddress.trim() !== "") {
-          if (!user.walletAddressHistory) {
-             user.walletAddressHistory = [];
-          }
-          user.walletAddressHistory.push({
-              address: user.walletAddress,
-              changedAt: new Date(),
-              updatedBy: "Admin" // 🔥 NAYI LINE
-          });
+      
+      // Agar array nahi bani hai toh bana do
+      if (!user.walletAddressHistory) {
+         user.walletAddressHistory = [];
       }
+      
+      // 🔥 Yahan se purani IF condition hata di. Ab FIRST TIME add hone par bhi ye chalega
+      user.walletAddressHistory.push({
+          address: walletAddress.trim(), // Jo naya address dala gaya hai
+          changedAt: new Date(),
+          updatedBy: "Admin" // Kisne kiya (Admin)
+      });
+      
+      // Final address update
       user.walletAddress = walletAddress.trim();
     }
+    
     const updatedUser = await user.save();
 
     // 🔥 ONLY PENDING WITHDRAWALS UPDATE

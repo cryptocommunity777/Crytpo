@@ -1,4 +1,3 @@
- 
 import React, { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
@@ -7,14 +6,15 @@ import Confetti from 'react-confetti';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 import { 
   User, Users, Lock, Mail, Phone, Eye, EyeOff, 
-  CheckCircle2, XCircle, ArrowRight, ShieldCheck, Copy, Sparkles, Globe
-} from 'lucide-react'; 
+  CheckCircle2, XCircle, ArrowRight, ShieldCheck, Copy, Sparkles, Globe, Wallet 
+} from 'lucide-react'; // 🔥 Naya Wallet icon import kiya hai
 
 function Register() {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [country, setCountry] = useState('');
+  const [walletAddress, setWalletAddress] = useState(''); // 🔥 Naya state wallet ke liye
   
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -58,11 +58,11 @@ function Register() {
     }
   };
 
-  // 🔥 MOBILE FIX: Ab 15 digits tak allow karega type karna (taaki international form fix ho)
+  // MOBILE FIX: 15 digits tak allow karega type karna
   const handleMobileChange = (e) => {
     let value = e.target.value.replace(/\D/g, ''); 
     value = value.replace(/^0+/, ''); 
-    if (value.length > 15) value = value.slice(0, 15); // Changed 10 to 15
+    if (value.length > 15) value = value.slice(0, 15);
     setMobile(value);
   };
 
@@ -74,26 +74,27 @@ function Register() {
     const cleanName = name.trim();
     const cleanEmail = email.trim();
     const cleanMobile = mobile.trim();
+    const cleanWallet = walletAddress.trim(); // 🔥 Wallet trim
 
-    if (!cleanName || !cleanMobile || !cleanEmail || !country || !password || !confirmPassword) {
-      setErrorMsg('All fields are required.');
+    if (!cleanName || !cleanMobile || !cleanEmail || !country || !password || !confirmPassword || !cleanWallet) {
+      setErrorMsg('All fields, including the BEP20 Wallet Address, are required.');
       return;
     }
 
-    // 🔥 1. FRONTEND NAME VALIDATION (Saves server load from Bots)
+    // 1. FRONTEND NAME VALIDATION
     const nameRegex = /^[A-Za-z\s]{3,50}$/;
     if (!nameRegex.test(cleanName)) {
       setErrorMsg('Invalid Name. Only alphabets are allowed (No symbols or numbers).');
       return;
     }
 
-    // 🔥 2. FRONTEND EMAIL VALIDATION
+    // 2. FRONTEND EMAIL VALIDATION
     if (!cleanEmail.toLowerCase().endsWith('@gmail.com')) {
       setErrorMsg('Only @gmail.com emails are accepted.');
       return;
     }
 
-    // 🔥 3. FRONTEND MOBILE VALIDATION
+    // 3. FRONTEND MOBILE VALIDATION
     if (country === 'India' && cleanMobile.length !== 10) {
       setErrorMsg('Mobile number must be exactly 10 digits for India.');
       return;
@@ -102,8 +103,15 @@ function Register() {
       return;
     }
 
-    if (password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters.');
+    // 🔥 4. FRONTEND WALLET VALIDATION (BEP20)
+   // 🔥 Updated Flexible Wallet Validation (30 to 50 characters)
+if (!/^0x[a-fA-F0-9]{28,48}$/.test(cleanWallet)) {
+  setErrorMsg('Invalid Wallet Address. It must start with "0x" and be between 30 to 50 characters long.');
+  return;
+}
+
+    if (password.length < 8) { // Updated to match backend rules
+      setErrorMsg('Password must be at least 8 characters long.');
       return;
     }
     if (password !== confirmPassword) {
@@ -127,6 +135,7 @@ function Register() {
         country, 
         password, 
         sponsorId,
+        walletAddress: cleanWallet, // 🔥 Backend ko wallet bhej diya
         deviceId: visitorId 
       });
 
@@ -140,7 +149,7 @@ function Register() {
       setShowConfetti(true);
       setLoading(false);
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Registration failed. Please try again.');
+      setErrorMsg(err.response?.data?.message || 'Registration failed. Please check your details and try again.');
       setLoading(false);
     }
   };
@@ -166,7 +175,7 @@ function Register() {
   { value: 'Canada', label: 'Canada (+1)' },
   { value: 'Singapore', label: 'Singapore (+65)' },
   { value: 'Malaysia', label: 'Malaysia (+60)' },
-  { value: 'PK', label: 'Pakistan (+92)' }, // 🔥 Fix: 'PK' instead of 'Pakistan'
+  { value: 'PK', label: 'Pakistan (+92)' },
   { value: 'Bangladesh', label: 'Bangladesh (+880)' },
   { value: 'Nepal', label: 'Nepal (+977)' },
   { value: 'South Africa', label: 'South Africa (+27)' },
@@ -202,9 +211,9 @@ function Register() {
   // Added Popular Countries (Americas)
   { value: 'Mexico', label: 'Mexico (+52)' },
   { value: 'Brazil', label: 'Brazil (+55)' }
-];
+ ];
 
-  // 🔥 Light Theme Custom Select Styles
+  // Light Theme Custom Select Styles
   const customSelectStyles = {
     control: (base, state) => ({
       ...base,
@@ -370,10 +379,24 @@ function Register() {
                     </div>
                     <input type="tel" placeholder="Mobile Number" value={mobile} onChange={handleMobileChange} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-bold placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all font-mono" />
                   </div>
+
+                  {/* 🔥 NEW FIELD: USDT BEP20 Wallet Address */}
+                  <div className="relative group z-10">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Wallet className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="USDT BEP20 Address For Withdrawal (Starts with 0x)" 
+                      value={walletAddress} 
+                      onChange={e => setWalletAddress(e.target.value)} 
+                      className="w-full font-extrabold bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 text-slate-900 font-mono text-sm placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all" 
+                    />
+                  </div>
               </div>
 
               {/* Passwords */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 z-10 relative">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 z-0 relative">
                  <div className="relative group">
                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                        <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
