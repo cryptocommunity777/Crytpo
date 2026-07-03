@@ -1398,16 +1398,19 @@ router.get("/topup-history/:userId", async (req, res) => {
 // ✅ FINAL ROUTE: Get User Wallet & Income Stats
 // (Isko file mein sabse NEECHE rakho)
 // ==========================================
+// 🔥 1. Yahan 'authMiddleware' add kiya gaya hai
 router.get("/:userId", authMiddleware, async (req, res) => {
   try {
-    const requestedUserId = Number(req.params.userId);
+    // 🔥 2. Iska naam wapas 'userId' kar diya taaki niche ka pura code bina crash hue chal sake
+    const userId = Number(req.params.userId);
     const loggedInUserId = Number(req.user.userId); // Token se nikala ID
 
     // 🔥 SECURITY LOCK: Sirf Admin ya wahi user apna data dekh sake
-    if (req.user.role !== 'admin' && requestedUserId !== loggedInUserId) {
+    if (req.user.role !== 'admin' && userId !== loggedInUserId) {
       return res.status(403).json({ success: false, message: "Unauthorized access: You can only view your own profile." });
     }
-    // 1. User validation
+    
+    // 1. User validation (Ab yahan 'userId' perfectly kaam karega)
     const user = await User.findOne({ userId }).select('-password -txnPassword -__v');
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -1419,7 +1422,7 @@ router.get("/:userId", authMiddleware, async (req, res) => {
         await user.save(); 
     }
 
-    // 2. Lifetime incomes nikalna
+    // 2. Lifetime incomes nikalna (Yahan bhi 'userId' define ho gaya)
     const life = await getLifetimeIncomes(userId);
 
     // 3. Current Plan Income calculation

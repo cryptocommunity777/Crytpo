@@ -1961,10 +1961,12 @@ router.get('/reward-stats/:userId', async (req, res) => {
 // const { bot } = require('../utils/telegramBot'); 
 
 const mongoose = require('mongoose');
+const sanitizeUser = require('../utils/sanitizeUser');
 
 router.get('/:userId', authMiddleware, async (req, res) => {
-    try {
+  try {
     const rawUserId = req.params.userId;
+    const loggedInUserId = Number(req.user.userId);
 
     // 🛡️ 1. Validation
     if (!rawUserId || rawUserId === "undefined") {
@@ -1972,17 +1974,21 @@ router.get('/:userId', authMiddleware, async (req, res) => {
     }
 
     let query = {};
+    let targetUserId = null;
     
-    // 💡 2. Smart Detection: Check if it's a MongoDB _id or a Numerical userId
+    // 💡 2. Smart Detection
     if (mongoose.Types.ObjectId.isValid(rawUserId) && rawUserId.length === 24) {
-      // Agar 24 character ki string hai, toh _id se dhoondo
       query = { _id: rawUserId };
     } else if (!isNaN(Number(rawUserId))) {
-      // Agar number hai, toh userId field se dhoondo
-      query = { userId: Number(rawUserId) };
+      targetUserId = Number(rawUserId);
+      query = { userId: targetUserId };
     } else {
-      // Agar dono nahi hai, toh bad request
       return res.status(400).json({ success: false, message: 'Invalid ID format' });
+    }
+
+    // 🔥 SECURITY LOCK: Sirf Admin ya wahi user apna data dekh sake
+    if (req.user.role !== 'admin' && targetUserId && targetUserId !== loggedInUserId) {
+        return res.status(403).json({ success: false, message: "Unauthorized: You can only view your own profile." });
     }
 
     // 3. Search Real User
@@ -1991,21 +1997,16 @@ router.get('/:userId', authMiddleware, async (req, res) => {
     
     // 🔥 4. Search Fake User if Real not found
     if (!user) {
-        const FakeUser = require('../models/FakeUser'); // File path check kar lena
+        const FakeUser = require('../models/FakeUser');
         user = await FakeUser.findOne(query).select('-__v');
         
-        // Backup ke liye DummyUser ka check (agar purani IDs hon)
         if (!user && typeof DummyUser !== 'undefined') {
             user = await DummyUser.findOne(query).select('-__v');
         }
 
-        // Agar Fake/Dummy user mil gaya
         if (user) {
             isFake = true;
-            // Mongoose document ko plain Javascript object me convert karo taaki hum modify kar sakein
             user = user.toObject ? user.toObject() : user;
-            
-            // 🚨 FRONTEND CRASH FIX: Frontend 'packages' array me check karta hai ki ID topup hai ya nahi
             if (user.isToppedUp && (!user.packages || user.packages.length === 0)) {
                 user.packages = [{ amount: user.topUpAmount || 30 }];
             }
@@ -2014,7 +2015,7 @@ router.get('/:userId', authMiddleware, async (req, res) => {
 
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    // 🏆 5. Sync Logic (Sirf Real User par chalega kyunki FakeUser plain object me convert ho chuka hai)
+    // 🏆 5. Sync Logic
     if (!isFake && user.totalRewardIncome === 0 && user.rewardIncome > 0) {
         user.totalRewardIncome = user.rewardIncome;
         await user.save();
@@ -2037,76 +2038,59 @@ router.get('/:userId', authMiddleware, async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
+
 // ---------------------------
-// Update user
-// Update user - REPLACE YOUR EXISTING router.put('/:userId' ...) WITH THIS:
-// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\user.js
-
-const sanitizeUser = require('../utils/sanitizeUser'); // Isko top par check kar lena
-
+// 2. UPDATE PROFILE ROUTE - 🔥 SECURED
+// ---------------------------
 router.put('/:userId', authMiddleware, async (req, res) => {
   try {
+    const targetUserId = Number(req.params.userId);
+    const loggedInUserId = Number(req.user.userId);
+
+    // 🔥 SECURITY LOCK: Sirf Admin ya wahi user update kar sake
+    if (req.user.role !== 'admin' && targetUserId !== loggedInUserId) {
+        return res.status(403).json({ success: false, message: "Unauthorized: You can only update your own profile." });
+    }
+
     const { walletAddress, oldTxnPassword, name, email, mobile } = req.body;
 
-    // 1. Find User
-    const user = await User.findOne({ userId: Number(req.params.userId) });
+    const user = await User.findOne({ userId: targetUserId });
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // 2. Transaction Password Verify
+    // Transaction Password Verify
     if (!oldTxnPassword || oldTxnPassword !== user.transactionPassword) {
-      return res.status(403).json({
-        message: 'Invalid Transaction Password.'
-      });
+      return res.status(403).json({ message: 'Invalid Transaction Password.' });
     }
 
-    // 3. 🔒 PERMANENT WALLET LOCK LOGIC
+    // 🔒 PERMANENT WALLET LOCK LOGIC
     if (walletAddress && walletAddress.trim() !== '') {
-      
-      // Agar user ke paas already ek address hai, aur wo change karna chah raha hai
       if (user.walletAddress && user.walletAddress.trim() !== '' && walletAddress !== user.walletAddress) {
-        return res.status(403).json({
-          message: 'Wallet Locked: Wallet address cannot be changed once it is set.'
-        });
+        return res.status(403).json({ message: 'Wallet Locked: Wallet address cannot be changed once it is set.' });
       }
-
-      // Agar address khali tha, toh set karne do
       if (walletAddress !== user.walletAddress) {
         user.walletAddress = walletAddress;
-
-        // Note: Change count & window start ab zaroori nahi hain (kyunki change allow hi nahi hai), 
-        // par DB records ke liye aap rakh sakte ho.
         user.walletAddressChangeCount = (user.walletAddressChangeCount || 0) + 1;
         user.walletAddressChangeWindowStart = new Date();
       }
     }
 
-    // 4. Other Fields
     if (name) user.name = name;
     if (email) user.email = email;
     if (mobile) user.mobile = mobile;
 
-    // 5. Save
     await user.save();
-
-    // 6. Response
-    res.json({
-      success: true,
-      message: 'Profile updated successfully',
-      user: user // 🔥 sanitizeUser hata diya taaki history frontend tak ja sake  
-        });
-
+    res.json({ success: true, message: 'Profile updated successfully', user: user });
   } catch (err) {
     console.error('Profile Update Error:', err);
-
-    res.status(500).json({
-      message: 'Server error'
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
+
+// ---------------------------
+// 3. CHECK WALLET
+// ---------------------------
 router.post('/check-wallet', async (req, res) => {
   const { walletAddress } = req.body;
   const exists = await User.findOne({ walletAddress });
@@ -2114,32 +2098,35 @@ router.post('/check-wallet', async (req, res) => {
 });
 
 
-
-
 // ---------------------------
-// Password Change
-router.put('/change-password/:userId', async (req, res) => {
+// 4. PASSWORD CHANGE - 🔥 SECURED WITH authMiddleware
+// ---------------------------
+router.put('/change-password/:userId', authMiddleware, async (req, res) => {
+  const targetUserId = Number(req.params.userId);
+  const loggedInUserId = Number(req.user.userId);
+
+  // 🔥 SECURITY LOCK: Sirf apna password badal sakta hai
+  if (req.user.role !== 'admin' && targetUserId !== loggedInUserId) {
+      return res.status(403).json({ success: false, message: "Unauthorized access." });
+  }
+
   const { oldPassword, newPassword, oldTxnPassword, newTxnPassword } = req.body;
   
   try {
-    const user = await User.findOne({ userId: Number(req.params.userId) });
+    const user = await User.findOne({ userId: targetUserId });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // 🔥 1. LOGIN PASSWORD CHECK (Plain Text)
     if (oldPassword && newPassword) {
       if (oldPassword !== user.password) {
         return res.status(403).json({ message: 'Incorrect old login password' });
       }
-      // Naya password normal text mein save hoga
       user.password = newPassword; 
     }
 
-    // 🔥 2. TRANSACTION PASSWORD CHECK (Plain Text)
     if (oldTxnPassword && newTxnPassword) {
       if (oldTxnPassword !== user.transactionPassword) {
         return res.status(403).json({ message: 'Incorrect old transaction password' });
       }
-      // Naya txn password bhi normal text mein save hoga
       user.transactionPassword = newTxnPassword; 
     }
 

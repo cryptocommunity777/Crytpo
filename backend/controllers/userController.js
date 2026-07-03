@@ -4,17 +4,27 @@ const sanitizeUser = require('../utils/sanitizeUser');
 const SystemStat = require('../models/SystemStat'); // 👈 SystemStat import kiya hai fake count ke liye
 
 // 🔍 1. Get User By ID (Ye function frontend Dashboard se call hota hai)
+// 🔍 1. Get User By ID (Ye function frontend Dashboard se call hota hai)
 exports.getUserById = async (req, res) => {
   try {
-    // Frontend URL se userId bhej raha hai (req.params.id)
-    const user = await User.findOne({ userId: req.params.id });
+    // 🔥 BUG 1 & 2 FIX: Route se ID nikal kar usko thik se NUMBER mein convert karna
+    // req.params.userId aur req.params.id dono check kar lete hain taaki koi error na aaye
+    const rawId = req.params.userId || req.params.id; 
+    const targetUserId = Number(rawId);
+
+    // Agar ID valid number nahi hai toh yahi block kar do
+    if (!targetUserId) {
+      return res.status(400).json({ message: 'Invalid User ID format' });
+    }
+
+    const user = await User.findOne({ userId: targetUserId });
     
     if (!user) {
         return res.status(404).json({ message: 'User not found' });
     }
 
     // 🔥 Total Real Users ka count nikalna
-const totalRealUsers = await User.countDocuments({ isToppedUp: true });
+    const totalRealUsers = await User.countDocuments({ isToppedUp: true });
 
     // 🔥 Total Fake Users (Cron wala) ka count nikalna
     const stat = await SystemStat.findOne();
@@ -22,6 +32,7 @@ const totalRealUsers = await User.countDocuments({ isToppedUp: true });
 
     // Frontend ko user data, real count, aur fake count ek sath bhejo
     res.json({
+      success: true,
       user: sanitizeUser(user),
       totalRealUsers: totalRealUsers, // 👈 Asli log
       globalFakeCount: globalFakeCount // 👈 Cron wale fake log
