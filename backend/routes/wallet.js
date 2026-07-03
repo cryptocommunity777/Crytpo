@@ -991,7 +991,7 @@ router.get('/history/:userId', async (req, res) => {
       return res.status(400).json({ message: 'Invalid user ID' });
     }
 
-    // 1. 🔥 CHOR YAHI THA: "fast_track" add kar diya list mein!
+    // 1. 🔥 YAHAN UPDATE KIYA: "convert_to_cct" aur "cct_stake_send" add kar diye!
     const allowedTypes = [
       "deposit",
       "credit_to_wallet",
@@ -1002,7 +1002,9 @@ router.get('/history/:userId', async (req, res) => {
       "withdrawal",
       "manual_credit",
       "manual_debit",
-      "fast_track" // ✅ YE LINE MISSING THI
+      "fast_track",
+      "convert_to_cct", // ✅ Convert ki entry allow karega
+      "cct_stake_send"  // ✅ Staking ki entry allow karega
     ];
 
     // 2. ✨ MEGA QUERY

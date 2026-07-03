@@ -17,15 +17,21 @@ router.get('/stats', authMiddleware, async (req, res) => {
                 walletBalance: user.walletBalance || 0,
                 cctBalance: user.cctBalance || 0,
                 cctStakingIncome: user.cctStakingIncome || 0,
-                cctStakingDirectIncome: user.cctStakingDirectIncome || 0, // 🔥 ADD KIYA
-                cctStakingLevelIncome: user.cctStakingLevelIncome || 0,   // 🔥 ADD KIYA
+                cctStakingDirectIncome: user.cctStakingDirectIncome || 0,
+                cctStakingLevelIncome: user.cctStakingLevelIncome || 0,  
                 totalCctStaked: user.totalCctStaked || 0,
                 stakedMaxCap: user.stakedMaxCap || 0,
                 stakedEarned: user.stakedEarned || 0,
-                isStaked: user.isStaked || false
+                isStaked: user.isStaked || false,
+                
+                // 🔥 NAYE FIELDS ADD KIYE FRONTEND TIMER KE LIYE 🔥
+                isToppedUp: user.isToppedUp || false,
+                topUpDate: user.topUpDate || null,
+                createdAt: user.createdAt || null
             }
         });
     } catch (err) {
+        console.error("Stats Fetch Error:", err);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -125,7 +131,7 @@ router.post('/stake', authMiddleware, async (req, res) => {
         }
 
         // 🛑 RULE 3: 15-DAY TIME LIMIT CHECK
-        const STAKING_START_DATE = new Date("2026-07-01T00:01:00+05:30");
+        const STAKING_START_DATE = new Date("2026-07-03T00:01:00+05:30");
         const STAKING_WINDOW_DAYS = 15;
         const userTopUpDate = targetUser.topUpDate || targetUser.createdAt; 
         
@@ -244,13 +250,13 @@ router.post('/stake', authMiddleware, async (req, res) => {
                     // ============================================
                     // B. LEADER BREAKAWAY BONUS 5% LOGIC
                     // ============================================
-if (currentLevel >= 1 && isCurrentUplineLeader && !leaderBonusGiven) {
+                    if (currentLevel >= 1 && isCurrentUplineLeader && !leaderBonusGiven) {
                             if (upline.isToppedUp) {
                             const effectiveAmount = upline.totalCctStaked > 0 
                                 ? Math.min(upline.totalCctStaked, stakeAmt) 
                                 : stakeAmt; 
 
-                            const leaderBonusAmount = (effectiveAmount * 5) / 100; 
+                            const leaderBonusAmount = (effectiveAmount * 10) / 100; 
                             
                             if (leaderBonusAmount > 0) {
                                 await User.updateOne(

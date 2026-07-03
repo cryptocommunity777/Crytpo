@@ -5,19 +5,16 @@ import Select from 'react-select';
 import Confetti from 'react-confetti';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 import { 
-  User, Users, Lock, Mail, Phone, Eye, EyeOff, 
-  CheckCircle2, XCircle, ArrowRight, ShieldCheck, Copy, Sparkles, Globe, Wallet 
-} from 'lucide-react'; // 🔥 Naya Wallet icon import kiya hai
+  User, Users, Mail, Phone, 
+  CheckCircle2, XCircle, ArrowRight, Copy, Sparkles, Globe, Wallet 
+} from 'lucide-react';
 
 function Register() {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [country, setCountry] = useState('');
-  const [walletAddress, setWalletAddress] = useState(''); // 🔥 Naya state wallet ke liye
-  
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
   
   const [sponsorId, setSponsorId] = useState('');
   const [sponsorName, setSponsorName] = useState('');
@@ -27,9 +24,6 @@ function Register() {
   const [registeredData, setRegisteredData] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [loading, setLoading] = useState(false);
-  
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -74,9 +68,10 @@ function Register() {
     const cleanName = name.trim();
     const cleanEmail = email.trim();
     const cleanMobile = mobile.trim();
-    const cleanWallet = walletAddress.trim(); // 🔥 Wallet trim
+    const cleanWallet = walletAddress.trim();
 
-    if (!cleanName || !cleanMobile || !cleanEmail || !country || !password || !confirmPassword || !cleanWallet) {
+    // Password validation is removed since system auto-generates it
+    if (!cleanName || !cleanMobile || !cleanEmail || !country || !cleanWallet) {
       setErrorMsg('All fields, including the BEP20 Wallet Address, are required.');
       return;
     }
@@ -103,19 +98,9 @@ function Register() {
       return;
     }
 
-    // 🔥 4. FRONTEND WALLET VALIDATION (BEP20)
-   // 🔥 Updated Flexible Wallet Validation (30 to 50 characters)
-if (!/^0x[a-fA-F0-9]{28,48}$/.test(cleanWallet)) {
-  setErrorMsg('Invalid Wallet Address. It must start with "0x" ');
-  return;
-}
-
-    if (password.length < 8) { // Updated to match backend rules
-      setErrorMsg('Password must be at least 8 characters long.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrorMsg('Passwords do not match.');
+    // 4. FRONTEND WALLET VALIDATION (BEP20)
+    if (!/^0x[a-fA-F0-9]{28,48}$/.test(cleanWallet)) {
+      setErrorMsg('Invalid Wallet Address. It must start with "0x" and be a valid length.');
       return;
     }
 
@@ -127,21 +112,21 @@ if (!/^0x[a-fA-F0-9]{28,48}$/.test(cleanWallet)) {
       const result = await fp.get();
       const visitorId = result.visitorId;
 
-      // Passing cleaned data to backend
+      // Passing cleaned data to backend (no password sent)
       const response = await api.post('/auth/register', {
         name: cleanName, 
         mobile: cleanMobile, 
         email: cleanEmail, 
         country, 
-        password, 
         sponsorId,
-        walletAddress: cleanWallet, // 🔥 Backend ko wallet bhej diya
+        walletAddress: cleanWallet, 
         deviceId: visitorId 
       });
 
+      // Backend returns the auto-generated password
       setRegisteredData({
         userId: response.data.userId,
-        password: response.data.password || password,
+        password: response.data.password,
         name: response.data.name || cleanName,
       });
 
@@ -395,26 +380,7 @@ if (!/^0x[a-fA-F0-9]{28,48}$/.test(cleanWallet)) {
                   </div>
               </div>
 
-              {/* Passwords */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 z-0 relative">
-                 <div className="relative group">
-                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                       <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-                   </div>
-                   <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 pr-10 text-slate-900 font-bold placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all font-mono" />
-                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3.5 text-slate-400 hover:text-emerald-500 p-1">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
-                 </div>
-                 
-                 <div className="relative group">
-                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                       <ShieldCheck className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-                   </div>
-                   <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 pl-12 pr-10 text-slate-900 font-bold placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all font-mono" />
-                   <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-3.5 text-slate-400 hover:text-emerald-500 p-1">{showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
-                 </div>
-              </div>
-
-              <button type="submit" disabled={loading} className={`w-full py-4 mt-4 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black text-sm tracking-widest uppercase shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)] hover:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.7)] transition-all flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-wait' : 'hover:-translate-y-1 active:scale-95'}`}>
+              <button type="submit" disabled={loading} className={`w-full py-4 mt-6 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black text-sm tracking-widest uppercase shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)] hover:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.7)] transition-all flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-wait' : 'hover:-translate-y-1 active:scale-95'}`}>
                 {loading ? (
                   <>
                     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../../api/axios";
-import { Search, ChevronLeft, ChevronRight, Wallet, History, ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Zap, Landmark } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Wallet, History, ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Zap, Landmark, Coins } from "lucide-react";
 
 const WalletHistory = () => {
   const [transactions, setTransactions] = useState([]);
@@ -16,30 +16,15 @@ const WalletHistory = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // ✅ Ye array backend se saara data lane ke liye hai (isme hidden types bhi hain)
   const allTypes = [
-    "deposit",
-    "credit_to_wallet",
-    "credit", 
-    "transfer",
-    "topup",
-    "debit_topup", // Hidden in UI but required for data
-    "withdrawal",
-    "manual_credit", // Hidden in UI but required for data
-    "manual_debit", // Hidden in UI but required for data
-    "fast_track" 
+    "deposit", "credit_to_wallet", "credit", "transfer", "topup", 
+    "debit_topup", "withdrawal", "manual_credit", "manual_debit", "fast_track",
+    "convert_to_cct", "cct_stake_send"
   ];
 
-  // ✅ Ye naya array sirf UI Dropdown me dikhane ke liye hai
   const dropdownTypes = [
-    "all",
-    "deposit",
-    "credit_to_wallet",
-    "credit", 
-    "transfer",
-    "topup",
-    "withdrawal",
-    "fast_track" 
+    "all", "deposit", "credit_to_wallet", "credit", "transfer", 
+    "topup", "withdrawal", "fast_track", "convert_to_cct", "cct_stake_send"
   ];
 
   useEffect(() => {
@@ -73,27 +58,21 @@ const WalletHistory = () => {
     }
 
     const formattedHistory = txns
-      .filter(t => allTypes.includes(t.type)) // Data saara aayega
+      .filter(t => allTypes.includes(t.type)) 
       .filter(t => {
         const desc = (t.description || "").toLowerCase();
         
         // 🔥 DUPLICATE ENTRY FIX FOR TRANSFERS
-        // Backend transfer me 2 entries banata hai, humein sirf ek sahi wali dikhani hai
         if (t.type === 'transfer') {
             const isSender = String(t.fromUserId) === String(uid) || String(t.userId) === String(uid);
             const isReceiver = String(t.toUserId) === String(uid);
             
-            // Agar transfer hai, toh ensure karo ki user is entry ka hissa hai
             if (!isSender && !isReceiver) return false;
-
-            // 🔥 MAIN FIX: Dusri party ki mirror entry hide karo
-            // Agar main Receiver hoon, toh mujhe "Transferred To" wali entry nahi dekhni
             if (isReceiver && !isSender && desc.includes("transferred")) return false;
-
-            // Agar main Sender hoon, toh mujhe "Received From" wali entry nahi dekhni
             if (isSender && !isReceiver && desc.includes("received")) return false;
         }
 
+        // 🔥 LEADER BONUS HIDDEN FROM ALL
         return !(
           desc.includes("auto-pool") || 
           desc.includes("pool level") || 
@@ -101,9 +80,10 @@ const WalletHistory = () => {
           desc.includes("singel leg") ||      
           desc.includes("single leg") ||      
           desc.includes("community income") || 
-          desc.includes("unlocked") ||         
+          desc.includes("unlocked") ||
+          desc.includes("instant leader staking bonus") || 
           desc.includes("instant leader bonus") || 
-          desc.includes("instant bonus from downline") 
+          desc.includes("instant bonus from downline")
         );
       })
       .map(t => {
@@ -123,7 +103,6 @@ const WalletHistory = () => {
         };
       });
 
-    // Remove direct exact duplicates if backend sends the SAME _id twice (Edge case protection)
     const uniqueTxns = [];
     const seenTxnIds = new Set();
     
@@ -146,10 +125,12 @@ const WalletHistory = () => {
 };
 
  const calculateBalances = () => {
-  let runningBalance = 0; 
+  let runningBalance = 0; // 🔥 Main Wallet Track
+  let cctRunningBalance = 0; // 🔥 CCT Wallet Track (NAYA)
 
   return transactions.map((txn) => {
     let mathImpact = 0;
+    let cctMathImpact = 0; 
     let colorStyle = "text-black";
     let operator = "";
     let finalDescription = txn.description || "";
@@ -180,6 +161,24 @@ const WalletHistory = () => {
         operator = "+";
         displayTypeUI = "FAST TRACK";
         icon = <Zap size={14} className="text-blue-500" />;
+        break;
+
+      case "convert_to_cct":
+        mathImpact = -amt; // Main se katega
+        cctMathImpact = amt; // CCT me aayega
+        colorStyle = "text-purple-600";
+        operator = "-";
+        displayTypeUI = "CONVERTED";
+        icon = <ArrowRightLeft size={14} className="text-purple-600" />;
+        break;
+
+      case "cct_stake_send":
+        mathImpact = 0; // 🔥 YAHI PROBLEM THI: Ab Main wallet minus nahi hoga
+        cctMathImpact = -amt; // 🔥 Sirf CCT minus hoga
+        colorStyle = "text-indigo-600";
+        operator = ""; // Main operator blank
+        displayTypeUI = "STAKED";
+        icon = <ArrowUpRight size={14} className="text-indigo-600" />;
         break;
 
       case "manual_debit":
@@ -247,16 +246,43 @@ const WalletHistory = () => {
         break;
     }
 
+    // 🔥 30 JUNE CCT FUND LOGIC
+    const descLower = finalDescription.toLowerCase();
+    const isCCTAddition = descLower.includes("cct wallet") || descLower.includes("to cct") || descLower.includes("cct bonus");
+    const isStakingOrConvert = txn.type === "cct_stake_send" || txn.type === "convert_to_cct" || descLower.includes("staked") || descLower.includes("convert"); 
+
+    const txnDate = new Date(txn.date);
+    const june30 = new Date("2026-06-30T00:00:00");
+
+    // Agar 30 June ke baad CCT Wallet me credit hua hai
+    if (txnDate >= june30 && isCCTAddition && !isStakingOrConvert && mathImpact > 0) {
+        cctMathImpact = mathImpact; // CCT mein add kar do
+        mathImpact = 0; // Main balance pe asar mat dalo
+        operator = "";
+    }
+
+    // Balance Updates
     if (userRole !== "leader") {
         runningBalance += mathImpact;
+        cctRunningBalance += cctMathImpact;
+    }
+
+    // Formatting Amounts properly
+    let finalFormattedAmt = `${operator} $${(amt || 0).toFixed(2)}`;
+    if (txn.type === "cct_stake_send" || (mathImpact === 0 && cctMathImpact !== 0)) {
+        finalFormattedAmt = `${cctMathImpact > 0 ? '+' : cctMathImpact < 0 ? '-' : ''} ${amt.toFixed(2)} CCT`;
+        if (txn.type !== "cct_stake_send") {
+           colorStyle = cctMathImpact > 0 ? "text-indigo-500" : "text-red-500";
+        }
     }
 
     return {
       ...txn,
       description: finalDescription,
       balance: userRole === "leader" ? "0.00" : (runningBalance || 0).toFixed(2),
+      cctBalance: userRole === "leader" ? "0.00" : (cctRunningBalance || 0).toFixed(2), // 🔥 NAYA CCT DATA
       colorStyle,
-      formattedAmount: `${operator} $${(amt || 0).toFixed(2)}`,
+      formattedAmount: finalFormattedAmt,
       displayTypeUI,
       icon,
       fromIdSafe: fromId,
@@ -267,7 +293,10 @@ const WalletHistory = () => {
 };
 
   const processedData = calculateBalances();
+  
+  // 🔥 Current Balances from the last processed row
   const currentWalletBalance = processedData.length > 0 ? processedData[processedData.length - 1].balance : "0.00";
+  const currentCCTBalance = processedData.length > 0 ? processedData[processedData.length - 1].cctBalance : "0.00";
 
   const filtered = processedData.filter(txn => {
     const s = searchTerm.toLowerCase();
@@ -304,20 +333,32 @@ const WalletHistory = () => {
              <History className="text-green-500" size={28} /> Wallet Ledger
           </h2>
           <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
-            Main Wallet Transaction History
+            Complete Wallet Transaction History
           </p>
         </div>
       </div>
 
-      {/* Balance Card */}
-      <div className="mb-8">
-        <div className="bg-white shadow-sm backdrop-blur-md rounded-2xl border border-slate-200 p-5 md:p-6 shadow-[0_0_30px_rgba(249,115,22,0.1)] relative overflow-hidden flex flex-col justify-center max-w-sm">
+      {/* 🔥 DOUBLE BALANCE CARDS (Main Wallet & CCT Wallet) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        {/* Card 1: Main Balance */}
+        <div className="bg-white shadow-sm backdrop-blur-md rounded-2xl border border-slate-200 p-5 md:p-6 shadow-[0_0_30px_rgba(249,115,22,0.1)] relative overflow-hidden flex flex-col justify-center">
           <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 blur-[30px]"></div>
           <h3 className="text-gray-500 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 mb-2">
              <Wallet size={14} className="text-green-500" /> Current Main Balance
           </h3>
           <p className="text-3xl md:text-4xl font-black text-slate-900 drop-shadow-md">
             ${currentWalletBalance}
+          </p>
+        </div>
+
+        {/* Card 2: CCT Balance */}
+        <div className="bg-white shadow-sm backdrop-blur-md rounded-2xl border border-slate-200 p-5 md:p-6 shadow-[0_0_30px_rgba(99,102,241,0.1)] relative overflow-hidden flex flex-col justify-center">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 blur-[30px]"></div>
+          <h3 className="text-gray-500 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 mb-2">
+             <Coins size={14} className="text-indigo-500" /> Current CCT Balance
+          </h3>
+          <p className="text-3xl md:text-4xl font-black text-slate-900 drop-shadow-md">
+            {currentCCTBalance} CCT
           </p>
         </div>
       </div>
@@ -338,7 +379,6 @@ const WalletHistory = () => {
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Filter:</span>
-           {/* ✅ DROPDOWN MEIN AB NAYA ARRAY USE HO RAHA HAI */}
            <select
              value={typeFilter}
              onChange={(e) => setTypeFilter(e.target.value)}
@@ -361,10 +401,12 @@ const WalletHistory = () => {
             <thead className="bg-slate-50 text-green-600 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
               <tr>
                 <th className="p-4 font-black text-center w-16">Sr.</th>
-                                <th className="p-4 font-black text-right">Date & Time</th>
+                <th className="p-4 font-black text-right">Date & Time</th>
                 <th className="p-4 font-black">Type</th>
                 <th className="p-4 font-black">Amount</th>
-                <th className="p-4 font-black">Running Bal.</th>
+                <th className="p-4 font-black">Main Bal.</th>
+                {/* 🔥 NAYA COLUMN: CCT BALANCE */}
+                <th className="p-4 font-black text-indigo-600">CCT Bal.</th>
                 <th className="p-4 font-black">From / To</th>
                 <th className="p-4 font-black">Details</th>
               </tr>
@@ -373,26 +415,25 @@ const WalletHistory = () => {
             <tbody className="text-slate-600">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-10">
+                  <td colSpan="8" className="text-center py-10">
                     <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Loading Ledger...</span>
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-10">
+                  <td colSpan="8" className="text-center py-10">
                     <span className="text-red-500 font-bold text-sm uppercase tracking-widest bg-red-50 px-4 py-2 rounded-lg border border-red-200">{error}</span>
                   </td>
                 </tr>
               ) : currentItems.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-10">
+                  <td colSpan="8" className="text-center py-10">
                     <span className="text-gray-500 font-bold text-sm uppercase tracking-widest">No Transactions Found</span>
                   </td>
                 </tr>
               ) : (
                 currentItems.map((txn, idx) => {
                   const serialNumber = indexOfFirstItem + idx + 1;
-                  
                   let partyInfo = "-";
                   
                   if (txn.type === "fast_track") {
@@ -431,6 +472,12 @@ const WalletHistory = () => {
                       <td className="p-4 font-black text-slate-900">
                          ${txn.balance}
                       </td>
+                      
+                      {/* 🔥 NAYA CCT CELL */}
+                      <td className="p-4 font-black text-indigo-600">
+                         {txn.cctBalance}
+                      </td>
+                      
                       <td className="p-4 font-mono text-black text-xs">
                         {partyInfo !== "-" ? <span className="bg-slate-50 px-2 py-1 border border-slate-200 rounded">{partyInfo}</span> : "-"}
                       </td>

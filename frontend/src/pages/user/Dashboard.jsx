@@ -249,10 +249,19 @@ const Dashboard = ({ setModalState }) => {
                                     onError={(e) => { e.target.src = 'https://flagcdn.com/w40/in.png'; }}
                                  />
                                  <div>
-                                     <span className="block font-black text-slate-700 text-sm capitalize leading-tight">{u.name || "User"}</span>
-                                     <span className="text-[10px] font-bold text-slate-400">
-                                         #{u.userId ? (String(u.userId).length > 2 ? '**' + String(u.userId).substring(2) : '**') : ''}
-                                     </span>
+                                    <span className="text-[10px] font-bold text-slate-400 tracking-wider">
+  #{(() => {
+    const id = String(u.userId);
+    if (id.length <= 4) {
+      // Agar ID 4 ya usse choti hai toh sabhi ko star bana do
+      return '****';
+    } else {
+      // Shuru ke 2 '*' + Beech ka part + Last ke 2 '*'
+      const middlePart = id.substring(2, id.length - 2);
+      return `**${middlePart}**`;
+    }
+  })()}
+</span>
                                  </div>
                              </div>
                              

@@ -46,15 +46,19 @@ const getFullCountryName = (code) => {
   return countryMap[c] || c; 
 };
 
-// 🔥 NAYA HELPER: User ID ke SHURU ke 2 number chupane ke liye (Start mein **)
+// 🔥 NAYA HELPER: User ID ko "Star Number Star Number" format me dikhane ke liye
 const maskUserId = (id) => {
   if (!id) return '';
   const strId = String(id);
-  // Agar ID 2 character se badi hai toh shuru ke 2 numbers hata ke '**' laga do
-  if (strId.length > 2) {
-    return '**' + strId.substring(2);
+  
+  // Agar ID 4 digits ya usse choti hai, toh sab star kar do
+  if (strId.length <= 4) {
+    return '****';
   }
-  return '**'; 
+  
+  // Shuru ke 2 stars + Beech ka part + Last ke 2 stars
+  const middlePart = strId.substring(2, strId.length - 2);
+  return `**${middlePart}**`;
 };
 
 const GlobalTeam = () => {
@@ -164,7 +168,7 @@ const GlobalTeam = () => {
                       </div>
                     </td>
                     
-                    {/* 🔥 YAHAN UPDATE KIYA HAI: User ID ki Shuruwat me ** lagaya hai */}
+                    {/* 🔥 YAHAN UPDATE KIYA HAI: User ID Star-Number pattern me dikhegi */}
                     <td className="p-4 font-black text-slate-900">
                       <div className="flex items-center gap-2">
                           <div className="p-1.5 rounded-md bg-slate-100 text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
