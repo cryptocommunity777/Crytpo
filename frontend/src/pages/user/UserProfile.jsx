@@ -1,16 +1,15 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from "../../api/axios";
 import { 
-  ArrowLeft, Save, Lock, User, Mail, Smartphone, 
-  Wallet, Key, ShieldCheck, BadgeInfo, Settings, Edit3, Clock
+  ArrowLeft, Lock, User, Mail, Wallet, Key, ShieldCheck, BadgeInfo, Settings, Clock, Send, Copy
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import MessageModal from '../../components/modals/MessageModal';
 
 function UserProfile() {
   const navigate = useNavigate();
-  const { user, updateUser } = useAuth(); // Token is now handled by interceptor
+  const { user } = useAuth(); // Token is now handled by interceptor
 
   const [activeTab, setActiveTab] = useState('profile'); 
 
@@ -32,12 +31,6 @@ function UserProfile() {
     }
   }, [user]);
 
-  // 🔥 FAST FLOW OTP States
-  const [otp, setOtp] = useState('');
-  const [isOtpSent, setIsOtpSent] = useState(false);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); 
-
   const [loginPassword, setLoginPassword] = useState('');
   const [newLoginPassword, setNewLoginPassword] = useState('');
   const [currentTxnPassword, setCurrentTxnPassword] = useState('');
@@ -49,65 +42,6 @@ function UserProfile() {
 
   const showMessage = (title, message, type = 'info') =>
     setMessageModal({ open: true, title, message, type });
-
-  // Wallet Lock Logic
-  const walletLockReason = useMemo(() => {
-    if (!user) return null;
-    if (user.walletAddress && user.walletAddress.trim() !== '') {
-      return 'Wallet address is permanently locked once set. For changes, contact support.';
-    }
-    return null;
-  }, [user]);
-
-  const isWalletLocked = Boolean(walletLockReason);
-
-  const handleChange = e => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-
-  // 🔥 STEP 1: SEND OTP (SECURED - Token via Interceptor)
-  const handleSendOtp = async () => {
-    setIsSendingOtp(true);
-    try {
-      // Backend ab user ID token se lega, frontend se nahi
-      const res = await api.post(`/user/send-edit-otp`);
-      setIsOtpSent(true);
-      showMessage('OTP Sent 📧', res.data.message || 'Verification OTP sent to your registered email.', 'success');
-    } catch (err) {
-      showMessage('Error', err.response?.data?.message || 'Failed to send OTP. Try again.', 'error');
-    } finally {
-      setIsSendingOtp(false);
-    }
-  };
-
-  // 🔥 STEP 2: VERIFY & SAVE (SECURED - Token via Interceptor)
-  const handleSaveProfile = async () => {
-    if (isWalletLocked) return showMessage('Wallet Locked', 'Wallet address cannot be changed.', 'error');
-    if (!otp || otp.length < 6) return showMessage('Invalid OTP', 'Please enter a valid 6-digit OTP.', 'warning');
-    
-    setIsSaving(true);
-    try {
-      // 1. Verify OTP (Sirf OTP jayega, backend check karega kiska token hai)
-      await api.post(`/user/verify-edit-otp`, { otp: otp });
-
-      // 2. Agar verify ho gaya, toh Update Profile hit karo
-      const payload = { 
-        newWalletAddress: formData.walletAddress 
-      }; 
-      const res = await api.put(`/user/update-profile-secure`, payload); 
-      
-      if (res.data && res.data.user) {
-        updateUser(res.data.user);
-      }
-      
-      // Reset states
-      setOtp('');
-      setIsOtpSent(false);
-      showMessage('Updated Successfully ✅', 'Your wallet address has been saved.', 'success');
-    } catch (err) {
-      showMessage('Error', err.response?.data?.message || 'Invalid OTP or Update failed.', 'error');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleChangePassword = async type => {
     let payload;
@@ -135,6 +69,29 @@ function UserProfile() {
     }
   };
 
+  // 🔥 SMART EMAIL LOGIC (PC ke liye Gmail, Mobile ke liye Mail App)
+  const supportEmail = "support@cryptocommunity.live";
+  const mailSubject = encodeURIComponent(`Wallet Address Update Request - User ID: ${user?.userId}`);
+  const mailBody = encodeURIComponent(`Hello Support Team,\n\nPlease update my USDT (BEP20) wallet address.\n\nUser ID: ${user?.userId}\nRegistered Email: ${user?.email}\nNew Wallet Address: [Please paste your BEP-20 address here]\n\nThank you.`);
+
+  // Check if device is Mobile
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  // Gmail Direct Web Link (For PC)
+  const gmailWebLink = `https://mail.google.com/mail/?view=cm&fs=1&to=${supportEmail}&su=${mailSubject}&body=${mailBody}`;
+
+  // Default Mail App Link (For Mobile)
+  const mailToLink = `mailto:${supportEmail}?subject=${mailSubject}&body=${mailBody}`;
+
+  const finalMailLink = isMobile ? mailToLink : gmailWebLink;
+
+  // Manual Copy Fallback
+  const handleCopyDetails = () => {
+      const template = `To: ${supportEmail}\nSubject: Wallet Address Update Request - User ID: ${user?.userId}\n\nHello Support Team,\n\nPlease update my USDT (BEP20) wallet address.\n\nUser ID: ${user?.userId}\nRegistered Email: ${user?.email}\nNew Wallet Address: [Please paste your BEP-20 address here]\n\nThank you.`;
+      navigator.clipboard.writeText(template);
+      alert("Email details copied to clipboard! You can paste this in your email app.");
+  };
+
   if (!user) {
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 flex justify-center items-center font-bold text-xl">
@@ -157,8 +114,6 @@ function UserProfile() {
                     Account Settings
                  </h1>
              </div>
-             
-             
           </div>
 
           {/* User Basic Info Card */}
@@ -225,21 +180,53 @@ function UserProfile() {
                    </div>
 
                    {/* Editable/Locked Wallet Address */}
-                   <div className="pt-2 border-t border-slate-100">
+                   <div className="pt-4 border-t border-slate-100">
                       <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1 mb-1.5">USDT Wallet Address (BEP20)</label>
                       <div className="relative group">
                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                            <Wallet size={16} className={isWalletLocked ? "text-slate-400" : "text-emerald-500"} />
+                            <Wallet size={16} className={formData.walletAddress ? "text-emerald-500" : "text-slate-400"} />
                          </div>
                          <input 
                             name="walletAddress" 
-                            value={formData.walletAddress} 
-                            onChange={handleChange} 
-                            disabled={isWalletLocked}
-                            placeholder="Enter your BEP-20 Wallet Address"
-                            className={`w-full bg-white border ${isWalletLocked ? 'border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed' : 'border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-slate-900'} rounded-xl px-4 py-3.5 pl-10 font-bold outline-none transition-all text-sm`} 
+                            value={formData.walletAddress || ''} 
+                            readOnly
+                            disabled
+                            placeholder="Not Updated Yet"
+                            className={`w-full bg-slate-50 border border-slate-200 text-slate-500 cursor-not-allowed rounded-xl px-4 py-3.5 pl-10 font-bold outline-none transition-all text-sm`} 
                          />
                       </div>
+
+                      {/* 🔥 Support Email Box (Jab address set na ho) */}
+                      {!formData.walletAddress && (
+                         <div className="mt-4 bg-blue-50/50 border border-blue-200 p-4 md:p-5 rounded-xl animate-in fade-in zoom-in duration-300">
+                             <h4 className="text-blue-800 font-black text-sm mb-2 flex items-center gap-2">
+                                <BadgeInfo size={16} /> Wallet Update Request
+                             </h4>
+                             <p className="text-xs font-bold text-blue-700/80 mb-4 leading-relaxed">
+                                To update your USDT (BEP-20) wallet address, please send an email to our support team from your registered email ID. Your address will be updated within <span className="font-black text-blue-800">24 to 48 hours</span>.
+                             </p>
+                             
+                             <div className="flex flex-col sm:flex-row items-center gap-3">
+                                 {/* Ye button PC me direct Gmail kholega aur mobile me App */}
+                                 <a 
+                                    href={finalMailLink}
+                                    target={!isMobile ? "_blank" : "_self"}
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest py-3 px-6 rounded-lg transition-all shadow-sm hover:shadow-md"
+                                 >
+                                    <Send size={16} /> Open Mail App
+                                 </a>
+
+                                 {/* Backup Button: Agar kisi ka browser block kare, toh copy kar le */}
+                                 <button 
+                                    onClick={handleCopyDetails}
+                                    className="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-white hover:bg-slate-50 text-blue-600 border border-blue-200 font-black text-xs uppercase tracking-widest py-3 px-6 rounded-lg transition-all shadow-sm"
+                                 >
+                                    <Copy size={16} /> Copy Details
+                                 </button>
+                             </div>
+                         </div>
+                      )}
                    </div>
 
                    {/* 🔥 WALLET HISTORY SECTION */}
@@ -253,7 +240,7 @@ function UserProfile() {
                                <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                   <span className="text-xs font-mono font-bold text-slate-600 break-all">
                                      {history.address}
-                                 </span>
+                                  </span>
                                   <span className="text-[10px] font-bold text-slate-400 shrink-0 bg-white px-2 py-1 rounded border border-slate-100">
                                      {new Date(history.changedAt).toLocaleDateString()}
                                   </span>
@@ -262,45 +249,6 @@ function UserProfile() {
                          </div>
                       </div>
                    )}
-
-                   {/* 🔥 OTP VERIFICATION FLOW (FAST FLOW) */}
-                   {!isWalletLocked && (
-                     <div className="pt-4 border-t border-slate-100">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5">Security Verification</label>
-                        
-                        {!isOtpSent ? (
-                           <button 
-                              onClick={handleSendOtp} 
-                              disabled={isSendingOtp || !formData.walletAddress}
-                              className={`w-full py-3.5 rounded-xl text-white font-black text-sm uppercase tracking-wider shadow-sm transition-all flex items-center justify-center gap-2 ${isSendingOtp || !formData.walletAddress ? 'bg-slate-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-                           >
-                              <Mail size={18} /> {isSendingOtp ? "Sending OTP..." : "Send OTP to Email"}
-                           </button>
-                        ) : (
-                           <div className="animate-in fade-in zoom-in duration-300 space-y-3">
-                              <div className="relative">
-                                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Key size={16} className="text-slate-400" /></div>
-                                 <input 
-                                    type="text" 
-                                    placeholder="Enter OTP"
-                                    value={otp} 
-                                    onChange={e => setOtp(e.target.value.replace(/\D/g, ''))} 
-                                    maxLength={6}
-                                    className="w-full tracking-[0.5em] text-center font-black text-sm bg-slate-50 border border-slate-300 rounded-xl px-4 py-3.5 pl-10 text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all" 
-                                 />
-                              </div>
-                              <button 
-                                 onClick={handleSaveProfile} 
-                                 disabled={isSaving}
-                                 className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-wider shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
-                              >
-                                 <Save size={18} /> {isSaving ? "Saving..." : "Verify & Save Changes"}
-                              </button>
-                           </div>
-                        )}
-                     </div>
-                   )}
-
                 </div>
              </div>
           )}
@@ -315,9 +263,9 @@ function UserProfile() {
                        <ShieldCheck size={18} className="text-blue-500" /> Change Login Password
                     </div>
                     <div className="space-y-3">
-                       <input type="password" placeholder="Current Login Password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:border-blue-500 outline-none text-sm" />
-                       <input type="password" placeholder="New Login Password" value={newLoginPassword} onChange={e => setNewLoginPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:border-blue-500 outline-none text-sm" />
-                       <button onClick={() => handleChangePassword('login')} className="w-full py-3 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200 font-black text-xs uppercase tracking-wider transition-all mt-2">
+                       <input type="password" placeholder="Current Login Password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:border-blue-500 outline-none text-sm font-bold placeholder-slate-400" />
+                       <input type="password" placeholder="New Login Password" value={newLoginPassword} onChange={e => setNewLoginPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:border-blue-500 outline-none text-sm font-bold placeholder-slate-400" />
+                       <button onClick={() => handleChangePassword('login')} className="w-full py-3.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200 font-black text-xs uppercase tracking-wider transition-all mt-2 shadow-sm">
                           Update Login Password
                        </button>
                     </div>
@@ -329,9 +277,9 @@ function UserProfile() {
                        <Lock size={18} className="text-purple-500" /> Change Transaction Password
                     </div>
                     <div className="space-y-3">
-                       <input type="password" placeholder="Current Txn Password" value={currentTxnPassword} onChange={e => setCurrentTxnPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:border-purple-500 outline-none text-sm" />
-                       <input type="password" placeholder="New Txn Password" value={newTxnPassword} onChange={e => setNewTxnPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:border-purple-500 outline-none text-sm" />
-                       <button onClick={() => handleChangePassword('txn')} className="w-full py-3 rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white border border-purple-200 font-black text-xs uppercase tracking-wider transition-all mt-2">
+                       <input type="password" placeholder="Current Txn Password" value={currentTxnPassword} onChange={e => setCurrentTxnPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:border-purple-500 outline-none text-sm font-bold placeholder-slate-400" />
+                       <input type="password" placeholder="New Txn Password" value={newTxnPassword} onChange={e => setNewTxnPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:border-purple-500 outline-none text-sm font-bold placeholder-slate-400" />
+                       <button onClick={() => handleChangePassword('txn')} className="w-full py-3.5 rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white border border-purple-200 font-black text-xs uppercase tracking-wider transition-all mt-2 shadow-sm">
                           Update Txn Password
                        </button>
                     </div>

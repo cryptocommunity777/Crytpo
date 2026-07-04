@@ -39,41 +39,43 @@ const getDepositAddress = async (req, res) => {
     }
 };
 
-// 🛡️ HELPER FUNCTION: Try Primary RPC, fallback to Free RPC if it fails
-async function getWalletDataWithFallback(address) {
+// 🛡️ HELPER FUNCTION: Ab ye sirf USDT check karega pehle (API Credits bachane ke liye)
+async function getUsdtBalanceWithFallback(address) {
     try {
         const usdtWei = await usdtContractPrimary.balanceOf(address);
-        const bnbWei = await primaryProvider.getBalance(address);
-        const feeData = await primaryProvider.getFeeData();
-        return { activeProvider: primaryProvider, usdtWei, bnbWei, gasPrice: feeData.gasPrice, mode: 'PRIMARY' };
+        return { activeProvider: primaryProvider, usdtWei, mode: 'PRIMARY' };
     } catch (err) {
         console.log(`⚠️ Primary RPC limit reached. Switching to FALLBACK (Free RPC) for ${address}...`);
         const usdtWei = await usdtContractFallback.balanceOf(address);
-        const bnbWei = await fallbackProvider.getBalance(address);
-        const feeData = await fallbackProvider.getFeeData();
-        return { activeProvider: fallbackProvider, usdtWei, bnbWei, gasPrice: feeData.gasPrice, mode: 'FALLBACK' };
+        return { activeProvider: fallbackProvider, usdtWei, mode: 'FALLBACK' };
     }
 }
 
-// 💎 2. PREMIUM 100% AUTOMATIC SWEEP FUNCTION (Super Fast + Fallback Protection)
+// 💎 2. PREMIUM 100% AUTOMATIC SWEEP FUNCTION (Super Optimized - Saves 70% API Credits)
 const sweepFunds = async (user_id) => {
     try {
         const user = await User.findById(user_id);
         if (!user || !user.depositAddress) return;
 
-        // 🚀 FAST CHECK: CPU aur Time bachane ke liye pehle directly sirf Address check karo
-        const walletData = await getWalletDataWithFallback(user.depositAddress);
-        const { activeProvider, usdtWei, bnbWei, gasPrice } = walletData;
+        // 🚀 SMART CHECK: Sirf USDT check karo pehle. (BNB aur Gas check skip karo empty wallets ke liye)
+        const walletData = await getUsdtBalanceWithFallback(user.depositAddress);
+        const { activeProvider, usdtWei, mode } = walletData;
 
         const amountInUSDT = parseFloat(ethers.formatUnits(usdtWei, 18));
-        const bnbTransferCost = 21000n * gasPrice;
 
-        // Agar balance nahi hai, toh yahin se skip maro
-        if (amountInUSDT < 0.1 && bnbWei <= bnbTransferCost) {
+        // 🔥 AGAR BALANCE 0 HAI, TOH YAHIN SE WAPAS JAAO! (Saves API Credits)
+        if (amountInUSDT < 0.1) {
             return; 
         }
 
-        console.log(`\n💎 [SWEEP - ${walletData.mode} RPC] Detecting ${amountInUSDT} USDT for User ${user.userId}... Processing...`);
+        console.log(`\n💎 [SWEEP - ${mode} RPC] Detecting ${amountInUSDT} USDT for User ${user.userId}... Processing...`);
+
+        // ==========================================
+        // 🟢 USDT MIL GAYA! AB BNB AUR GAS CHECK KARO
+        // ==========================================
+        const bnbWei = await activeProvider.getBalance(user.depositAddress);
+        const feeData = await activeProvider.getFeeData();
+        const gasPrice = feeData.gasPrice;
 
         const pathIndex = parseInt(user._id.toString().substring(0, 8), 16); 
         const hdNode = HDNodeWallet.fromPhrase(process.env.MNEMONIC);
@@ -83,62 +85,56 @@ const sweepFunds = async (user_id) => {
         const userUsdtContract = new ethers.Contract(process.env.USDT_CONTRACT_ADDRESS, usdtAbi, userWallet);
         const gasFunderWallet = new ethers.Wallet(process.env.GAS_FUNDER_PRIVATE_KEY, activeProvider);
 
-        // ==========================================
-        // 🟢 PHASE 1: USDT SWEEP
-        // ==========================================
-        if (amountInUSDT >= 0.1) { 
-            let gasLimit;
-            try {
-                gasLimit = await userUsdtContract.transfer.estimateGas(process.env.CENTRAL_WALLET_ADDRESS, usdtWei);
-            } catch (error) {
-                gasLimit = 100000n; 
-            }
-
-            const exactBnbNeeded = (gasLimit * gasPrice * 105n) / 100n; 
-            
-            if (bnbWei < exactBnbNeeded) {
-                const bnbToFund = exactBnbNeeded - bnbWei;
-                console.log(`⛽ [SMART GAS] Sending ${ethers.formatEther(bnbToFund)} BNB for fees...`);
-                const gasTx = await gasFunderWallet.sendTransaction({ to: userWallet.address, value: bnbToFund });
-                await gasTx.wait(); 
-                
-                console.log(`⏳ Waiting for blockchain sync...`);
-                await new Promise(resolve => setTimeout(resolve, 3000));
-            }
-
-            console.log(`📤 [SWEEP] Sweeping USDT to Central Wallet...`);
-            const sweepTx = await userUsdtContract.transfer(process.env.CENTRAL_WALLET_ADDRESS, usdtWei);
-            const receipt = await sweepTx.wait(); 
-            const actualHash = receipt.hash; 
-
-            user.walletBalance = (user.walletBalance || 0) + amountInUSDT;
-            await user.save();
-            
-            await Transaction.create({
-                userId: user.userId,
-                amount: amountInUSDT,
-                type: 'deposit',
-                status: 'completed', 
-                description: `Auto-Deposit of ${amountInUSDT} USDT via BEP-20`,
-                date: new Date(),
-                txHash: actualHash,  
-                txnHash: actualHash  
-            });
-
-            await Deposit.create({
-                userId: user.userId,
-                amount: amountInUSDT,
-                txnHash: actualHash, 
-                status: 'approved',
-                createdAt: new Date()
-            });
-
-            console.log(`✅ [SUCCESS] ${amountInUSDT} USDT swept! Hash: ${actualHash}`);
+        // --- PHASE 1: USDT SWEEP ---
+        let gasLimit;
+        try {
+            gasLimit = await userUsdtContract.transfer.estimateGas(process.env.CENTRAL_WALLET_ADDRESS, usdtWei);
+        } catch (error) {
+            gasLimit = 100000n; 
         }
 
-        // ==========================================
-        // 🟠 PHASE 2: LEFT-OVER BNB RECOVERY (Recycle)
-        // ==========================================
+        const exactBnbNeeded = (gasLimit * gasPrice * 105n) / 100n; 
+        
+        if (bnbWei < exactBnbNeeded) {
+            const bnbToFund = exactBnbNeeded - bnbWei;
+            console.log(`⛽ [SMART GAS] Sending ${ethers.formatEther(bnbToFund)} BNB for fees...`);
+            const gasTx = await gasFunderWallet.sendTransaction({ to: userWallet.address, value: bnbToFund });
+            await gasTx.wait(); 
+            
+            console.log(`⏳ Waiting for blockchain sync...`);
+            await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+
+        console.log(`📤 [SWEEP] Sweeping USDT to Central Wallet...`);
+        const sweepTx = await userUsdtContract.transfer(process.env.CENTRAL_WALLET_ADDRESS, usdtWei);
+        const receipt = await sweepTx.wait(); 
+        const actualHash = receipt.hash; 
+
+        user.walletBalance = (user.walletBalance || 0) + amountInUSDT;
+        await user.save();
+        
+        await Transaction.create({
+            userId: user.userId,
+            amount: amountInUSDT,
+            type: 'deposit',
+            status: 'completed', 
+            description: `Auto-Deposit of ${amountInUSDT} USDT via BEP-20`,
+            date: new Date(),
+            txHash: actualHash,  
+            txnHash: actualHash  
+        });
+
+        await Deposit.create({
+            userId: user.userId,
+            amount: amountInUSDT,
+            txnHash: actualHash, 
+            status: 'approved',
+            createdAt: new Date()
+        });
+
+        console.log(`✅ [SUCCESS] ${amountInUSDT} USDT swept! Hash: ${actualHash}`);
+
+        // --- PHASE 2: LEFT-OVER BNB RECOVERY ---
         try {
             const currentBnbBalance = await activeProvider.getBalance(userWallet.address);
             const freshFeeData = await activeProvider.getFeeData();
