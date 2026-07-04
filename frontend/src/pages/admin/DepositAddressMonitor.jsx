@@ -10,7 +10,6 @@ const DepositAddressMonitor = () => {
     const [isAutoFetching, setIsAutoFetching] = useState(false);
     const [sweepingId, setSweepingId] = useState(null); 
 
-    // 🔥 Paginaton States
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -40,30 +39,23 @@ const DepositAddressMonitor = () => {
         fetchUsersWithAddresses();
     }, []);
 
-   // 🔥 ULTIMATE BACKGROUND SCANNER (Poori list check karega, par 5x Speed se aur bina RPC block kiye)
+    // 🔥 1. BACKGROUND SCANNER (Aaram se chalta rahega)
     useEffect(() => {
         if (!isAutoFetching || users.length === 0) return;
-
         let isMounted = true;
 
         const fetchAllBalancesInBatches = async () => {
-            const BATCH_SIZE = 10; // Ek baar mein 5 users ka check karega (RPC safe limit)
+            const BATCH_SIZE = 10; 
             
             for (let i = 0; i < users.length; i += BATCH_SIZE) {
                 if (!isMounted) break;
                 
-                // 5 users ka ek batch banayenge
                 const batch = users.slice(i, i + BATCH_SIZE);
-                
-                // Un users ko filter karenge jinka check hona baaki hai
                 const usersToCheck = batch.filter(u => u.liveBalance === null);
                 
                 if (usersToCheck.length > 0) {
                     try {
-                        // Batch ke sabhi users ko Loading state mein daalo
                         usersToCheck.forEach(u => setBalanceLoading(u.userId));
-
-                        // Promise.all se 5 requests ek sath bhejenge (5x Fast)
                         const token = localStorage.getItem('adminToken');
                         const promises = usersToCheck.map(user => 
                             api.get(`/admin/check-live-balance/${user.userId}`, {
@@ -72,22 +64,17 @@ const DepositAddressMonitor = () => {
                               .catch(() => ({ userId: user.userId, balance: 'Error' }))
                         );
 
-                        // Ek sath 5 results aayenge
                         const results = await Promise.all(promises);
 
-                        // State ko ek hi baar mein update karenge
                         setUsers(prev => {
                             let newUsers = [...prev];
                             results.forEach(res => {
                                 const index = newUsers.findIndex(u => u.userId === res.userId);
-                                if (index !== -1) {
-                                    newUsers[index].liveBalance = res.balance;
-                                }
+                                if (index !== -1) newUsers[index].liveBalance = res.balance;
                             });
                             return newUsers;
                         });
 
-                        // Binance RPC ko relax karne ke liye 1 second ka gap
                         await new Promise(resolve => setTimeout(resolve, 1000));
                         
                     } catch (error) {
@@ -95,7 +82,6 @@ const DepositAddressMonitor = () => {
                     }
                 }
             }
-            
             if (isMounted) {
                 setBalanceLoading(null);
                 setIsAutoFetching(false);
@@ -103,11 +89,41 @@ const DepositAddressMonitor = () => {
         };
 
         fetchAllBalancesInBatches();
-
         return () => { isMounted = false; };
-        
-    // 🛑 DEPENDENCY CHANGE: Yahan wapas 'users.length' laga diya hai taaki poori list cover ho
     }, [isAutoFetching, users.length]);
+
+    // 🔥 1. ADVANCED FILTERING
+    const filteredUsers = users.filter(u => 
+        (u.userId?.toString().includes(searchQuery)) || 
+        (u.name?.toLowerCase().includes(searchQuery.toLowerCase())) || 
+        (u.depositAddress?.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+
+    // 🚀 NEW: INSTANT FETCH FOR SEARCHED USER!
+    // Agar admin ne kuch search kiya hai, toh turant usko fetch karo, queue ka wait mat karo.
+    useEffect(() => {
+        if (searchQuery.trim().length > 0 && filteredUsers.length > 0 && filteredUsers.length <= 10) {
+            const usersToFetchInstantly = filteredUsers.filter(u => u.liveBalance === null);
+            
+            if (usersToFetchInstantly.length > 0) {
+                usersToFetchInstantly.forEach(async (user) => {
+                    try {
+                        setBalanceLoading(user.userId);
+                        const token = localStorage.getItem('adminToken');
+                        const res = await api.get(`/admin/check-live-balance/${user.userId}`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        
+                        setUsers(prev => prev.map(u => u.userId === user.userId ? { ...u, liveBalance: res.data.liveBalance } : u));
+                    } catch (error) {
+                        setUsers(prev => prev.map(u => u.userId === user.userId ? { ...u, liveBalance: 'Error' } : u));
+                    } finally {
+                        setBalanceLoading(null);
+                    }
+                });
+            }
+        }
+    }, [searchQuery, filteredUsers]);
 
     const handleForceSweep = async (userId) => {
         if (!window.confirm(`Are you sure you want to FORCE SWEEP funds for User #${userId}? This will transfer the crypto to the Master Wallet and credit the user.`)) return;
@@ -134,21 +150,14 @@ const DepositAddressMonitor = () => {
         }
     };
 
-    // 🔥 1. ADVANCED FILTERING (Name, ID, Address)
-    const filteredUsers = users.filter(u => 
-        (u.userId?.toString().includes(searchQuery)) || 
-        (u.name?.toLowerCase().includes(searchQuery.toLowerCase())) || 
-        (u.depositAddress?.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-
-    // 🔥 2. DYNAMIC SORTING (Jiska balance zyada, wo sabse upar)
+    // 🔥 2. DYNAMIC SORTING
     const sortedUsers = [...filteredUsers].sort((a, b) => {
         const getVal = (val) => {
-            if (val === null) return -1; // Waiting wala sabse niche
-            if (val === 'Error') return -2; // Error wala usse bhi niche
-            return Number(val) || 0; // Real balance ko number me convert karo
+            if (val === null) return -1; 
+            if (val === 'Error') return -2; 
+            return Number(val) || 0; 
         };
-        return getVal(b.liveBalance) - getVal(a.liveBalance); // Descending order (High to Low)
+        return getVal(b.liveBalance) - getVal(a.liveBalance); 
     });
 
     // 🔥 3. PAGINATION LOGIC
@@ -178,14 +187,13 @@ const DepositAddressMonitor = () => {
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                         <Search size={16} className="text-gray-400 group-focus-within:text-orange-500" />
                     </div>
-                    {/* 🔥 Search by Name updated */}
                     <input
                         type="text"
                         placeholder="Search by ID, Name or Address..."
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
-                            setCurrentPage(1); // Search karne pe page 1 pe bhejo
+                            setCurrentPage(1); 
                         }}
                         className="w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-3 pl-10 focus:border-orange-500 focus:outline-none font-bold tracking-wide shadow-sm"
                     />
@@ -212,7 +220,6 @@ const DepositAddressMonitor = () => {
                                 currentItems.map((user) => (
                                     <tr key={user.userId} className="hover:bg-slate-50 transition-colors bg-white">
                                         
-                                        {/* 🔥 User ID aur Name dono ek sath */}
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col">
                                                 <span className="font-mono font-black text-slate-800 flex items-center gap-1.5">

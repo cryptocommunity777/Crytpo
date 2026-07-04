@@ -1,11 +1,10 @@
-// backend/cron/sweepJob.js
 const cron = require('node-cron');
 const User = require('../models/User');
 const { sweepFunds } = require('../controllers/depositController');
 
 const startSweeper = () => {
-    // Har 15 minute me chalega
-    cron.schedule('*/2 * * * *', async () => {
+    // Har 2 minute me chalega
+    cron.schedule('*/5 * * * *', async () => {
         console.log("🔍 Running automated deposit check...");
         
         try {
@@ -15,15 +14,22 @@ const startSweeper = () => {
 
             console.log(`Total Wallets to check: ${usersWithWallets.length}`);
 
-            for (const user of usersWithWallets) {
-                try {
-                    await sweepFunds(user._id);
-                    // ⏱️ Delay of 1 second between each user check. 
-                    // Ye RPC block/ban hone se bachayega aur saare users properly check honge.
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                } catch (err) {
-                    console.log(`⚠️ User ${user.userId} sweep issue, skipping to next...`);
-                }
+            // 🚀 BATCH PROCESSING: Ek sath 20 users check karenge taaki speed 20x ho jaye
+            const batchSize = 20; 
+            
+            for (let i = 0; i < usersWithWallets.length; i += batchSize) {
+                const batch = usersWithWallets.slice(i, i + batchSize);
+                
+                await Promise.all(batch.map(async (user) => {
+                    try {
+                        await sweepFunds(user._id);
+                    } catch (err) {
+                        // Silent catch taaki ek fail ho toh baki na ruke
+                    }
+                }));
+                
+                // ⏱️ Delay of 500ms between batches to keep RPC safe
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
             
             console.log("✅ Automated check complete.");

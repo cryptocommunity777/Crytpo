@@ -2318,33 +2318,28 @@ router.get('/users-deposit-addresses', verifyAdmin, async (req, res) => {
 
 // ==========================================
 // 2. CHECK LIVE BLOCKCHAIN BALANCE (Single User)
-// ==========================================
+ 
+// 🔥 SIRF FREE WALA RPC (BINANCE PUBLIC) USE KAREGA ADMIN PANEL KE LIYE
+const freeProvider = new ethers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+const usdtAbi = ["function balanceOf(address owner) view returns (uint256)"];
+const usdtContractFree = new ethers.Contract(process.env.USDT_CONTRACT_ADDRESS, usdtAbi, freeProvider);
+
 router.get('/check-live-balance/:userId', verifyAdmin, async (req, res) => {
     try {
-        const userId = Number(req.params.userId);
-        const user = await User.findOne({ userId: userId });
-
+        const user = await User.findOne({ userId: req.params.userId });
+        
         if (!user || !user.depositAddress) {
-            return res.status(404).json({ success: false, message: "User or Address not found." });
+            return res.json({ success: true, liveBalance: "0.00" });
         }
 
-        // 🔥 Asli Blockchain Connection (Same as your depositController)
-        const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-        const usdtAbi = ["function balanceOf(address owner) view returns (uint256)"];
-        const usdtContract = new ethers.Contract(process.env.USDT_CONTRACT_ADDRESS, usdtAbi, provider);
+        // Paid RPC ki jagah yahan Free wale se connect hoga
+        const balanceWei = await usdtContractFree.balanceOf(user.depositAddress);
+        const balanceUSDT = ethers.formatUnits(balanceWei, 18);
 
-        // Balance fetch kar rahe hain
-        const rawBalance = await usdtContract.balanceOf(user.depositAddress);
-        const liveBalance = ethers.formatUnits(rawBalance, 18); // USDT BEP20 has 18 decimals
-
-        res.json({ 
-            success: true, 
-            liveBalance: Number(liveBalance).toFixed(2) 
-        });
-
+        res.json({ success: true, liveBalance: parseFloat(balanceUSDT).toFixed(2) });
     } catch (error) {
         console.error("Live Balance Check Error:", error);
-        res.status(500).json({ success: false, message: "Server error checking live balance." });
+        res.status(500).json({ success: false, message: "Error fetching balance" });
     }
 });
 
