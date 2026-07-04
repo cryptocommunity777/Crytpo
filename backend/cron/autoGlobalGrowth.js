@@ -248,50 +248,54 @@ const startGlobalGrowthCron = () => {
     // DAILY MIDNIGHT CRON
     // =========================================================================
 cron.schedule('48 1 * * *', async () => {
-            try {
-            const users = await User.find({ "activePools.status": "ACTIVE" });
-            const todayStr = getISTDateStr();
+    try {
+        console.log("🚀 Starting Daily Community Payouts...");
+        const users = await User.find({ "activePools.status": "ACTIVE" });
+        const todayStr = getISTDateStr();
 
-            for (let user of users) {
+        // 🚀 Batch processing use karenge taaki CPU hang na ho
+        const BATCH_SIZE = 50;
+        for (let i = 0; i < users.length; i += BATCH_SIZE) {
+            const batch = users.slice(i, i + BATCH_SIZE);
+            
+            // Promise.all se CPU load bat jayega
+            await Promise.all(batch.map(async (user) => {
                 let isUpdated = false;
-
                 for (let pool of user.activePools) {
-                    if (pool.status === 'ACTIVE' && pool.daysPaid < pool.totalDays) {
+                    if (pool.status === 'ACTIVE' && pool.daysPaid < pool.totalDays && pool.lastPaidDate !== todayStr) {
                         
-                        if (pool.lastPaidDate === todayStr) {
-                            continue; 
-                        }
-
-                        user.poolIncome = (user.poolIncome || 0) + pool.dailyAmount; 
+                        user.poolIncome = (user.poolIncome || 0) + pool.dailyAmount;
                         
-                        await Transaction.create({
+                        // Transaction creation ko await mat karo taaki speed bani rahe
+                        Transaction.create({
                             userId: user.userId,
                             type: 'credit',
                             source: 'pool',
                             amount: pool.dailyAmount,
                             description: `Daily Community Income Level ${pool.level} (Day ${pool.daysPaid + 1} of ${pool.totalDays})`,
                             status: 'success'
-                        });
+                        }).catch(err => console.error("Txn creation failed:", err));
 
                         pool.daysPaid += 1;
-                        pool.lastPaidDate = todayStr; 
+                        pool.lastPaidDate = todayStr;
+                        if (pool.daysPaid >= pool.totalDays) pool.status = 'COMPLETED';
                         isUpdated = true;
-
-                        if (pool.daysPaid >= pool.totalDays) {
-                            pool.status = 'COMPLETED';
-                        }
                     }
                 }
                 if (isUpdated) await user.save();
-            }
-            console.log(`✅ [CRON] Community Payout Done for: ${todayStr}`);
-        } catch (err) {
-            console.error('[DAILY-POOL] Error:', err);
+            }));
+
+            // Har batch ke baad thoda sa pause (CPU breather)
+            await new Promise(resolve => setTimeout(resolve, 200));
         }
-    }, {
-        scheduled: true,
-        timezone: "Asia/Kolkata" 
-    });
+        console.log(`✅ [CRON] Community Payout Done for: ${todayStr}`);
+    } catch (err) {
+        console.error('[DAILY-POOL] Error:', err);
+    }
+}, {
+    scheduled: true,
+    timezone: "Asia/Kolkata" 
+});
 };
 
 module.exports = startGlobalGrowthCron;
