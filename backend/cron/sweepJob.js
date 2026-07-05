@@ -40,14 +40,14 @@
 // };
 
 // module.exports = startSweeper;
-
 const cron = require('node-cron');
 const User = require('../models/User');
 const { sweepFunds } = require('../controllers/depositController');
 
 const startSweeper = () => {
-    // 🔥 Har 5 minute me chalega (Par check completely FREE hoga!)
-    cron.schedule('*/5 * * * *', async () => {
+    // 🔥 Har 5 minute me chalega (FREE Check & Paid Sweep)
+    // Abhi testing ke liye aap isko '*/1 * * * *' (1 min) rakh sakte hain, par live me 5 mins ('*/5 * * * *') best hai.
+    cron.schedule('*/4 * * * *', async () => {
         console.log("🔍 Running automated deposit check (Hybrid Mode)...");
         
         try {
@@ -57,22 +57,20 @@ const startSweeper = () => {
 
             console.log(`Total Wallets to check: ${usersWithWallets.length}`);
 
-            // 🚀 BATCH PROCESSING: Ek sath 20 users check karenge
-            const batchSize = 20; 
-            
-            for (let i = 0; i < usersWithWallets.length; i += batchSize) {
-                const batch = usersWithWallets.slice(i, i + batchSize);
+            // 🚀 SEQUENTIAL PROCESSING: Ek-ek karke check karenge taaki Server CPU aur Memory par Load ZERO ho!
+            for (let i = 0; i < usersWithWallets.length; i++) {
+                const user = usersWithWallets[i];
                 
-                await Promise.all(batch.map(async (user) => {
-                    try {
-                        await sweepFunds(user._id);
-                    } catch (err) {
-                        // Silent catch taaki ek fail ho toh baki na ruke
-                    }
-                }));
-                
-                // ⏱️ Delay of 1 second between batches to keep Free RPCs safe and avoid getting blocked
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                try {
+                    // Check karo
+                    await sweepFunds(user._id);
+                } catch (err) {
+                    // Silent fail taaki agla wallet check ho sake
+                }
+
+                // ⏱️ DELAY: Har ek user ke check ke baad adhe second (500ms) ka aaram. 
+                // Isse na toh Free RPC block karega aur na hi aapki site hang hogi.
+                await new Promise(resolve => setTimeout(resolve, 500)); 
             }
             
             console.log("✅ Automated check complete. No Paid Ankr credits wasted!");

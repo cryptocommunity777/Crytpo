@@ -169,22 +169,27 @@
 //     sweepFunds
 // };
 
-
 const { ethers, HDNodeWallet } = require("ethers");
 const User = require("../models/User");
 const Transaction = require("../models/Transaction");
 const Deposit = require("../models/Deposit"); 
 require("dotenv").config();
 
-// 🔥 PREMIUM RPC (Sirf Sweep/Transfer ke liye use hoga, balance check ke liye NAHI)
-const primaryProvider = new ethers.JsonRpcProvider(process.env.RPC_URL_PRIMARY);
+console.log("🔥 PREMIUM RPC URL ACTIVE:", process.env.RPC_URL_PRIMARY);
 
 const usdtAbi = [
     "function balanceOf(address owner) view returns (uint256)", 
     "function transfer(address to, uint256 amount) returns (bool)"
 ];
 
-// 🆓 FREE PUBLIC RPC POOL (Balance check karne ke liye taaki Ankr credits bachein)
+// ==========================================
+// 🔥 1. GLOBAL PROVIDERS SETUP (LOAD REDUCER)
+// ==========================================
+
+// Premium Ankr RPC (Sirf Sweep ke liye) - staticNetwork: true ensures no detection errors
+const primaryProvider = new ethers.JsonRpcProvider(process.env.RPC_URL_PRIMARY, 56, { staticNetwork: true });
+
+// Free URLs
 const freeRpcUrls = [
     "https://bsc-dataseed.binance.org/",
     "https://binance.llamarpc.com",
@@ -193,13 +198,25 @@ const freeRpcUrls = [
     "https://bsc-dataseed1.defibit.io/"
 ];
 
-// Helper: Random Free Provider nikalne ke liye taaki load distribute ho
-const getRandomFreeProvider = () => {
-    const randomIndex = Math.floor(Math.random() * freeRpcUrls.length);
-    return new ethers.JsonRpcProvider(freeRpcUrls[randomIndex]);
+// 🚀 SUPER OPTIMIZATION: Connections sirf EK BAAR banenge aur reuse honge. 
+// Isse Memory Leak nahi hoga aur Site fast chalegi!
+const freeProvidersPool = freeRpcUrls.map(url => {
+    const provider = new ethers.JsonRpcProvider(url, 56, { staticNetwork: true });
+    const contract = new ethers.Contract(process.env.USDT_CONTRACT_ADDRESS, usdtAbi, provider);
+    return { provider, contract };
+});
+
+// Helper: Get pre-connected random free contract (0 extra load on server)
+const getRandomFreeContract = () => {
+    const randomIndex = Math.floor(Math.random() * freeProvidersPool.length);
+    return freeProvidersPool[randomIndex].contract;
 };
 
-// 1. Generate Address
+// ==========================================
+// 🎯 2. API ENDPOINTS & FUNCTIONS
+// ==========================================
+
+// Generate Address
 const getDepositAddress = async (req, res) => {
     try {
         const userId = req.user.userId || req.user.id || req.user._id;
@@ -222,38 +239,35 @@ const getDepositAddress = async (req, res) => {
     }
 };
 
-// 🛡️ HELPER FUNCTION: Sirf Free RPCs se USDT check karega ($0 Cost)
+// 🛡️ HELPER FUNCTION: Zero Server Load Free Scanning
 async function checkUsdtBalanceFree(address) {
-    let retries = 2; // Agar ek free fail hua, to dusre se try karega
+    let retries = 2; 
     
     while (retries > 0) {
         try {
-            const freeProvider = getRandomFreeProvider();
-            const freeContract = new ethers.Contract(process.env.USDT_CONTRACT_ADDRESS, usdtAbi, freeProvider);
+            const freeContract = getRandomFreeContract(); // Direct pre-made contract use kiya
             const usdtWei = await freeContract.balanceOf(address);
             return usdtWei;
         } catch (err) {
             retries--;
             if (retries === 0) {
-                // Agar saare free fail ho gaye, to 0 return karega, agle 5 min wale round me check ho jayega.
-                // (Isse hum Ankr par fallback nahi karte, taaki cost zero hi rahe scanning ki)
                 return 0n; 
             }
         }
     }
 }
 
-// 💎 2. PREMIUM HYBRID SWEEP FUNCTION
+// 💎 3. PREMIUM HYBRID SWEEP FUNCTION
 const sweepFunds = async (user_id) => {
     try {
         const user = await User.findById(user_id);
         if (!user || !user.depositAddress) return;
 
-        // 🚀 FREE CHECK: Balance Free RPC se check hoga (Zero Ankr Credits!)
+        // 🚀 FREE CHECK: Free Pool se balance check karo
         const usdtWei = await checkUsdtBalanceFree(user.depositAddress);
         const amountInUSDT = parseFloat(ethers.formatUnits(usdtWei, 18));
 
-        // 🔥 AGAR BALANCE 0 HAI, TOH WAPAS JAAO! (Kharcha bacha)
+        // 🔥 AGAR BALANCE 0 HAI, TOH WAPAS JAAO
         if (amountInUSDT < 0.1) {
             return; 
         }
@@ -261,7 +275,7 @@ const sweepFunds = async (user_id) => {
         console.log(`\n💰💰 [DEPOSIT DETECTED] ${amountInUSDT} USDT for User ${user.userId}... Switching to Paid Ankr RPC to Sweep!`);
 
         // ==========================================
-        // 🟢 PAISA MIL GAYA! AB PREMIUM ANKR USE KARO SWEEP KE LIYE
+        // 🟢 PREMIUM ANKR SWEEP LOGIC
         // ==========================================
         const bnbWei = await primaryProvider.getBalance(user.depositAddress);
         const feeData = await primaryProvider.getFeeData();
@@ -270,7 +284,6 @@ const sweepFunds = async (user_id) => {
         const pathIndex = parseInt(user._id.toString().substring(0, 8), 16); 
         const hdNode = HDNodeWallet.fromPhrase(process.env.MNEMONIC);
         
-        // Connect to Premium Provider for 100% success rate
         const userWallet = hdNode.derivePath(`44'/60'/0'/0/${pathIndex}`).connect(primaryProvider);
         const userUsdtContract = new ethers.Contract(process.env.USDT_CONTRACT_ADDRESS, usdtAbi, userWallet);
         const gasFunderWallet = new ethers.Wallet(process.env.GAS_FUNDER_PRIVATE_KEY, primaryProvider);
