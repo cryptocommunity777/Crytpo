@@ -249,7 +249,8 @@ const generateUserId = async () => {
 
 // 🔥 RANDOM PASSWORD GENERATOR HELPER FUNCTION
 const generateRandomPassword = (length = 8) => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    // Sirf Capital letters hataye hain, small letters aur numbers wahi hain
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     let pass = '';
     for (let i = 0; i < length; i++) {
         pass += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -278,7 +279,7 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     // 🔥 2. STRICT MOBILE VALIDATION
     const mobileRegex = /^[0-9]{10,15}$/;
     if (!mobile || !mobileRegex.test(mobile)) {
-        return res.status(400).json({ message: 'Invalid Mobile Number. Enter 10 to 15 digits only.' });
+        return res.status(400).json({ message: 'Invalid Mobile Number.' });
     }
 
     // 🔥 3. EMAIL CHECK

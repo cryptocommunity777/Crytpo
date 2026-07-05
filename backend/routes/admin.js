@@ -3210,18 +3210,13 @@ router.get('/wallet-update-history', verifyAdmin, async (req, res) => {
         const users = await User.find({
             walletAddress: { $exists: true, $ne: "" } 
         })
-        .select('userId name walletAddress walletAddressHistory createdAt')
+        .select('userId name walletAddress walletAddressUpdatedAt walletAddressHistory createdAt') // walletAddressUpdatedAt add kiya
         .lean();
 
         const formattedData = users.map(user => {
-            // 🔥 LOGIC: Agar history khali hai, toh 'createdAt' (registration time) ko use karo
             let history = user.walletAddressHistory && user.walletAddressHistory.length > 0 
                 ? [...user.walletAddressHistory] 
-                : [{ 
-                    address: user.walletAddress, 
-                    changedAt: user.createdAt, 
-                    updatedBy: "User (Initial Setup)" 
-                  }];
+                : []; // Empty history handle karne ke liye
 
             const reversedHistory = history.reverse();
             const latestChange = reversedHistory[0];
@@ -3231,8 +3226,10 @@ router.get('/wallet-update-history', verifyAdmin, async (req, res) => {
                 userId: user.userId,
                 name: user.name,
                 currentWallet: user.walletAddress || "Not Set",
-                latestUpdateAt: latestChange ? latestChange.changedAt : null,
-                latestUpdatedBy: latestChange ? (latestChange.updatedBy || 'User (Old Data)') : 'Unknown',
+                currentAddedAt: user.walletAddressUpdatedAt || user.createdAt, // Naya address kab set hua
+                latestUpdateAt: latestChange ? latestChange.changedAt : (user.walletAddressUpdatedAt || user.createdAt),
+                latestUpdatedBy: latestChange ? (latestChange.updatedBy || 'User (Old Data)') : 'User (Initial Setup)',
+                changeCount: history.length, // 🔥 Kitni baar change hua (Count)
                 history: reversedHistory
             };
         });
@@ -3282,6 +3279,17 @@ router.get('/search-user/:userId', verifyAdmin, async (req, res) => {
       user.sponsorName = "N/A"; // Agar kisi ne refer nahi kiya
     }
 
+    // 🔥 3. FIX FOR OLD HISTORY DATA: Purani history entries me jahan addedAt nahi hai, wahan fallback time daal do
+    if (user.walletAddressHistory && user.walletAddressHistory.length > 0) {
+      user.walletAddressHistory = user.walletAddressHistory.map(entry => {
+        if (!entry.addedAt) {
+          // Agar entry purani hai aur time nahi hai, toh user kab bana tha uska time de do
+          entry.addedAt = user.createdAt || user.updatedAt || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Agar kuch nahi mila toh 1 mahina purani date fallback me dikhayega
+        }
+        return entry;
+      });
+    }
+
     // Ensure we are sending EVERYTHING, including passwords and the new sponsorName
     res.json({ user: user });
   } catch (err) {
@@ -3298,8 +3306,8 @@ router.get('/search-user/:userId', verifyAdmin, async (req, res) => {
 // 🔥 FIX: ADDED verifyAdmin MIDDLEWARE 🔥
 router.put('/:userId', verifyAdmin, async (req, res) => { 
   try {
-    // 🔥 FRONTEND SE AANE WALE 'HISTORY' FIELDS KO ALAG NIKAL LIYA TAARI OVERWRITE NA HO 🔥
     const { 
+        authPassword, 
         password, 
         transactionPassword, 
         walletAddress, 
@@ -3311,41 +3319,50 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
         ...otherFields 
     } = req.body;
     
-    // 1. Pehle user ko fetch karo
+    const SECRET_SAVE_PASSWORD = process.env.ADMIN_SAVE_PASSWORD || "Ram@111";
+    
+    if (authPassword !== SECRET_SAVE_PASSWORD) {
+        return res.status(403).json({ message: "❌ Incorrect Authorization Password! Update denied." });
+    }
+
     const user = await User.findOne({ userId: Number(req.params.userId) });
     
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // 2. Baaki normal fields update karo (Ab History overwrite nahi hogi)
     Object.assign(user, otherFields);
 
     if (password) user.password = password;
     if (transactionPassword) user.transactionPassword = transactionPassword;
 
-    // 🔥 3. WALLET HISTORY LOGIC (FIRST TIME + UPDATES DONO TRACK HOGA) 🔥
+   // 🔥 3. WALLET HISTORY LOGIC (PURANA ADDRESS HISTORY ME JAYEGA)
+    // 🔥 3. WALLET HISTORY & CURRENT TIME LOGIC 🔥
+   // 🔥 3. WALLET HISTORY LOGIC (Added Time & Replaced Time) 🔥
+    // 🔥 3. WALLET HISTORY LOGIC (Added Time & Fallback) 🔥
     if (walletAddress && walletAddress.trim() !== user.walletAddress) {
       
-      // Agar array nahi bani hai toh bana do
-      if (!user.walletAddressHistory) {
-         user.walletAddressHistory = [];
+      const oldHistory = user.walletAddressHistory ? [...user.walletAddressHistory] : [];
+      
+      if (user.walletAddress && user.walletAddress.trim() !== "") {
+          const oldHistoryEntry = {
+              address: user.walletAddress,
+              // 🔥 Fallback: Agar purana time nahi hai, toh User ke create hone ka time ya aakhri update ka time le lo
+              addedAt: user.walletAddressUpdatedAt || user.createdAt || user.updatedAt || new Date(), 
+              changedAt: new Date(), 
+              updatedBy: "Admin"
+          };
+          user.walletAddressHistory = [...oldHistory, oldHistoryEntry];
       }
       
-      // 🔥 Yahan se purani IF condition hata di. Ab FIRST TIME add hone par bhi ye chalega
-      user.walletAddressHistory.push({
-          address: walletAddress.trim(), // Jo naya address dala gaya hai
-          changedAt: new Date(),
-          updatedBy: "Admin" // Kisne kiya (Admin)
-      });
-      
-      // Final address update
+      // Final naya address update
       user.walletAddress = walletAddress.trim();
+      // Naye wale address ka Set Time (Aaj ka time)
+      user.walletAddressUpdatedAt = new Date(); 
     }
     
     const updatedUser = await user.save();
 
-    // 🔥 ONLY PENDING WITHDRAWALS UPDATE
     if (walletAddress) {
       await Withdrawal.updateMany(
         { userId: Number(req.params.userId), status: "pending" },
@@ -3365,9 +3382,20 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
       );
     }
 
+    // 🔥 SECURITY FIX: Frontend par bhejne se pehle sensitive data hata do
+    const safeUserData = updatedUser.toObject(); // Mongoose document ko plain object banaya
+    
+    // Jo fields API payload me nahi dikhani, unko delete kar do
+    delete safeUserData.password;
+    delete safeUserData.transactionPassword;
+    delete safeUserData.authPassword; 
+    delete safeUserData.__v;
+    // Agar aur koi secret field hai toh usko bhi 'delete safeUserData.fieldName' karke hata sakte hain.
+
+    // Ab safe data frontend ko bhejo
     res.json({
       message: "✅ User updated successfully",
-      user: updatedUser
+      user: safeUserData 
     });
 
   } catch (err) {

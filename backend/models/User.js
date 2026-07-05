@@ -118,13 +118,18 @@ const userSchema = new mongoose.Schema({
   walletAddressChangeCount: { type: Number, default: 0 },
   walletAddressChangeWindowStart: { type: Date, default: null },
   // models/User.js ke andar dhundhiye aur ye add kijiye:
-walletAddressHistory: [
+// 1. Root level par ek naya field (Naye address ka time track karne ke liye)
+  walletAddressUpdatedAt: { type: Date },
+
+// 2. Aapka purana history wala array (Isme bas 'addedAt' add kiya hai)
+  walletAddressHistory: [
   {
     address: { type: String },
+    addedAt: { type: Date }, // 🔥 BAS YE EK NAYI LINE ADD KARNI HAI
     changedAt: { type: Date, default: Date.now },
-    updatedBy: { type: String, default: "User" } // 🔥 YE NAYI LINE ADD KARNI HAI
+    updatedBy: { type: String, default: "User" } 
   }
-],
+  ],
   
 
 // User Schema mein yeh do lines add karein:

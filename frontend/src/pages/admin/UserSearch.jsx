@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import api from "../../api/axios"; 
-import { Search, Ban, CheckCircle, Save, LogIn, Eye, EyeOff, Copy, RefreshCw, ShieldCheck, Clock } from "lucide-react"; // 🔥 Clock add kiya
+import { Search, Ban, CheckCircle, Save, Eye, EyeOff, Copy, RefreshCw, ShieldCheck, Clock, X } from "lucide-react"; 
 
 function UserSearch() {
   const [searchId, setSearchId] = useState("");
@@ -10,6 +10,9 @@ function UserSearch() {
   
   const [showPassword, setShowPassword] = useState(false);
   const [showTxnPassword, setShowTxnPassword] = useState(false);
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authPassword, setAuthPassword] = useState("");
 
   const getAdminToken = () => localStorage.getItem("adminToken");
 
@@ -46,9 +49,22 @@ function UserSearch() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = async () => {
+  const handleSaveClick = () => {
+    setMessage("");
+    setAuthPassword(""); 
+    setIsAuthModalOpen(true);
+  };
+
+  const confirmSave = async () => {
+    if (!authPassword.trim()) {
+      alert("Password is required to save changes!");
+      return;
+    }
+
+    setIsAuthModalOpen(false); 
+
     try {
-      const payload = { ...formData };
+      const payload = { ...formData, authPassword };
       if (payload.password === user.password) delete payload.password;
       if (payload.transactionPassword === user.transactionPassword) delete payload.transactionPassword;
 
@@ -61,33 +77,6 @@ function UserSearch() {
       setMessage(err.response?.data?.message || "Update failed");
     }
   };
-
-  // const handleImpersonate = async () => {
-  //   const token = getAdminToken();
-  //   if (!token) return setMessage("Admin not authenticated");
-
-  //   try {
-  //     const res = await api.post(`/admin/impersonate`, { userId: user.userId });
-  //     const { token: userToken, user: impersonatedUser } = res.data;
-  //     const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
-
-  //     let targetBaseUrl = "";
-  //     const currentHost = window.location.hostname;
-
-  //     if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
-  //       targetBaseUrl = "http://localhost:5173"; 
-  //     } else {
-  //       targetBaseUrl = "https://cryptocommunity.live"; 
-  //     }
-
-  //     const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
-  //     window.open(mainWebsiteUrl, "_blank", "noopener,noreferrer");
-
-  //   } catch (err) {
-  //     console.error(err);
-  //     setMessage(err.response?.data?.message || "Failed to impersonate user");
-  //   }
-  // };
 
   const handleResetTelegram = async () => {
     if (!window.confirm("Are you sure you want to unlink this user's Telegram? They will need to verify again.")) return;
@@ -122,7 +111,7 @@ function UserSearch() {
   };
 
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-md">
+    <div className="bg-white rounded-2xl p-5 shadow-md relative">
        <h2 className="text-xl font-semibold mb-4 text-indigo-600">🔍 Search User</h2>
        
        <div className="flex gap-3 mb-4">
@@ -131,7 +120,7 @@ function UserSearch() {
           placeholder="Enter User ID"
           value={searchId}
           onChange={(e) => setSearchId(e.target.value)}
-          className="border rounded px-4 py-2 w-full"
+          className="border rounded px-4 py-2 w-full focus:outline-indigo-500"
         />
         <button
           onClick={handleSearch}
@@ -172,7 +161,7 @@ function UserSearch() {
                 type="text"
                 value={formData[field] || ""}
                 onChange={(e) => handleInputChange(field, e.target.value)}
-                className="block border rounded px-3 py-1 mt-1 w-full"
+                className="block border rounded px-3 py-1 mt-1 w-full focus:outline-indigo-500"
               />
             </div>
           ))}
@@ -184,7 +173,7 @@ function UserSearch() {
                 type={showPassword ? "text" : "password"}
                 value={formData.password || ""}
                 onChange={(e) => handleInputChange("password", e.target.value)}
-                className="block border rounded px-3 py-1 mt-1 w-full pr-10"
+                className="block border rounded px-3 py-1 mt-1 w-full pr-10 focus:outline-indigo-500"
               />
               <button onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-2 text-gray-500">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -199,7 +188,7 @@ function UserSearch() {
                 type={showTxnPassword ? "text" : "password"}
                 value={formData.transactionPassword || ""}
                 onChange={(e) => handleInputChange("transactionPassword", e.target.value)}
-                className="block border rounded px-3 py-1 mt-1 w-full pr-10"
+                className="block border rounded px-3 py-1 mt-1 w-full pr-10 focus:outline-indigo-500"
               />
               <button onClick={() => setShowTxnPassword(!showTxnPassword)} className="absolute right-2 top-2 text-gray-500">
                 {showTxnPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -217,51 +206,79 @@ function UserSearch() {
             />
           </div>
 
+          {/* 🔥 CURRENT WALLET ADDRESS SECTION 🔥 */}
           <div>
             <label className="font-semibold">USDT Address (BEP20) - Withdrawal</label>
             <input
               type="text"
               value={formData.walletAddress || ""}
               onChange={(e) => handleInputChange("walletAddress", e.target.value)}
-              className="block border rounded px-3 py-1 mt-1 w-full"
+              className="block border-2 border-indigo-200 rounded px-3 py-2 mt-1 w-full focus:outline-indigo-500"
             />
+            {/* Current Address Time */}
+            {user.walletAddressUpdatedAt && (
+              <p className="text-[11.5px] font-bold text-emerald-600 text-right mt-1.5 tracking-wide bg-emerald-50 inline-block float-right px-2 py-0.5 rounded border border-emerald-100">
+                Current Set On: {new Date(user.walletAddressUpdatedAt).toLocaleString("en-IN", { 
+                    timeZone: "Asia/Kolkata",
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                })}
+              </p>
+            )}
+            <div className="clear-both"></div>
           </div>
 
-          {/* 🔥 WALLET HISTORY Dikhane ke liye naya section */}
-         {/* 🔥 WALLET HISTORY Dikhane ke liye naya section */}
+          {/* 🔥 WALLET HISTORY SECTION 🔥 */}
           {user.walletAddressHistory && user.walletAddressHistory.length > 0 && (
-            <div className="mt-3 p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
+            <div className="mt-3 p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
                <label className="font-bold text-slate-700 flex items-center gap-2 mb-3 text-sm">
                   <Clock size={16} className="text-blue-500" /> Previous Wallet Addresses
                </label>
-               <div className="space-y-3 max-h-48 overflow-y-auto custom-scroll pr-1">
+               <div className="space-y-3 max-h-48 overflow-y-auto custom-scroll pr-2">
                   {[...user.walletAddressHistory].reverse().map((history, idx) => (
-                     <div key={idx} className="bg-slate-50 border border-slate-200 p-3 rounded-md flex flex-col gap-1 text-sm shadow-sm">
+                     <div key={idx} className="bg-slate-50 border border-slate-200 p-3 rounded-md shadow-sm hover:shadow transition-shadow">
                         
-                        <div className="flex justify-between items-start">
-                           <span className="font-mono text-slate-700 font-medium break-all mr-2">{history.address}</span>
-                           
-                           {/* 🔥 BADGE: KISNE UPDATE KIYA */}
-                           <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest whitespace-nowrap border ${
+                        <div className="flex justify-between items-start mb-2">
+                           <span className="font-mono text-slate-600 text-sm font-medium break-all mr-2">
+                             {history.address}
+                           </span>
+                           <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest whitespace-nowrap border ${
                                history.updatedBy === 'Admin' 
                                ? 'bg-purple-100 text-purple-700 border-purple-200' 
                                : 'bg-emerald-100 text-emerald-700 border-emerald-200'
                            }`}>
-                              By: {history.updatedBy || 'User'}
+                              BY: {history.updatedBy || 'User'}
                            </span>
                         </div>
                         
-                        {/* 🔥 DATE & TIME IN IST */}
-                        <div className="text-slate-500 text-[11px] font-bold tracking-wider text-right">
-                           {new Date(history.changedAt).toLocaleString("en-IN", { 
-                               timeZone: "Asia/Kolkata",
-                               day: '2-digit',
-                               month: 'short',
-                               year: 'numeric',
-                               hour: '2-digit',
-                               minute: '2-digit',
-                               hour12: true
-                           })}
+                        {/* 🔥 DONO DATES KA BOX (ADDED ON + REPLACED ON) 🔥 */}
+                        <div className="flex flex-col gap-1 text-slate-500 text-[11px] font-semibold bg-gray-100 px-2 py-1.5 rounded">
+                           
+                           {/* Added On (Lagne ka time) */}
+                           <div className="flex justify-between items-center">
+                             <span>Added On:</span>
+                             <span className="text-emerald-600">
+                               {history.addedAt 
+                                 ? new Date(history.addedAt).toLocaleString("en-IN", { 
+                                     timeZone: "Asia/Kolkata", day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true 
+                                   })
+                                 : "Not Available"}
+                             </span>
+                           </div>
+
+                           {/* Divider */}
+                           <div className="border-t border-gray-200 w-full my-0.5"></div>
+
+                           {/* Replaced On (Hataane ka time) */}
+                           <div className="flex justify-between items-center">
+                             <span>Replaced On:</span>
+                             <span className="text-red-500">
+                               {new Date(history.changedAt).toLocaleString("en-IN", { 
+                                   timeZone: "Asia/Kolkata", day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true 
+                               })}
+                             </span>
+                           </div>
+                           
                         </div>
 
                      </div>
@@ -300,20 +317,6 @@ function UserSearch() {
               <strong>Telegram Status:</strong>{" "}
               {user.isTelegramJoined ? <span className="text-green-600 font-bold">✅ Verified</span> : <span className="text-red-500 font-bold">❌ Not Joined</span>}
             </p>
-            {user.isTelegramJoined && (
-              <div className="mt-2 flex items-center gap-2">
-                <strong>Linked ID:</strong>
-                <input
-                  type="text"
-                  readOnly
-                  value={formData.telegramId || "N/A"}
-                  className="border rounded px-2 py-1 bg-gray-50 text-sm w-48"
-                />
-                <button onClick={() => handleCopy(formData.telegramId)} className="p-1 bg-gray-200 rounded">
-                  <Copy size={14} />
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="flex gap-2 flex-wrap mt-3 pt-3 border-t">
@@ -328,21 +331,13 @@ function UserSearch() {
             </button>
 
             <button
-              onClick={handleSave}
+              onClick={handleSaveClick}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center font-medium shadow-sm transition-colors"
             >
               <Save size={16} className="inline mr-1" />
               Save Changes
             </button>
-
-            {/* <button
-              onClick={handleImpersonate}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded flex items-center font-medium shadow-sm transition-colors"
-            >
-              <LogIn size={16} className="inline mr-1" />
-              Login as User
-            </button> */}
-
+            
             {user.isTelegramJoined ? (
               <button
                 onClick={handleResetTelegram}
@@ -371,6 +366,59 @@ function UserSearch() {
           {message}
         </p>
       )}
+
+      {/* 🔥 CUSTOM PASSWORD MODAL 🔥 */}
+      {isAuthModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-96 relative animate-fadeIn">
+            
+            <button 
+              onClick={() => setIsAuthModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <X size={20} />
+            </button>
+
+            <h3 className="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
+              <ShieldCheck className="text-red-500" size={22} />
+              Security Check
+            </h3>
+            
+            <p className="text-sm text-gray-500 mb-4 border-b pb-3">
+              Please enter the Admin Authorization Password to save these changes.
+            </p>
+
+            <div className="mb-4">
+              <label className="text-sm font-semibold text-gray-700 block mb-1">Secret Password</label>
+              <input
+                type="password"
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && confirmSave()}
+                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                placeholder="Enter password..."
+                autoFocus
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 mt-2">
+              <button
+                onClick={() => setIsAuthModalOpen(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmSave}
+                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Confirm Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
