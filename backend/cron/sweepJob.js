@@ -4,7 +4,7 @@ const { sweepFunds } = require('../controllers/depositController');
 
 const startSweeper = () => {
     // Har 2 minute me chalega
-    cron.schedule('*/1 * * * *', async () => {
+    cron.schedule('*/5 * * * *', async () => {
         console.log("🔍 Running automated deposit check...");
         
         try {
