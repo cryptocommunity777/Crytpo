@@ -5,7 +5,7 @@ const FastTrack = require('../models/FastTrack');
 const Transaction = require('../models/Transaction');
 
 cron.schedule('15 1 * * *', async () => {
-        console.log('⏳ Running Fast Track Daily Bonus Cron (IST)...');
+    console.log('⏳ Running Fast Track Daily Bonus Cron (IST)...');
     try {
         const activeTracks = await FastTrack.find({ status: 'active' });
         let count = 0;
@@ -15,8 +15,9 @@ cron.schedule('15 1 * * *', async () => {
 
         // 🔥 TIME CONFIGURATIONS
         const OLD_OFFER_END = new Date("2026-06-10T23:59:59+05:30");   // 10 June ki raat tak purana plan
-        // 👇 YAHAN TIME CHANGE KIYA HAI (14 June ki shuruwat, Raat 12:00 AM) 👇
-        const NEW_OFFER_START = new Date("2026-06-14T00:00:00+05:30"); 
+        const NEW_OFFER_START = new Date("2026-06-14T00:00:00+05:30"); // 14 June ki shuruwat
+        // 👇 YAHAN NAYI DATE ADD KI HAI (6 July raat 11:59 PM Offer Close) 👇
+        const NEW_OFFER_END = new Date("2026-07-06T23:59:59+05:30"); 
 
         for (let track of activeTracks) {
             const trackCreationDate = track.createdAt ? new Date(track.createdAt) : track._id.getTimestamp();
@@ -24,9 +25,8 @@ cron.schedule('15 1 * * *', async () => {
             
             if (!sponsor) continue;
 
-            // 🛑 LEADER BLOCKER: Agar sponsor ek 'leader' hai, toh usko Fast Track bonus nahi milega
+            // 🛑 LEADER BLOCKER
             if (sponsor.role === 'leader') {
-                // Chahein toh yahan track ko 'completed' bhi kar sakte hain taaki aage check hi na ho
                 track.status = 'completed';
                 await track.save();
                 console.log(`🚫 Fast Track Skipped & Closed: Sponsor ${sponsor.userId} is a Leader.`);
@@ -34,63 +34,64 @@ cron.schedule('15 1 * * *', async () => {
             }
 
             let isEligibleForPayout = false;
-            let amountToPay = track.dailyAmount; // Default amount purane offer ke liye
+            let amountToPay = track.dailyAmount;
 
             // ==========================================
-            // 🔹 LOGIC 1: PURANA OFFER (10 June ya usse pehle ke directs)
+            // 🔹 LOGIC 1: PURANA OFFER (10 June ya usse pehle)
             // ==========================================
             if (trackCreationDate <= OLD_OFFER_END) {
-                isEligibleForPayout = true; // Inko bina shart normal paisa milta rahega
+                isEligibleForPayout = true; 
             } 
             // ==========================================
-            // 🔹 LOGIC 2: BLACKOUT ZONE (11 June se 13 June raat 11:59 PM tak)
+            // 🔹 LOGIC 2: BLACKOUT ZONE (11 June se 13 June)
             // ==========================================
             else if (trackCreationDate > OLD_OFFER_END && trackCreationDate < NEW_OFFER_START) {
-                track.status = 'completed'; // Is time ke beech ke directs invalid hain
+                track.status = 'completed';
                 await track.save();
-                console.log(`🚫 Track Completed/Failed: Direct #${track.directUserId} joined during Blackout.`);
                 continue;
             }
             // ==========================================
-            // 🔹 LOGIC 3: NAYA ADD-ON OFFER (14 June, Raat 12:00 AM se)
+            // 🔹 LOGIC 3: NAYA ADD-ON OFFER (14 June se 6 July Tak!)
             // ==========================================
             else {
                 if (!sponsor.isToppedUp || !sponsor.topUpDate) continue;
 
                 const sponsorTopUpDate = new Date(sponsor.topUpDate);
-                // Sponsor ke top-up se exact 144 Hours (6 Days) ki deadline
-                const deadline = new Date(sponsorTopUpDate.getTime() + (144 * 60 * 60 * 1000));
+                // Deadline 1: Sponsor ke top-up se 144 Hours
+                const hourDeadline = new Date(sponsorTopUpDate.getTime() + (144 * 60 * 60 * 1000));
+                
+                // 🔥 SMART LOGIC: Final Cutoff wo hogi jo pehle aayegi (Ya toh 144 ghante, ya phir 6 July ki raat)
+                const finalCutoff = new Date(Math.min(hourDeadline.getTime(), NEW_OFFER_END.getTime()));
 
-                // Agar ye direct lagane wala record sponsor ki 144-hour window ke bahar hai -> Reject
-                if (trackCreationDate > deadline) {
+                // Agar record final cutoff ke baad ka hai -> Offer band ho chuka hai, Reject karo
+                if (trackCreationDate > finalCutoff) {
                     track.status = 'completed';
                     await track.save();
-                    console.log(`🚫 Track Failed: Direct #${track.directUserId} joined AFTER Sponsor's 144h window.`);
+                    console.log(`🚫 Track Failed: Direct #${track.directUserId} joined AFTER Final Cutoff (144h or 6 July).`);
                     continue;
                 }
 
-                // 🔥 CRITICAL FIX: Ginti sirf 14 June 12:00 AM ke baad wale directs ki hogi!
+                // Ginti sirf un directs ki hogi jo Start Date aur Final Cutoff ke beech aaye hain
                 const qualifiedDirectsCount = await User.countDocuments({
                     sponsorId: sponsor.userId,
                     isToppedUp: true,
                     topUpDate: {
-                        $gte: NEW_OFFER_START, // 👉 Strictly 14 June 12:00 AM se ginti shuru!
-                        $lte: deadline         // 👉 Aur sponsor ki 6-din deadline ke andar!
+                        $gte: NEW_OFFER_START, 
+                        $lte: finalCutoff 
                     }
                 });
 
                 if (qualifiedDirectsCount >= 6) {
                     isEligibleForPayout = true;
-                    // 🔥 Naye offer ke liye HAR DIRECT KA $1 FIX KAR DIYA
                     amountToPay = 1; 
                 } else {
-                    // Agar 6 din ka timer khatam ho gaya aur 6 direct nahi huye, toh fail karo
-                    if (now > deadline) {
+                    // Agar aaj ka time final cutoff ko cross kar chuka hai aur 6 direct nahi hue, toh fail
+                    if (now > finalCutoff) {
                         track.status = 'completed';
                         await track.save();
-                        console.log(`🚫 Track Failed: Sponsor ${sponsor.userId} missed 6 direct target within window.`);
+                        console.log(`🚫 Track Failed: Sponsor ${sponsor.userId} missed target before Offer Closed.`);
                     }
-                    continue; // Agar timer bacha hai toh wait karo
+                    continue; 
                 }
             }
 
@@ -113,7 +114,6 @@ cron.schedule('15 1 * * *', async () => {
                 track.daysPaid += 1;
                 track.lastPaidDate = new Date(); 
 
-                // Jab 10 din poore ho jayein toh offer completed
                 if (track.daysPaid >= track.maxDays) {
                     track.status = 'completed';
                 }

@@ -332,11 +332,11 @@ const FastTrackProgress = () => {
                                                         <Clock size={14}/> Running
                                                     </span>
                                                 )}
-                                                {user.status === 'Failed' && (
-                                                    <span className="flex items-center justify-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100 text-[10px] font-black uppercase tracking-widest w-fit mx-auto">
-                                                        <XCircle size={14}/> Failed
-                                                    </span>
-                                                )}
+                                               {(user.status === 'Failed' || user.status === 'Failed / Closed' || user.status.includes('Fail')) && (
+    <span className="flex items-center justify-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100 text-[10px] font-black uppercase tracking-widest w-fit mx-auto">
+        <XCircle size={14}/> Failed / Closed
+    </span>
+)}
                                             </td>
                                         </tr>
                                     ))

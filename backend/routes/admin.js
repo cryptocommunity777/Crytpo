@@ -1104,12 +1104,18 @@ router.get('/global-team', verifyAdmin, async (req, res) => {
 router.get('/fast-track-progress', verifyAdmin, async (req, res) => {
     try {
         const NEW_OFFER_START = new Date("2026-06-14T00:00:00+05:30");
+        // 👇 YAHAN BHI 6 JULY CUTOFF ADD KIYA 👇
+        const NEW_OFFER_END = new Date("2026-07-06T23:59:59+05:30"); 
         const now = new Date();
 
-        // 1. 🔥 Ek hi baar saara zaroori data uthao (Loop ke andar query NAHI karni hai)
-        const allUsers = await User.find({ isToppedUp: true })
-            .select('userId name topUpDate sponsorId')
-            .lean();
+        // 1. 🔥 Ek hi baar saara zaroori data uthao 
+        // 🛑 LEADERS KO LIST SE GAYAB KAR DIYA (role: { $ne: 'leader' })
+        const allUsers = await User.find({ 
+            isToppedUp: true,
+            role: { $ne: 'leader' } 
+        })
+        .select('userId name topUpDate sponsorId role')
+        .lean();
 
         // 2. RAM (Memory) me ek Map banayenge fast calculation ke liye
         const userMap = {};
@@ -1117,25 +1123,28 @@ router.get('/fast-track-progress', verifyAdmin, async (req, res) => {
             if (!user.topUpDate) continue;
             
             const topUpDate = new Date(user.topUpDate);
-            const deadline = new Date(topUpDate.getTime() + (144 * 60 * 60 * 1000)); // 6 Days (144 hours)
+            // Sponsor ko apne top-up se 144 ghante milte hain
+            const hourDeadline = new Date(topUpDate.getTime() + (144 * 60 * 60 * 1000));
+            
+            // 🔥 SMART CUTOFF: Ya toh 144 ghante, ya 6 July raat 12 baje (Jo bhi pehle aaye)
+            const finalCutoff = new Date(Math.min(hourDeadline.getTime(), NEW_OFFER_END.getTime()));
             
             userMap[user.userId] = {
                 userId: user.userId,
                 name: user.name,
                 topUpDate: user.topUpDate,
-                deadline: deadline,
+                deadline: finalCutoff, // Ab list is cutoff ke hisaab se chalegi
                 directs: 0
             };
         }
 
         // 3. 🔥 In-Memory Directs Calculation (Database par no load)
         for (let directUser of allUsers) {
-            // Agar is user ka koi sponsor hai aur us sponsor ka data Map me available hai
             if (directUser.sponsorId && userMap[directUser.sponsorId] && directUser.topUpDate) {
                 const sponsor = userMap[directUser.sponsorId];
                 const directTopUpDate = new Date(directUser.topUpDate);
 
-                // Agar direct 14 June ke baad aaya hai aur sponsor ki deadline ke andar hai
+                // Agar direct 14 June ke baad aaya hai aur sponsor ki Final Cutoff ke andar hai
                 if (directTopUpDate >= NEW_OFFER_START && directTopUpDate <= sponsor.deadline) {
                     sponsor.directs += 1;
                 }
@@ -1148,10 +1157,13 @@ router.get('/fast-track-progress', verifyAdmin, async (req, res) => {
             const sponsor = userMap[key];
             if (sponsor.directs >= 1) {
                 let status = 'In Progress';
+                
                 if (sponsor.directs >= 6) {
                     status = 'Achieved';
-                } else if (now > sponsor.deadline) {
-                    status = 'Failed';
+                } 
+                // Agar aaj ki date cutoff ko cross kar chuki hai, toh sidha Failed
+                else if (now > sponsor.deadline) {
+                    status = 'Failed / Closed';
                 }
 
                 sponsor.status = status;
