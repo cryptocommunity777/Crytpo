@@ -15,6 +15,7 @@ import SuccessModal from "../../components/modals/SuccessModal";
 import TelegramPopup from "../../components/TelegramPopup";
 import PromoVideoBox from "../../components/dashboard/PromoVideoBox"; 
 //import FastTrackTimerBanner from "../../components/dashboard/FastTrackTimerBanner"; // Import yahan se ho raha hai
+import UpcomingFeaturesBanner from "../../components/dashboard/UpcomingFeaturesBanner";
 import StakingPopup from "../../components/StakingPopup";
 // 🔥 MONTHLY REWARD BOX IMPORT
 import MonthlyRewardBox from "../../components/MonthlyRewardBox";
@@ -197,6 +198,7 @@ const Dashboard = ({ setModalState }) => {
 
  {/* 🔥 SMART TIMER BANNER: Yeh sirf valid users ko dikhega */}
       {/* <FastTrackTimerBanner user={user} /> */}
+      <UpcomingFeaturesBanner />
 
         <div>
             <PromoVideoBox />
