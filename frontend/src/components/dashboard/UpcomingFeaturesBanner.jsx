@@ -56,7 +56,7 @@ const UpcomingFeaturesBanner = () => {
               </h4>
             </div>
            <p className="text-xs text-slate-600 font-bold leading-relaxed pl-1">
-              Tranfer CCT directly with your downline Team!
+              Transfer CCT directly with your downline Team!
             </p>
           </div>
 
