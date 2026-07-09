@@ -23,7 +23,7 @@ const ConvertCctModal = ({ onClose, onSuccess, walletBalance }) => {
 
   const handleConvert = async () => {
     if (!amount || amount < 1) return showMessage("Error", "❌ Enter a valid amount (Minimum $1).", "error");
-    if (Number(amount) > usableBalance) return showMessage("Error", `❌ Insufficient usable balance. You have $${usableBalance.toFixed(2)} available.`, "error");
+    if (Number(amount) > usableBalance) return showMessage("Error", `❌ Insufficient usable balance. You have $${(Math.floor(Number(usableBalance) * 100) / 100).toFixed(2)} available.`, "error");
     if (!transactionPassword) return showMessage("Error", "❌ Enter transaction password.", "error");
     
     setLoading(true);
@@ -73,9 +73,9 @@ const ConvertCctModal = ({ onClose, onSuccess, walletBalance }) => {
               <div className="flex justify-between items-center bg-white border border-slate-200 rounded-xl p-2 px-3 shadow-sm">
                  <div>
                     <span className="text-black text-[9px] uppercase tracking-wider font-bold block mb-0.5">USDT Balance</span>
-                    <div className="text-sm md:text-base font-black text-slate-800 font-mono">
-                      ${usableBalance.toFixed(2)}
-                    </div>
+                   <div className="text-sm md:text-base font-black text-slate-800 font-mono">
+  ${(Math.floor(Number(usableBalance) * 100) / 100).toFixed(2)}
+</div>
                  </div>
                  <div className="text-right">
                     <span className="text-black text-[9px] uppercase tracking-wider font-bold block mb-0.5">Action</span>

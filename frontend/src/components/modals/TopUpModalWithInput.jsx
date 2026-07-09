@@ -153,7 +153,7 @@ const TopUpModal = ({ onClose, onTopUpSuccess }) => {
              <div>
                 <span className="text-black text-[9px] uppercase tracking-wider font-bold block mb-0.5">Your Balance</span>
                 <div className="text-base md:text-lg font-black text-slate-800 font-mono">
-                  {walletBalance !== null ? `$${walletBalance.toFixed(2)}` : "..."}
+    {walletBalance !== null ? `$${(Math.floor(Number(walletBalance) * 100) / 100).toFixed(2)}` : "..."}
                 </div>
              </div>
              <div className="text-right">

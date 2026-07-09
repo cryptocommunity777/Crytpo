@@ -991,7 +991,7 @@ router.get('/history/:userId', async (req, res) => {
       return res.status(400).json({ message: 'Invalid user ID' });
     }
 
-    // 1. 🔥 YAHAN UPDATE KIYA: "convert_to_cct" aur "cct_stake_send" add kar diye!
+    // 1. 🔥 YAHAN UPDATE KIYA: "cct_transfer" add kar diya!
     const allowedTypes = [
       "deposit",
       "credit_to_wallet",
@@ -1003,8 +1003,9 @@ router.get('/history/:userId', async (req, res) => {
       "manual_credit",
       "manual_debit",
       "fast_track",
-      "convert_to_cct", // ✅ Convert ki entry allow karega
-      "cct_stake_send"  // ✅ Staking ki entry allow karega
+      "convert_to_cct", 
+      "cct_stake_send",  
+      "cct_transfer"    // ✅ Ab CCT transfers bhi wallet history me dikhenge
     ];
 
     // 2. ✨ MEGA QUERY

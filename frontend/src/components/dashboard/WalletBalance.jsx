@@ -56,7 +56,7 @@ const WalletBalance = ({ income = {} }) => {
   // 3. 🔥 UPDATED TOTAL EARNING: Ab isme fastTrackIncome bhi add ho gaya hai
   const totalEarning = directIncome + levelIncome + rewardIncome + globalGrowthIncome + fastTrackIncome;
   
-  const format = (val) => `$${Number(val || 0).toFixed(2)}`;
+const format = (val) => `$${(Math.floor(Number(val || 0) * 100) / 100).toFixed(2)}`;
 
   // 🔥 Copy Function
   const handleCopyId = () => {

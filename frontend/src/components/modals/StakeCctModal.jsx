@@ -116,9 +116,10 @@ const StakeCctModal = ({ onClose, onSuccess, cctBalance }) => {
               <div className="flex justify-between items-center bg-white border border-slate-200 rounded-xl p-2 px-3 shadow-sm">
                  <div>
                     <span className="text-black text-[9px] uppercase tracking-wider font-bold block mb-0.5">Your CCT Balance</span>
-                    <div className="text-sm md:text-base font-black text-green-600 font-mono">
-                      {isPromo ? "Demo Active" : `${Number(cctBalance || 0).toFixed(2)} CCT`}
-                    </div>
+                   <div className="text-sm md:text-base font-black text-green-600 font-mono">
+  {isPromo ? "Demo Active" : `${(Math.floor(Number(cctBalance || 0) * 100) / 100).toFixed(2)} CCT`}
+</div>
+
                  </div>
               </div>
 

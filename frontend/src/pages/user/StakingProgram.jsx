@@ -121,10 +121,22 @@ const StakingProgram = () => {
 
                 {/* STATS CARDS */}
                 <div className="grid grid-cols-2 gap-3 md:gap-4">
-                    <StatCard label="Available USDT" value={`$${stats.walletBalance.toFixed(2)}`} />
-                    <StatCard label="Available CCT" value={`${stats.cctBalance.toFixed(2)}`} />
-                    <StatCard label="Total Staked" value={`${stats.totalCctStaked.toFixed(2)}`} />
-                    <StatCard label="Total Staking Income" value={`${stats.stakedEarned.toFixed(2)}`} />
+                    <StatCard 
+                        label="Available USDT" 
+                        value={`$${(Math.floor((stats.walletBalance || 0) * 100) / 100).toFixed(2)}`} 
+                    />
+                    <StatCard 
+                        label="Available CCT" 
+                        value={`${(Math.floor((stats.cctBalance || 0) * 100) / 100).toFixed(2)}`} 
+                    />
+                    <StatCard 
+                        label="Total Staked" 
+                        value={`${(Math.floor((stats.totalCctStaked || 0) * 100) / 100).toFixed(2)}`} 
+                    />
+                    <StatCard 
+                        label="Total Staking Income" 
+                        value={`${(Math.floor((stats.stakedEarned || 0) * 100) / 100).toFixed(2)}`} 
+                    />
                 </div>
 
                 {/* STAKING PROGRESS */}
@@ -142,7 +154,7 @@ const StakingProgram = () => {
                     </div>
                 )}
 
-                {/* ACTION BUTTONS */}
+                {/* 🔥 ACTION BUTTONS (Wapas 3 Buttons Grid Set Kiya) */}
                 <div className="grid grid-cols-3 gap-2 md:gap-3 pt-2">
                     <button 
                         onClick={() => setIsConvertOpen(true)} 

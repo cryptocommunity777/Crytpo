@@ -94,7 +94,6 @@ const SuccessModal = ({
           </SuccessLayout>
         );
 
-      // 🔥 NAYA: CONVERT CCT KE LIYE
       case "convert":
         return (
           <SuccessLayout title="Conversion Done" icon={ArrowRightLeft}>
@@ -110,11 +109,9 @@ const SuccessModal = ({
           </SuccessLayout>
         );
 
-      // 🔥 NAYA: STAKE CCT KE LIYE
-     case "stake":
+      case "stake":
         return (
           <SuccessLayout title="Staking Done" icon={ShieldCheck}>
-            {/* 🔴 Compact banaya gaya hai: p-3, mt-1, text-3xl */}
             <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-3 w-full shadow-sm mt-1">
               <UserInfoBlock idLabel="Target ID" />
               <div className="flex flex-col items-center pt-0.5">
@@ -127,7 +124,6 @@ const SuccessModal = ({
           </SuccessLayout>
         );
         
-
       case "deposit":
         return (
           <SuccessLayout title="Deposit Successful" icon={ArrowDownLeft}>
@@ -160,6 +156,7 @@ const SuccessModal = ({
           </SuccessLayout>
         );
 
+      // 🔥 USDT TRANSFER (NORMAL)
       case "transfer":
         return (
           <SuccessLayout title="Transfer Done" icon={ArrowRightLeft}>
@@ -169,6 +166,22 @@ const SuccessModal = ({
                  <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Transfer Amount</span>
                  <span className="text-4xl font-black text-emerald-600 drop-shadow-sm">
                    ${amount}
+                 </span>
+              </div>
+            </div>
+          </SuccessLayout>
+        );
+
+      // 🔥 CCT TRANSFER (NAYA CASE ADD KIYA)
+      case "cct_transfer":
+        return (
+          <SuccessLayout title="CCT Transfer Done" icon={ArrowRightLeft}>
+            <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 w-full shadow-sm mt-2">
+              <UserInfoBlock idLabel="Sent To" />
+              <div className="flex flex-col items-center pt-1">
+                 <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Transfer Amount</span>
+                 <span className="text-4xl font-black text-emerald-600 drop-shadow-sm">
+                   {amount} CCT
                  </span>
               </div>
             </div>

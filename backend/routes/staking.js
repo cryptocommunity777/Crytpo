@@ -89,6 +89,112 @@ router.post('/convert', authMiddleware, async (req, res) => {
     }
 });
 
+
+router.post('/cct-transfer', authMiddleware, async (req, res) => {
+  try {
+    const { fromUserId, toUserId, amount, transactionPassword } = req.body;
+
+    const [sender, receiver] = await Promise.all([
+      User.findOne({ userId: Number(fromUserId) }),
+      User.findOne({ userId: Number(toUserId) }),
+    ]);
+
+    if (!sender) return res.status(404).json({ message: 'Sender not found' });
+    if (!receiver) return res.status(404).json({ message: 'Recipient not found' });
+
+    const amt = Number(amount);
+    
+    // ✨ LIMIT CHECK: Minimum 10 CCT
+    if (amt < 10) return res.status(400).json({ message: "Minimum transfer amount is 10 CCT" });
+
+    // ✨ INTEGER CHECK: Koi decimal nahi (e.g., 10, 11, 12 allow hoga)
+    if (amt % 1 !== 0) return res.status(400).json({ message: "Decimals not allowed. Please enter a whole number." });
+
+    // 🔥 PROMO USER LOGIC (Bypass for testing/promo if needed)
+    if (sender.role === "promo") {
+        sender.cctBalance -= amt;
+        receiver.cctBalance += amt;
+        await sender.save();
+        await receiver.save();
+        return res.json({ message: 'CCT Transfer successful (Promo Mode)' });
+    }
+
+    // ============================================
+    // 🛡️ STRICT RULES & CHECKS START
+    // ============================================
+
+    // 🛑 RULE 1: SENDER MUST HAVE ACTIVE STAKING (Leader is Exempted)
+    // Agar user leader nahi hai AUR usne stake nahi kiya hai, tabhi block hoga
+    if (!sender.isStaked && sender.role !== 'leader') {
+        return res.status(403).json({ message: 'Transfer Denied: You must have an active CCT Staking to use this feature.' });
+    }
+
+    // 🛑 RULE 2: PASSWORD CHECK
+    const isPasswordValid = (transactionPassword.toLowerCase() === sender.transactionPassword.toLowerCase());
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: 'Invalid transaction password' });
+    }
+
+    // 🛑 RULE 3: CCT BALANCE CHECK
+    if ((sender.cctBalance || 0) < amt) {
+      return res.status(400).json({ message: 'Insufficient CCT balance' });
+    }
+
+    // 🛑 RULE 4: STRICT DOWNLINE CHECK (Sirf Downline me transfer allow hoga)
+    let isDownline = false;
+    let currentSponsorId = receiver.sponsorId;
+    let depth = 0;
+    const maxDepth = 1000; // Infinite loop protection
+
+    while (currentSponsorId && depth < maxDepth) {
+      if (Number(currentSponsorId) === Number(sender.userId)) {
+        isDownline = true; // Mil gaya! Sender iska upline hai (Yani Receiver downline me hai)
+        break;
+      }
+      
+      // Upar ki taraf search badhao
+      const uplineUser = await User.findOne({ userId: Number(currentSponsorId) }).lean();
+      if (!uplineUser) break; 
+      
+      currentSponsorId = uplineUser.sponsorId;
+      depth++;
+    }
+
+    // Agar downline nahi hai, toh error throw karo (No Upline, No Crossline)
+    if (!isDownline) {
+      return res.status(403).json({ message: 'Transfer restricted. You can only transfer CCT to your direct or downline team members.' });
+    }
+
+    // ============================================
+    // 💸 CCT TRANSFER EXECUTION
+    // ============================================
+    sender.cctBalance -= amt;
+    receiver.cctBalance = (receiver.cctBalance || 0) + amt;
+
+    await sender.save();
+    await receiver.save();
+
+    // Sender ki Transaction Report
+    await Transaction.create({
+      userId: sender.userId,
+      type: 'cct_transfer', // Specific type for CCT
+      fromUserId: sender.userId,
+      toUserId: receiver.userId,
+      amount: amt,
+      grossAmount: amt,
+      status: 'success',
+      description: `Transferred ${amt} CCT to Downline ID #${receiver.userId}`,
+      date: new Date()
+    });
+
+    res.json({ success: true, message: 'CCT Transfer successful' });
+
+  } catch (err) {
+    console.error("CCT Transfer error:", err);
+    res.status(500).json({ message: 'CCT Transfer failed due to server error' });
+  }
+});
+
 // 3. Stake CCT (Self or Downline)
 router.post('/stake', authMiddleware, async (req, res) => {
     try {

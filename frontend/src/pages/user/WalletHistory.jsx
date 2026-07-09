@@ -19,12 +19,12 @@ const WalletHistory = () => {
   const allTypes = [
     "deposit", "credit_to_wallet", "credit", "transfer", "topup", 
     "debit_topup", "withdrawal", "manual_credit", "manual_debit", "fast_track",
-    "convert_to_cct", "cct_stake_send"
+    "convert_to_cct", "cct_stake_send", "cct_transfer"
   ];
 
   const dropdownTypes = [
     "all", "deposit", "credit_to_wallet", "credit", "transfer", 
-    "topup", "withdrawal", "fast_track", "convert_to_cct", "cct_stake_send"
+    "topup", "withdrawal", "fast_track", "convert_to_cct", "cct_stake_send", "cct_transfer"
   ];
 
   useEffect(() => {
@@ -62,7 +62,7 @@ const WalletHistory = () => {
       .filter(t => {
         const desc = (t.description || "").toLowerCase();
         
-        // 🔥 DUPLICATE ENTRY FIX FOR TRANSFERS
+        // 🔥 DUPLICATE ENTRY FIX FOR USDT TRANSFERS
         if (t.type === 'transfer') {
             const isSender = String(t.fromUserId) === String(uid) || String(t.userId) === String(uid);
             const isReceiver = String(t.toUserId) === String(uid);
@@ -70,6 +70,14 @@ const WalletHistory = () => {
             if (!isSender && !isReceiver) return false;
             if (isReceiver && !isSender && desc.includes("transferred")) return false;
             if (isSender && !isReceiver && desc.includes("received")) return false;
+        }
+
+        // 🔥 CCT TRANSFER FIX: Backend creates only 1 entry, so receiver MUST see it!
+        if (t.type === 'cct_transfer') {
+            const isSender = String(t.fromUserId) === String(uid) || String(t.userId) === String(uid);
+            const isReceiver = String(t.toUserId) === String(uid);
+            
+            if (!isSender && !isReceiver) return false;
         }
 
         // 🔥 LEADER BONUS HIDDEN FROM ALL
@@ -126,7 +134,7 @@ const WalletHistory = () => {
 
  const calculateBalances = () => {
   let runningBalance = 0; // 🔥 Main Wallet Track
-  let cctRunningBalance = 0; // 🔥 CCT Wallet Track (NAYA)
+  let cctRunningBalance = 0; // 🔥 CCT Wallet Track
 
   return transactions.map((txn) => {
     let mathImpact = 0;
@@ -164,8 +172,8 @@ const WalletHistory = () => {
         break;
 
       case "convert_to_cct":
-        mathImpact = -amt; // Main se katega
-        cctMathImpact = amt; // CCT me aayega
+        mathImpact = -amt; 
+        cctMathImpact = amt; 
         colorStyle = "text-purple-600";
         operator = "-";
         displayTypeUI = "CONVERTED";
@@ -173,12 +181,31 @@ const WalletHistory = () => {
         break;
 
       case "cct_stake_send":
-        mathImpact = 0; // 🔥 YAHI PROBLEM THI: Ab Main wallet minus nahi hoga
-        cctMathImpact = -amt; // 🔥 Sirf CCT minus hoga
+        mathImpact = 0; 
+        cctMathImpact = -amt; 
         colorStyle = "text-indigo-600";
-        operator = ""; // Main operator blank
+        operator = ""; 
         displayTypeUI = "STAKED";
         icon = <ArrowUpRight size={14} className="text-indigo-600" />;
+        break;
+
+      // 🔥 UPDATE: CCT TRANSFER RECEIVER LOGIC
+      case "cct_transfer":
+        if (toId === myId) {
+          cctMathImpact = amt; // 🔥 Receiver ka CCT PLUS hoga
+          colorStyle = "text-indigo-600";
+          operator = "+";
+          displayTypeUI = "CCT RECEIVED";
+          icon = <ArrowDownLeft size={14} className="text-indigo-600" />;
+          // 🔥 Smart description for receiver
+          finalDescription = `Received ${amt} CCT from ID #${fromId || txnOwnerId}`;
+        } else if (fromId === myId || (!fromId && txnOwnerId === myId)) {
+          cctMathImpact = -amt; // 🔥 Sender ka CCT MINUS hoga
+          colorStyle = "text-red-500";
+          operator = "-";
+          displayTypeUI = "CCT SENT";
+          icon = <ArrowRightLeft size={14} className="text-red-500" />;
+        }
         break;
 
       case "manual_debit":
@@ -204,6 +231,7 @@ const WalletHistory = () => {
           operator = "+";
           displayTypeUI = "RECEIVED";
           icon = <ArrowDownLeft size={14} className="text-green-500" />;
+          finalDescription = `Received $${amt} from ID #${fromId || txnOwnerId}`;
         } else if (fromId === myId || (!fromId && txnOwnerId === myId)) {
           mathImpact = -amt;
           colorStyle = "text-red-500";
@@ -249,15 +277,15 @@ const WalletHistory = () => {
     // 🔥 30 JUNE CCT FUND LOGIC
     const descLower = finalDescription.toLowerCase();
     const isCCTAddition = descLower.includes("cct wallet") || descLower.includes("to cct") || descLower.includes("cct bonus");
-    const isStakingOrConvert = txn.type === "cct_stake_send" || txn.type === "convert_to_cct" || descLower.includes("staked") || descLower.includes("convert"); 
+    const isStakingOrConvert = txn.type === "cct_stake_send" || txn.type === "convert_to_cct" || txn.type === "cct_transfer" || descLower.includes("staked") || descLower.includes("convert"); 
 
     const txnDate = new Date(txn.date);
     const june30 = new Date("2026-06-30T00:00:00");
 
     // Agar 30 June ke baad CCT Wallet me credit hua hai
     if (txnDate >= june30 && isCCTAddition && !isStakingOrConvert && mathImpact > 0) {
-        cctMathImpact = mathImpact; // CCT mein add kar do
-        mathImpact = 0; // Main balance pe asar mat dalo
+        cctMathImpact = mathImpact; 
+        mathImpact = 0; 
         operator = "";
     }
 
@@ -267,12 +295,13 @@ const WalletHistory = () => {
         cctRunningBalance += cctMathImpact;
     }
 
-    // Formatting Amounts properly
+    // 🔥 Formatting Amounts properly (CCT aur USDT dono ke liye)
     let finalFormattedAmt = `${operator} $${(amt || 0).toFixed(2)}`;
-    if (txn.type === "cct_stake_send" || (mathImpact === 0 && cctMathImpact !== 0)) {
+    
+    if (txn.type === "cct_stake_send" || txn.type === "cct_transfer" || (mathImpact === 0 && cctMathImpact !== 0)) {
         finalFormattedAmt = `${cctMathImpact > 0 ? '+' : cctMathImpact < 0 ? '-' : ''} ${amt.toFixed(2)} CCT`;
         if (txn.type !== "cct_stake_send") {
-           colorStyle = cctMathImpact > 0 ? "text-indigo-500" : "text-red-500";
+           colorStyle = cctMathImpact > 0 ? "text-indigo-600" : "text-red-500";
         }
     }
 
@@ -280,7 +309,7 @@ const WalletHistory = () => {
       ...txn,
       description: finalDescription,
       balance: userRole === "leader" ? "0.00" : (runningBalance || 0).toFixed(2),
-      cctBalance: userRole === "leader" ? "0.00" : (cctRunningBalance || 0).toFixed(2), // 🔥 NAYA CCT DATA
+      cctBalance: userRole === "leader" ? "0.00" : (cctRunningBalance || 0).toFixed(2),
       colorStyle,
       formattedAmount: finalFormattedAmt,
       displayTypeUI,
@@ -405,7 +434,6 @@ const WalletHistory = () => {
                 <th className="p-4 font-black">Type</th>
                 <th className="p-4 font-black">Amount</th>
                 <th className="p-4 font-black">Main Bal.</th>
-                {/* 🔥 NAYA COLUMN: CCT BALANCE */}
                 <th className="p-4 font-black text-indigo-600">CCT Bal.</th>
                 <th className="p-4 font-black">From / To</th>
                 <th className="p-4 font-black">Details</th>
@@ -473,7 +501,6 @@ const WalletHistory = () => {
                          ${txn.balance}
                       </td>
                       
-                      {/* 🔥 NAYA CCT CELL */}
                       <td className="p-4 font-black text-indigo-600">
                          {txn.cctBalance}
                       </td>

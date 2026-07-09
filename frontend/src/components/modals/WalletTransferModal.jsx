@@ -82,8 +82,8 @@ const WalletTransferModal = ({ onClose }) => {
       if (trimmedId === String(loggedInUser.userId))
         return showMessage("Error", "You cannot transfer to yourself.", "error");
       if (amt > senderBalance) 
-        return showMessage("Error", `Insufficient balance ($${senderBalance.toFixed(2)})`, "error");
-    }
+return showMessage("Error", `Insufficient balance ($${(Math.floor(Number(senderBalance) * 100) / 100).toFixed(2)})`, "error");
+        }
 
     setLoading(true);
     try {
@@ -168,9 +168,9 @@ const WalletTransferModal = ({ onClose }) => {
                     <div className="text-[10px] text-green-700 font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                        <Wallet size={12} /> Available Balance
                     </div>
-                    <div className="text-2xl font-black text-slate-800 font-mono">
-                      {senderBalance !== null ? `$${senderBalance.toFixed(2)}` : "..."}
-                    </div>
+                   <div className="text-2xl font-black text-slate-800 font-mono">
+  {senderBalance !== null ? `$${(Math.floor(Number(senderBalance) * 100) / 100).toFixed(2)}` : "..."}
+</div>
                  </div>
                </div>
 
