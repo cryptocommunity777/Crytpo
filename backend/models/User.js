@@ -141,6 +141,13 @@ passwordResetCount: { type: Number, default: 0 },
 lastPasswordResetDate: { type: Date },
 
  
+// Salary Trackers
+firstStakeDate: { type: Date }, // Time limit calculate karne ke liye
+salaryLevel: { type: Number, default: 0 }, // 0: None, 1: Starter, 2: Builder, 3: Leader, 4: Champion
+salaryMonthsPaid: { type: Number, default: 0 }, // Kitne mahine mil chuki (Max 24)
+
+monthlySalaryWallet: { type: Number, default: 0 }, // Jisme salary aayegi aur yahan se withdraw hogi
+totalSalaryEarned: { type: Number, default: 0 }, // Abhi tak tot
 
 // models/User.js ke andar CCT section:
 cctBalance: { type: Number, default: 0 },
@@ -151,6 +158,19 @@ totalCctStaked: { type: Number, default: 0 },
 stakedMaxCap: { type: Number, default: 0 },
 stakedEarned: { type: Number, default: 0 },
 isStaked: { type: Boolean, default: false },
+
+
+// models/User.js ke andar
+activeStakes: [{
+    amount: { type: Number, default: 0 },
+    maxCap: { type: Number, default: 0 },
+    earned: { type: Number, default: 0 },
+    dailyRate: { type: Number, default: 1.0 },
+    createdAt: { type: Date, default: Date.now },
+    status: { type: String, default: 'active' }
+}],
+stakingDailyRate: { type: Number, default: 1.0 }, // Old users backup ke liye
+
   // 🔥 Ye lines User schema mein hona zaroori hain
   editProfileOtp: { type: String },
   editProfileOtpExpiry: { type: Date },

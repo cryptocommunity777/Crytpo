@@ -13,6 +13,7 @@ const { startCron } = require('./roiCron');
 const User = require('./models/User'); 
 const startGlobalGrowthCron = require('./cron/autoGlobalGrowth');
 const startStakingCron = require('./cron/stakingCron');
+const startStakingSalaryCron = require('./cron/stakingSalaryCron'); // 🔥 YEH NAYI LINE ADD KAREIN
 
 const app = express();
 app.set('trust proxy', true);
@@ -134,6 +135,10 @@ mongoose.connect(process.env.MONGO_URI)
 
       startStakingCron();
       console.log("🚀 Staking 1% Daily Cron Started (Runs at 12:10 AM IST)");
+
+      // 🔥 Naya Monthly Salary wala cron
+      startStakingSalaryCron(); 
+      console.log('✅ Monthly Reward (Salary) Cron Started (Runs at 1:30 AM IST)');
 
       require('./cron/monthlyRewardCron');
       console.log('✅ Monthly Reward Cron Started');

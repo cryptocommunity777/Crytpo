@@ -46,7 +46,7 @@ const FastTrackTimerBanner = ({ user }) => {
       <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2.5 flex items-center justify-center gap-2 shadow-md">
         <AlertTriangle className="animate-bounce shrink-0 text-yellow-300" size={18} />
         <span className="font-black text-xs md:text-sm uppercase tracking-wider text-center drop-shadow-md animate-pulse">
-          🚨 OFFER EXTENDED & VALID TILL 6 JULY 2026 🚨
+          🚨 OFFER EXTENDED 🚨
         </span>
         <AlertTriangle className="animate-bounce shrink-0 text-yellow-300" size={18} />
       </div>

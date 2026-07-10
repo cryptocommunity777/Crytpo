@@ -66,6 +66,9 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
     { label: "Direct Income", icon: BadgeDollarSign, path: "/direct-income" },
     { label: "Level Income", icon: Users, path: "/level-income" },
     { label: "Staking Program", icon: Coins, path: "/staking-program" },
+    // 🔥 NAYE PAGES YAHAN ADD KIYE HAIN
+    { label: "Staking Direct", icon: BadgeDollarSign, path: "/staking-direct-income" },
+    { label: "Staking Level", icon: Users, path: "/staking-level-income" },
     { label: "Community Income", icon: BadgeDollarSign, path: "/community-income" },
     { label: "Withdrawals", icon: Banknote, path: "/withdrawals" },
     { label: "Wallet History", icon: History, path: "/wallet-history" },

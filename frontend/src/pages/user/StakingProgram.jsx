@@ -120,24 +120,34 @@ const StakingProgram = () => {
                 )}
 
                 {/* STATS CARDS */}
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                    <StatCard 
-                        label="Available USDT" 
-                        value={`$${(Math.floor((stats.walletBalance || 0) * 100) / 100).toFixed(2)}`} 
-                    />
-                    <StatCard 
-                        label="Available CCT" 
-                        value={`${(Math.floor((stats.cctBalance || 0) * 100) / 100).toFixed(2)}`} 
-                    />
-                    <StatCard 
-                        label="Total Staked" 
-                        value={`${(Math.floor((stats.totalCctStaked || 0) * 100) / 100).toFixed(2)}`} 
-                    />
-                    <StatCard 
-                        label="Total Staking Income" 
-                        value={`${(Math.floor((stats.stakedEarned || 0) * 100) / 100).toFixed(2)}`} 
-                    />
-                </div>
+               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+    <StatCard 
+        label="Available USDT" 
+        value={`$${(Math.floor((stats.walletBalance || 0) * 100) / 100).toFixed(2)}`} 
+    />
+    <StatCard 
+        label="Available CCT" 
+        value={`${(Math.floor((stats.cctBalance || 0) * 100) / 100).toFixed(2)}`} 
+    />
+    <StatCard 
+        label="Total Staked" 
+        value={`${(Math.floor((stats.totalCctStaked || 0) * 100) / 100).toFixed(2)}`} 
+    />
+    <StatCard 
+        label="Total Staking Income" 
+        value={`${(Math.floor((stats.stakedEarned || 0) * 100) / 100).toFixed(2)}`} 
+    />
+    
+    {/* 🔥 Naye CCT Direct aur Level Income (Abhi tak ka Total Earned) */}
+    <StatCard 
+        label="Staking Direct Income" 
+        value={`${(Math.floor((stats.cctStakingDirectIncome || 0) * 100) / 100).toFixed(2)}`} 
+    />
+    <StatCard 
+        label="Staking Level Income" 
+        value={`${(Math.floor((stats.cctStakingLevelIncome || 0) * 100) / 100).toFixed(2)}`} 
+    />
+</div>
 
                 {/* STAKING PROGRESS */}
                 {stats.isStaked && (
