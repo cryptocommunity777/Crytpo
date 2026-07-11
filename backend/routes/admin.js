@@ -338,10 +338,6 @@ router.get("/stats", verifyAdmin, async (req, res) => {
 
 
 
- 
-// =======================================================
-// 1. GET ALL USERS (SERVER-SIDE SEARCH & LEADER DEFAULT)
-// =======================================================
 router.get('/all-users', verifyAdmin, async (req, res) => {
   try {
     const { search = "", page = 1, limit = 50 } = req.query;
@@ -357,8 +353,8 @@ router.get('/all-users', verifyAdmin, async (req, res) => {
         ].filter(Boolean)
       };
     } else {
-      // 👑 🔥 NAYA FIX: Agar search khali hai, toh sirf "Leader" dikhao
-      query = { role: "leader" };
+      // 👑 🔥 NAYA FIX: Agar search khali hai, toh "Leader" aur "Super Leader" dono dikhao
+      query = { role: { $in: ["leader", "superleader"] } };
     }
 
     // 🔥 FIX: .lean() add kiya hai! 
@@ -425,7 +421,7 @@ router.put('/update-role/:userId', verifyAdmin, async (req, res) => {
 
     const oldRole = targetUser.role;
 
-    // 🔥 LEADER $30 LOGIC WITH TRANSACTION HISTORY 🔥
+    // 🔥 LEADER $30 LOGIC WITH TRANSACTION HISTORY 🔥 (Superleader ko isme add nahi kiya)
     if (oldRole !== 'leader' && newRole === 'leader') {
       targetUser.walletBalance = (targetUser.walletBalance || 0) + 30;
       

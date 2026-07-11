@@ -445,8 +445,11 @@ router.get('/direct-team/:userId', async (req, res) => {
     const currentUserId = Number(req.params.userId);
 
     // 🔥 1. Ek hi baar me saare users RAM mein load karenge (Superfast Breakaway ke liye)
-    // Isme 'role' fetch karna sabse zaruri hai!
     const allUsers = await User.find({}, 'userId sponsorId name mobile country topUpAmount createdAt role').lean();
+
+    // 👑 🔥 NAYA FIX: CURRENT USER KA ROLE CHECK KARO (Super Leader Bypass ke liye)
+    const currentUserData = allUsers.find(u => u.userId === currentUserId);
+    const isSuperLeader = currentUserData && currentUserData.role === 'superleader';
 
     // 2. RAM mein Network Tree (Map) banayenge
     const directMap = new Map();
@@ -470,14 +473,13 @@ router.get('/direct-team/:userId', async (req, res) => {
         const currentNode = mainQueue.shift();
         mainUserTotalTeam++; // Ek user count ho gaya
 
-        // 🛑 ABSOLUTE BREAKAWAY WALL 🛑
-        // Agar ye current banda 'leader' hai, toh network yahi cut ho jayega.
-        // Iske neeche ki team main user ko nahi dikhegi!
-        if (currentNode.role === 'leader') {
+        // 🛑 ABSOLUTE BREAKAWAY WALL (WITH SUPER LEADER BYPASS) 🛑
+        // Agar banda 'leader' hai aur check karne wala 'superleader' NAHI hai, tabhi roko.
+        if (currentNode.role === 'leader' && !isSuperLeader) {
             continue; 
         }
 
-        // Agar leader nahi hai, toh iski team aage queue mein add karo
+        // Agar leader nahi hai ya Super Leader bypass hai, toh iski team aage queue mein add karo
         const children = directMap.get(currentNode.userId) || [];
         for (let child of children) {
             mainQueue.push(child);
@@ -493,18 +495,18 @@ router.get('/direct-team/:userId', async (req, res) => {
 
         let teamSize = 0;
 
-        // Agar Direct member Leader hai, toh uski team 0 bhejenge (Frontend Breakaway)
-        if (direct.role === 'leader') {
+        // 🛑 Agar Direct member Leader hai aur user normal hai, toh uski team 0 bhejenge
+        if (direct.role === 'leader' && !isSuperLeader) {
             teamSize = 0; 
         } else {
-            // Agar normal user hai, toh uski team size calculate karenge (with Breakaway rules)
+            // Agar bypass allowed hai, toh uski team size calculate karenge
             let subQueue = [...membersDirects];
             while (subQueue.length > 0) {
                 const subNode = subQueue.shift();
                 teamSize++;
 
-                // Agar is normal user ki team mein koi Leader aa gaya, toh wahan break lag jayega
-                if (subNode.role === 'leader') {
+                // 🛑 Is sub-team ke andar bhi Breakaway check karenge (WITH BYPASS)
+                if (subNode.role === 'leader' && !isSuperLeader) {
                     continue; 
                 }
                 const subChildren = directMap.get(subNode.userId) || [];
@@ -520,11 +522,14 @@ router.get('/direct-team/:userId', async (req, res) => {
             name: direct.name,
             mobile: direct.mobile,
             country: direct.country,
-            role: direct.role, // 🔥 Frontend ko role bhej rahe hain red line aur badge ke liye
+            role: direct.role, 
             topUpAmount: direct.topUpAmount,
             createdAt: direct.createdAt,
             totalDirects: directCount,
-            totalTeam: teamSize // Yahan se calculated team jayegi (Leader ke liye 0)
+            totalTeam: teamSize,
+            // 🔥 NAYA FIX: Frontend ko same naam se data bhejo jo database mein hai
+            globalTeamCount: teamSize, 
+            directCount: directCount
         };
     });
 
@@ -533,8 +538,8 @@ router.get('/direct-team/:userId', async (req, res) => {
 
     // Response Bhejenge
     res.json({
-      team: teamWithStats,      // Table ka data (Leader ke liye totalTeam 0 jayega)
-      totalTeam: mainUserTotalTeam // Upar wale card ke liye total data (Breakaway filtered)
+      team: teamWithStats,      
+      totalTeam: mainUserTotalTeam 
     });
 
   } catch (err) {
@@ -557,12 +562,98 @@ router.get('/direct-team/:userId', async (req, res) => {
 // ---------------------------
 // 2. All Team (HIGHLY OPTIMIZED WITH GRAPH LOOKUP)
 // ---------------------------
+// router.get('/all-team/:userId', async (req, res) => {
+//   try {
+//     const currentUserId = Number(req.params.userId);
+
+//     // 🔥 1. Ek hi baar me saare users RAM mein load karenge (Superfast + Role Checking)
+//     const allUsers = await User.find({}, '_id userId sponsorId name country topUpAmount createdAt role').lean();
+
+//     // 2. RAM mein Network Tree banayenge
+//     const directMap = new Map();
+//     for (let u of allUsers) {
+//         if (u.sponsorId) {
+//             if (!directMap.has(u.sponsorId)) {
+//                 directMap.set(u.sponsorId, []);
+//             }
+//             directMap.get(u.sponsorId).push(u);
+//         }
+//     }
+
+//     // 3. Traversal with SECRET BREAKAWAY
+//     let allTeam = [];
+//     let queue = [];
+    
+//     // Stats maintain karne ke variables (Aapke purane code ke hisaab se)
+//     let directCount = 0;
+//     const levelWiseCount = {};
+
+//     // Pehle apne direct (Level 1) walo ko queue mein daalo
+//     const directs = directMap.get(currentUserId) || [];
+//     for (let d of directs) {
+//         queue.push({ user: d, level: 1 });
+//     }
+
+//     // Ab poora network traverse karenge
+//     while (queue.length > 0) {
+//         const { user, level } = queue.shift();
+
+//         // Stats update karo
+//         if (level === 1) directCount++;
+//         levelWiseCount[level] = (levelWiseCount[level] || 0) + 1;
+
+//         // User ko All Team list mein add kar do
+//         allTeam.push({
+//             srNo: allTeam.length + 1,
+//             _id: user._id,
+//             userId: user.userId,
+//             name: user.name,
+//             country: user.country,
+//             topUpAmount: user.topUpAmount || 0,
+//             createdAt: user.createdAt,
+//             level: level
+//             // Role ko hum response mein bhej hi nahi rahe, taaki frontend par kisi ko doubt na ho!
+//         });
+
+//         // 🛑 SECRET BREAKAWAY WALL 🛑
+//         // Agar ye current banda 'leader' hai, toh network aage badhna band ho jayega.
+//         // Iska matlab uske neeche ke Level 2, Level 3 wale log check hi nahi honge!
+//         if (user.role === 'leader') {
+//             continue; 
+//         }
+
+//         // Agar leader nahi hai, toh uske direct logo ko queue mein dalo (Next Level ke liye)
+//         const children = directMap.get(user.userId) || [];
+//         for (let child of children) {
+//             queue.push({ user: child, level: level + 1 });
+//         }
+//     }
+
+//     // 4. Response exactly aapke purane format me bhej rahe hain
+//     res.json({
+//       team: allTeam,
+//       totalTeamCount: allTeam.length,
+//       directCount: directCount,
+//       indirectCount: allTeam.length - directCount,
+//       levelWiseCount: levelWiseCount
+//     });
+
+//   } catch (err) {
+//     console.error('Error fetching team:', err);
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// });
+
 router.get('/all-team/:userId', async (req, res) => {
   try {
     const currentUserId = Number(req.params.userId);
 
     // 🔥 1. Ek hi baar me saare users RAM mein load karenge (Superfast + Role Checking)
     const allUsers = await User.find({}, '_id userId sponsorId name country topUpAmount createdAt role').lean();
+
+    // 🔥 CURRENT USER KA ROLE CHECK KARO (Check if he is a Super Leader)
+    const currentUserData = allUsers.find(u => u.userId === currentUserId);
+    const isSuperLeader = currentUserData && currentUserData.role === 'superleader';
 
     // 2. RAM mein Network Tree banayenge
     const directMap = new Map();
@@ -610,14 +701,13 @@ router.get('/all-team/:userId', async (req, res) => {
             // Role ko hum response mein bhej hi nahi rahe, taaki frontend par kisi ko doubt na ho!
         });
 
-        // 🛑 SECRET BREAKAWAY WALL 🛑
-        // Agar ye current banda 'leader' hai, toh network aage badhna band ho jayega.
-        // Iska matlab uske neeche ke Level 2, Level 3 wale log check hi nahi honge!
-        if (user.role === 'leader') {
+        // 🛑 SECRET BREAKAWAY WALL (WITH SUPER LEADER BYPASS) 🛑
+        // Agar ye current banda 'leader' hai, aur jo dekh raha hai wo 'superleader' NAHI hai, toh aage mat badho.
+        if (user.role === 'leader' && !isSuperLeader) {
             continue; 
         }
 
-        // Agar leader nahi hai, toh uske direct logo ko queue mein dalo (Next Level ke liye)
+        // Agar leader nahi hai (ya phir dekhne wala superleader hai), toh uske direct logo ko queue mein dalo
         const children = directMap.get(user.userId) || [];
         for (let child of children) {
             queue.push({ user: child, level: level + 1 });
@@ -727,7 +817,8 @@ router.get('/fix-missed-rewards', async (req, res) => {
 // C:\Users\HP\Desktop\Cryptocommunity\backend\routes\user.js (Ya jahan aapki user APIs hain)
 // C:\Users\HP\Desktop\Cryptocommunity\backend\routes\user.js
 
-const { getMonthlyLegStats } = require('../cron/monthlyRewardCron'); // Import the function from your cron file
+ 
+ const { getMonthlyLegStats } = require('../cron/monthlyRewardCron');
 
 // 🔥 Target 8 hata diya, sirf Target 7 tak rakha hai
 const REWARD_MILESTONES = [
@@ -740,33 +831,34 @@ const REWARD_MILESTONES = [
   { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7" }
 ];
 
-// 🔥 SPEED FIX: Simple In-Memory Cache (Taaki dashboard instantly load ho)
+// 🔥 SPEED FIX: Simple In-Memory Cache
 const rewardCache = new Map();
-const CACHE_TTL = 15 * 60 * 1000; // 15 Minutes tak data instantly aayega
+const CACHE_TTL = 15 * 60 * 1000; 
 
 router.get('/monthly-reward-stats/:userId', async (req, res) => {
     try {
-        const userId = Number(req.params.userId); // ID fetch
+        const userId = Number(req.params.userId); 
         
-        // 🚀 CACHE CHECK: Agar data already cache me hai, toh directly bhej do (Superfast load)
+        // 🚀 CACHE CHECK
         if (rewardCache.has(userId)) {
             const cached = rewardCache.get(userId);
-            // Agar data 15 minute se purana nahi hai
             if (Date.now() - cached.timestamp < CACHE_TTL) {
                 return res.json(cached.data);
             } else {
-                rewardCache.delete(userId); // Purana ho gaya toh delete kardo
+                rewardCache.delete(userId); 
             }
         }
 
+        // 👑 🔥 FIX 1: Current User ka role check karo
+        const currentUser = await User.findOne({ userId: userId }).select('role').lean();
+        const isSuperLeader = currentUser && currentUser.role === 'superleader';
+
         const now = new Date();
-        
-        // CURRENT MONTH ki start aur end date
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-        // 🔥 Cron file se getMonthlyLegStats call kar rahe hain (Calculation hogi)
-        const legStats = await getMonthlyLegStats(userId, startOfMonth, endOfMonth);
+        // 👑 🔥 FIX 2: isSuperLeader flag ko function me bhejo!
+        const legStats = await getMonthlyLegStats(userId, startOfMonth, endOfMonth, isSuperLeader);
         
         // Find current and next target
         let achievedTargets = [];
@@ -781,24 +873,23 @@ router.get('/monthly-reward-stats/:userId', async (req, res) => {
             }
         }
 
-        // Response Data Ready Karte Hain
+        // Response Data
         const responseData = {
             success: true,
             strongLeg: legStats.strongLeg,
             otherLegs: legStats.otherLegs,
-            strongLegId: legStats.strongLegId,     // 👉 Strong Leg wale ka ID
-            strongLegName: legStats.strongLegName, // 👉 Strong Leg wale ka Name
+            strongLegId: legStats.strongLegId,     
+            strongLegName: legStats.strongLegName, 
             milestones: REWARD_MILESTONES,
             nextTarget: nextTarget
         };
 
-        // 🚀 CACHE SAVE: Agli baar ke liye RAM mein save kar lo
+        // 🚀 CACHE SAVE
         rewardCache.set(userId, {
             data: responseData,
             timestamp: Date.now()
         });
 
-        // 🔥 Frontend ko data bhej rahe hain
         res.json(responseData);
 
     } catch (error) {
@@ -951,17 +1042,10 @@ router.put(
       // =======================================================
       // 🔹 4. BACKGROUND MLM ENGINE (Runs behind the scenes)
       // =======================================================
-    // =======================================================
-      // 🔹 4. BACKGROUND MLM ENGINE (Runs behind the scenes)
-      // =======================================================
-      // =======================================================
-      // 🔹 4. BACKGROUND MLM ENGINE (Runs behind the scenes)
-      // =======================================================
       (async () => {
           try {
               if (isFirstTopup) {
                   // 🌟 GLOBAL TEAM COUNT
-                  // 🔥 SMART CAPPING ENGINE CALL (Real Topup)
                   await processGlobalTeamGrowth(targetUser.userId);
 
                   if (targetUser.sponsorId) {
@@ -969,7 +1053,6 @@ router.put(
                       
                       // ✅ SPONSOR INCOME (ONLY IF SPONSOR IS ACTIVE/TOPPED-UP)
                       if (sponsor && sponsor.isToppedUp) {
-                          // DIRECT COUNT
                           sponsor.directCount = (sponsor.directCount || 0) + 1;
                           
                           // DIRECT INCOME (10%)
@@ -1002,10 +1085,13 @@ router.put(
                       }
                   }
 
-                  // 🌟 UNIFIED 100-LEVEL ENGINE (ABSOLUTE BREAKAWAY SYSTEM)
+                  // 🌟 UNIFIED 100-LEVEL ENGINE (SUPERLEADER BYPASS SYSTEM)
                   const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
                   let currentUplineId = targetUser.sponsorId; 
                   let currentLevel = 1;
+                  
+                  // 🔥 NAYA FLAG: Ye batayega ki breakaway wall hit hui ya nahi
+                  let isBreakawayHit = false;
 
                   while (currentUplineId && currentLevel <= 100) {
                       const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId role');
@@ -1020,6 +1106,14 @@ router.put(
                       }
 
                       const isCurrentUplineLeader = (upline.role === 'leader');
+                      const isCurrentUplineSuperLeader = (upline.role === 'superleader'); // 🔥 Naya role fetch kiya
+
+                      // 🛑 BREAKAWAY RULE: Agar Leader aa chuka hai, toh normal user block honge, par SUPERLEADER bypass kar jayega!
+                      if (isBreakawayHit && !isCurrentUplineSuperLeader) {
+                          currentUplineId = upline.sponsorId;
+                          currentLevel++;
+                          continue; // Block Normal User & other Leaders above breakaway
+                      }
 
                       // ============================================
                       // 1. LEVEL INCOME LOGIC (Level 2 se 20 tak)
@@ -1040,7 +1134,8 @@ router.put(
                       // ============================================
                       // 2. INSTANT LEADER 10% LOGIC & BREAKAWAY
                       // ============================================
-                      if (currentLevel >= 2 && isCurrentUplineLeader) {
+                      // Ye sirf pehle 'leader' ko milega (isBreakawayHit false hone par)
+                      if (currentLevel >= 2 && isCurrentUplineLeader && !isBreakawayHit) {
                           const instantBonusAmount = (amount * 10) / 100;
                           
                           await User.updateOne(
@@ -1058,9 +1153,10 @@ router.put(
                           console.log(`✅ [NORMAL ROUTE -> LEADER BONUS] Paid $${instantBonusAmount} to Leader ${upline.userId}`);
 
                           // 🔥 THE ULTIMATE LEADER BREAKAWAY WALL 🔥
-                          console.log(`[MLM ENGINE] Breakaway hit at Leader ${upline.userId} (Level ${currentLevel}). Normal Route Income distribution stopped completely.`);
+                          console.log(`[MLM ENGINE] Breakaway hit at Leader ${upline.userId} (Level ${currentLevel}). Normal users above are blocked, but Superleaders will bypass.`);
                           
-                          break; // Yahan chain toot jayegi. Iske upar kisi ko paisa nahi jayega!
+                          // BREAK nahi karenge ab, bas flag on kar denge!
+                          isBreakawayHit = true; 
                       }
 
                       currentUplineId = upline.sponsorId;
@@ -1071,7 +1167,6 @@ router.put(
               console.error("Background MLM Engine Error:", bgError);
           }
       })();
-      // Background process bracket closed here
 
     } catch (err) {
       console.error('Top-up Error:', err);
@@ -1081,6 +1176,7 @@ router.put(
     }
   }
 );
+
 
 // ==========================================
 // 🚀 LEADER SPECIAL: TOPUP ROUTE
@@ -1093,12 +1189,12 @@ router.put(
       const targetUserId = req.params.userId;
       const { amount, transactionPassword } = req.body;
 
-      // 🔹 1. Leader User & Password Check
       const currentUser = await User.findOne({ userId: req.user.userId });
       if (!currentUser) return res.status(404).json({ message: "Current user not found" });
       
-      if (currentUser.role !== 'leader') {
-          return res.status(403).json({ message: "Access denied. Only leaders can use this route." });
+      // 🔥 ALLOW BOTH LEADER & SUPERLEADER
+      if (currentUser.role !== 'leader' && currentUser.role !== 'superleader') {
+          return res.status(403).json({ message: "Access denied. Only leaders and superleaders can use this route." });
       }
 
       if (!transactionPassword) return res.status(400).json({ message: "Transaction password is required" });
@@ -1111,12 +1207,10 @@ router.put(
       const targetUser = await User.findOne({ userId: targetUserId });
       if (!targetUser) return res.status(404).json({ message: 'Target user not found' });
 
-      // 🔥 NAYA CHECK: Agar ID pehle se topup hai toh yahin rok do 🔥
       if (targetUser.isToppedUp) {
           return res.status(400).json({ message: "Action Denied! This ID is already activated (Topped Up)." });
       }
 
-      // 🔹 2. RELATIONSHIP CHECK (Direct, Self, or Downline)
       const isDirectReferral = Number(targetUser.sponsorId) === Number(currentUser.userId);
       const isSelfTopup = Number(targetUser.userId) === Number(currentUser.userId);
       
@@ -1144,10 +1238,7 @@ router.put(
           });
       }
 
-      // 🔥 IS IT A DUMMY (SHOWCASE) TOPUP?
       const isDummyTopup = isDirectReferral || isSelfTopup;
-
-      // 🔹 3. SMART WALLET CHECK
       let usableBalance = 0;
 
       if (isDummyTopup) {
@@ -1164,7 +1255,6 @@ router.put(
         }
       }
       
-      // 🔥 PAISA KATEGA YA NAHI? 🔥
       if (isDummyTopup) {
         console.log(`[DUMMY TOPUP] Leader ${currentUser.userId} activated ${targetUser.userId}. Leader balance NOT deducted.`);
       } else {
@@ -1177,7 +1267,6 @@ router.put(
          return Transaction.create({ ...data, date: new Date() });
       };
 
-      // 🔹 4. INSTANT RESPONSE & PROFILE UPDATE
       let isFirstTopup = !targetUser.isToppedUp;
       
       if (!targetUser.packages) targetUser.packages = [];
@@ -1206,7 +1295,6 @@ router.put(
         description: txDescription, status: 'success'
       });
 
-      // 🔥 Send response instantly
       let successMsg = isDummyTopup 
           ? `Success! Dummy ID Activated. Incomes sent to dashboard only.` 
           : `Success! Used $${amount} REAL balance to activate Downline member. Real incomes distributed.`;
@@ -1215,21 +1303,16 @@ router.put(
 
 
       // =======================================================
-      // 🔹 5. BACKGROUND MLM ENGINE (LEADER BREAKAWAY SYSTEM)
-      // =======================================================
-      // =======================================================
-      // 🔹 5. BACKGROUND MLM ENGINE (ABSOLUTE BREAKAWAY SYSTEM)
+      // 🔹 5. BACKGROUND MLM ENGINE (SUPERLEADER BYPASS SYSTEM)
       // =======================================================
       (async () => {
           try {
               if (isFirstTopup) {
-                  // 🌟 GLOBAL TEAM COUNT (Smart Capping Engine)
                   await processGlobalTeamGrowth(targetUser.userId);
 
                   if (targetUser.sponsorId) {
                       const sponsor = await User.findOne({ userId: targetUser.sponsorId });
                       if (sponsor) {
-                          // ✅ DIRECT COUNT & INCOME (10%)
                           sponsor.directCount = (sponsor.directCount || 0) + 1;
                           const DIRECT_BONUS_PERCENTAGE = 10; 
                           const directBonusAmount = (amount * DIRECT_BONUS_PERCENTAGE) / 100; 
@@ -1244,7 +1327,6 @@ router.put(
                               status: 'success'
                           });
 
-                          // 🔥 FAST TRACK (Only for Real Topups)
                           if (!isDummyTopup && sponsor.createdAt) {
                               const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
                               if ((new Date().getTime() - new Date(sponsor.createdAt).getTime()) <= thirtyDaysInMs) {
@@ -1259,20 +1341,27 @@ router.put(
                       }
                   }
 
-                  // 🌟 UNIFIED 100-LEVEL ENGINE (ABSOLUTE BREAKAWAY LOCK)
                   const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
                   let currentUplineId = targetUser.sponsorId; 
                   let currentLevel = 1;
+                  
+                  // 🔥 NAYA FLAG (Leader Bypass)
+                  let isBreakawayHit = false;
 
                   while (currentUplineId && currentLevel <= 100) {
                       const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId role');
                       if (!upline) break; 
 
                       const isCurrentUplineLeader = (upline.role === 'leader');
+                      const isCurrentUplineSuperLeader = (upline.role === 'superleader'); // 🔥 Superleader fetch
 
-                      // ============================================
-                      // 1. LEVEL INCOME LOGIC (Level 2 se 20 tak)
-                      // ============================================
+                      // 🛑 BREAKAWAY RULE
+                      if (isBreakawayHit && !isCurrentUplineSuperLeader) {
+                          currentUplineId = upline.sponsorId;
+                          currentLevel++;
+                          continue; 
+                      }
+
                       if (currentLevel >= 2 && currentLevel <= 20) {
                           if (upline.isToppedUp) {
                               const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
@@ -1293,10 +1382,7 @@ router.put(
                           }
                       }
 
-                      // ============================================
-                      // 2. INSTANT LEADER 10% LOGIC (Level 2 se 100 tak)
-                      // ============================================
-                      if (!isDummyTopup && currentLevel >= 2 && isCurrentUplineLeader) {
+                      if (!isDummyTopup && currentLevel >= 2 && isCurrentUplineLeader && !isBreakawayHit) {
                           const instantBonusAmount = (amount * 10) / 100;
                           
                           await User.updateOne(
@@ -1310,13 +1396,10 @@ router.put(
                               description: `10% Instant Bonus from Downline Activation (Level ${currentLevel})`,
                               status: "success"
                           });
-                      }
 
-                      // 🔥 THE ULTIMATE LEADER BREAKAWAY WALL 🔥
-                      // Agar ye upline Leader tha, toh iske baad connection cut!
-                      if (isCurrentUplineLeader) {
-                          console.log(`[MLM ENGINE] Breakaway hit at Leader ${upline.userId} (Level ${currentLevel}). Income distribution stopped.`);
-                          break; // Loop yahin khatam, ab iske upar kisi user/leader ko kuch nahi jayega.
+                          // 🔥 BREAKAWAY WALL HIT 🔥
+                          console.log(`[MLM ENGINE] Breakaway hit at Leader ${upline.userId} (Level ${currentLevel}). Superleaders will bypass.`);
+                          isBreakawayHit = true; 
                       }
 
                       currentUplineId = upline.sponsorId;

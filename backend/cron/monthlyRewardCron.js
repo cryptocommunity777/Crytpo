@@ -13,8 +13,8 @@ const REWARD_MILESTONES = [
   { target: 11750, strongLeg: 5875, otherLegs: 5875, reward: 1500, title: "Target 7 (11750 Points)" },
  ];
 
-// 🔥 SUPERFAST LOGIC + ABSOLUTE BREAKAWAY (Sync with Admin Panel)
-const getMonthlyLegStats = async (sponsorId, startOfMonth, endOfMonth) => {
+// 🔥 SUPERFAST LOGIC + ABSOLUTE BREAKAWAY WITH SUPER LEADER BYPASS
+const getMonthlyLegStats = async (sponsorId, startOfMonth, endOfMonth, isSuperLeader = false) => {
     // 1. Memory mein saare users load karenge
     const allUsers = await User.find({}, 'userId name sponsorId isToppedUp topUpDate role').lean();
 
@@ -38,17 +38,16 @@ const getMonthlyLegStats = async (sponsorId, startOfMonth, endOfMonth) => {
         while (queue.length > 0) {
             const currentUserNode = queue.shift();
             
-            // 🛑 ABSOLUTE BREAKAWAY WALL: 
-            // Agar yeh banda Leader hai, toh iske aage ki team process nahi hogi.
-            if (currentUserNode.role === 'leader') {
+            // 🛑 ABSOLUTE BREAKAWAY WALL WITH BYPASS:
+            // Agar yeh banda Leader hai AUR jiska count nikal raha hai wo Super Leader NAHI hai, toh ruk jao.
+            if (currentUserNode.role === 'leader' && !isSuperLeader) {
                continue; 
             }
 
-            // Agar Leader nahi hai, toh iski downline uthao
+            // Agar Leader nahi hai ya fir Super Leader search kar raha hai, toh iski downline uthao
             const downlines = userMap.get(currentUserNode.userId) || []; 
             for (let d of downlines) {
                 // 🔥 FIX EXACTLY LIKE ADMIN: Point counting yahan downlines par lagayi hai.
-                // Isse direct member ka apna top-up count nahi hoga, sirf neeche ki team count hogi.
                 if (d.isToppedUp && d.topUpDate >= startOfMonth && d.topUpDate <= endOfMonth) {
                     currentLegSize += 1; 
                 }
@@ -91,7 +90,10 @@ cron.schedule('15 0 1 * *', async () => {
         const allUsers = await User.find({ isToppedUp: true }).lean();
 
         for (let user of allUsers) {
-            const legStats = await getMonthlyLegStats(user.userId, startOfLastMonth, endOfLastMonth);
+            // 🔥 Yahan Cron check kar raha hai ki user superleader hai ya nahi
+            const isSuperLeader = user.role === 'superleader';
+            
+            const legStats = await getMonthlyLegStats(user.userId, startOfLastMonth, endOfLastMonth, isSuperLeader);
             
             let highestEligibleReward = null;
 
@@ -130,6 +132,3 @@ cron.schedule('15 0 1 * *', async () => {
 });
 
 module.exports = { getMonthlyLegStats };
-
-
- 

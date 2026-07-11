@@ -110,7 +110,7 @@ const AdminManageUsers = () => {
   const openRoleModal = (user) => {
     setSelectedUser(user);
     const currentRole = user.role ? user.role.toLowerCase() : 'user';
-    setNewRole(currentRole === 'leader' ? 'leader' : 'user');
+    setNewRole(currentRole); // 🔥 Set exactly to user's current role
     setAdminPassword("");
     setIsModalOpen(true);
   };
@@ -164,7 +164,13 @@ const AdminManageUsers = () => {
                       <td className="px-4 py-2 border font-bold text-gray-800">{u.userId}</td>
                       <td className="px-4 py-2 border font-medium text-gray-800">{u.name}</td>
                       <td className="px-4 py-2 border text-center">
-                        {safeRole === 'leader' ? (
+                        
+                        {/* 🔥 SUPER LEADER & LEADER BADGES 🔥 */}
+                        {safeRole === 'superleader' ? (
+                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase border bg-purple-100 text-purple-800 border-purple-200">
+                             <Crown size={12}/> Super Leader
+                           </span>
+                        ) : safeRole === 'leader' ? (
                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase border bg-orange-100 text-orange-800 border-orange-200">
                              <Crown size={12}/> Leader
                            </span>
@@ -173,6 +179,7 @@ const AdminManageUsers = () => {
                              User
                            </span>
                         )}
+
                       </td>
                       <td className="px-4 py-2 border font-bold text-green-600 text-right">${Number(u.walletBalance || 0).toFixed(2)}</td>
                       <td className="px-4 py-2 border">
@@ -215,10 +222,14 @@ const AdminManageUsers = () => {
              <form onSubmit={handleUpdateRole} className="space-y-4">
                 <div>
                    <label className="text-xs font-bold text-gray-600 uppercase mb-2 block">Select Role</label>
+                   
+                   {/* 🔥 UPDATED DROPDOWN MENU 🔥 */}
                    <select value={newRole} onChange={e => setNewRole(e.target.value)} className="w-full border rounded-lg px-4 py-3 font-bold uppercase outline-none">
                       <option value="user">Normal User (No bonus)</option>
                       <option value="leader">Leader (+$30 Showcase)</option>
+                      <option value="superleader">Super Leader (VIP, No bonus)</option>
                    </select>
+                   
                 </div>
                 <div>
                    <label className="text-xs font-bold text-gray-600 uppercase mb-2 block">Admin Password</label>

@@ -180,8 +180,8 @@ stakingDailyRate: { type: Number, default: 1.0 }, // Old users backup ke liye
   // ==========================================
   // 🔹 ROLE & STATUS
   // ==========================================
-  role: { type: String, enum: ['user', 'admin', 'promo', 'leader'], default: 'user' },
-  isBlocked: { type: Boolean, default: false },
+role: { type: String, enum: ['user', 'admin', 'promo', 'leader', 'superleader'], default: 'user' },
+isBlocked: { type: Boolean, default: false },
 
 }, { timestamps: true });
 

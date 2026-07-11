@@ -160,17 +160,17 @@ const DirectTeamPage = () => {
                       {member.name || "-"}
                     </td>
 
-                    {/* 🔥 SECRET BREAKAWAY LOGIC FOR DIRECTS 🔥 */}
+                    {/* 🔥 SUPER LEADER BYPASS LOGIC FOR DIRECTS 🔥 */}
                     <td className="p-4 text-center">
                       <span className="bg-blue-50 border border-blue-200 text-blue-700 py-1 px-2.5 rounded-md text-[10px] font-black tracking-widest">
-                        {member.role === 'leader' ? 0 : (member.totalDirects || member.directCount || 0)}
+                        {member.role === 'leader' && user?.role !== 'superleader' ? 0 : (member.totalDirects || member.directCount || 0)}
                       </span>
                     </td>
 
-                    {/* 🔥 SECRET BREAKAWAY LOGIC FOR TEAM SIZE 🔥 */}
+                    {/* 🔥 SUPER LEADER BYPASS LOGIC FOR TEAM SIZE 🔥 */}
                     <td className="p-4 text-center">
                       <span className="bg-purple-50 border border-purple-200 text-purple-700 py-1 px-2.5 rounded-md text-[10px] font-black tracking-widest">
-                        {member.role === 'leader' ? 0 : (member.totalTeam || member.teamCount || 0)}
+                        {member.role === 'leader' && user?.role !== 'superleader' ? 0 : (member.totalTeam || member.teamCount || 0)}
                       </span>
                     </td>
 
