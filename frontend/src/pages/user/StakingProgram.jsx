@@ -99,25 +99,37 @@ const StakingProgram = () => {
                 </div>
 
                 {/* ⏳ STAKING WINDOW COUNTDOWN BANNER */}
-                {stats.isToppedUp && !stats.isStaked && timeLeft && (
-                    <div className={`p-3 md:p-4 rounded-xl border flex flex-col md:flex-row items-center justify-between gap-3 shadow-inner ${timeLeft.expired ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
-                        <div className="flex items-center gap-2">
-                            <Clock className={timeLeft.expired ? "text-red-500" : "text-amber-500"} size={22} strokeWidth={2.5} />
-                            <span className={`text-xs md:text-sm font-black uppercase tracking-wider ${timeLeft.expired ? 'text-red-700' : 'text-amber-800'}`}>
-                                {timeLeft.expired ? 'Staking Window Expired' : 'Staking Window Closes In:'}
-                            </span>
-                        </div>
-                        
-                        {!timeLeft.expired && (
-                            <div className="flex gap-1.5 md:gap-2 text-amber-900 font-mono font-bold text-sm md:text-base">
-                                <div className="bg-amber-200/60 px-2.5 py-1 rounded-md shadow-sm border border-amber-300">{String(timeLeft.days).padStart(2, '0')}d</div>
-                                <div className="bg-amber-200/60 px-2.5 py-1 rounded-md shadow-sm border border-amber-300">{String(timeLeft.hours).padStart(2, '0')}h</div>
-                                <div className="bg-amber-200/60 px-2.5 py-1 rounded-md shadow-sm border border-amber-300">{String(timeLeft.minutes).padStart(2, '0')}m</div>
-                                <div className="bg-amber-200/60 px-2.5 py-1 rounded-md shadow-sm border border-amber-300 text-amber-700 animate-pulse">{String(timeLeft.seconds).padStart(2, '0')}s</div>
-                            </div>
-                        )}
-                    </div>
-                )}
+              {stats.isToppedUp && !stats.isStaked && timeLeft && (
+    <div className={`p-3 md:p-4 rounded-xl border flex flex-col gap-2 shadow-inner ${timeLeft.expired ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+        
+        {/* Top Section: Timer & Main Heading */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+                <Clock className={timeLeft.expired ? "text-red-500" : "text-amber-500"} size={22} strokeWidth={2.5} />
+                <span className={`text-xs md:text-sm font-black uppercase tracking-wider ${timeLeft.expired ? 'text-red-700' : 'text-amber-800'}`}>
+                    {timeLeft.expired ? '1% daily reward Window Expired' : 'Staking Reward Window Closes In:'}
+                </span>
+            </div>
+            
+            {!timeLeft.expired && (
+                <div className="flex gap-1.5 md:gap-2 text-amber-900 font-mono font-bold text-sm md:text-base">
+                    <div className="bg-amber-200/60 px-2.5 py-1 rounded-md shadow-sm border border-amber-300">{String(timeLeft.days).padStart(2, '0')}d</div>
+                    <div className="bg-amber-200/60 px-2.5 py-1 rounded-md shadow-sm border border-amber-300">{String(timeLeft.hours).padStart(2, '0')}h</div>
+                    <div className="bg-amber-200/60 px-2.5 py-1 rounded-md shadow-sm border border-amber-300">{String(timeLeft.minutes).padStart(2, '0')}m</div>
+                    <div className="bg-amber-200/60 px-2.5 py-1 rounded-md shadow-sm border border-amber-300 text-amber-700 animate-pulse">{String(timeLeft.seconds).padStart(2, '0')}s</div>
+                </div>
+            )}
+        </div>
+
+        {/* Bottom Section: Info Message (Niche likha hua text) */}
+        <div className={`text-[10px] md:text-xs font-bold text-center md:text-left mt-1 ${timeLeft.expired ? 'text-red-600' : 'text-amber-700'}`}>
+            {timeLeft.expired 
+                ? "* You missed the 1%  daily reward window. Any new stake will now generate 0.5% daily reward." 
+                : "* Stake before the timer ends to secure 1% daily reward . After this, the rate will drop to 0.5% daily reward ."}
+        </div>
+        
+    </div>
+)}
 
                 {/* STATS CARDS */}
                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
