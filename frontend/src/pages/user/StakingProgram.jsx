@@ -107,7 +107,7 @@ const StakingProgram = () => {
             <div className="flex items-center gap-2">
                 <Clock className={timeLeft.expired ? "text-red-500" : "text-amber-500"} size={22} strokeWidth={2.5} />
                 <span className={`text-xs md:text-sm font-black uppercase tracking-wider ${timeLeft.expired ? 'text-red-700' : 'text-amber-800'}`}>
-                    {timeLeft.expired ? '1% daily reward Window Expired' : 'Staking Reward Window Closes In:'}
+                    {timeLeft.expired ? '1% daily reward Window Expired' : 'Staking Window Closes In:'}
                 </span>
             </div>
             
