@@ -139,8 +139,22 @@ const UserLayout = ({ children }) => {
       {modalState.showTopUpForm && <TopUpModal user={user} userId={user?.userId} onClose={() => setModalState(prev => ({ ...prev, showTopUpForm: false }))} />}
       {modalState.showWalletTransfer && <WalletTransferModal user={user} userId={user?.userId} onClose={() => setModalState(prev => ({ ...prev, showWalletTransfer: false }))} />}
       {modalState.showWithdrawalModal && <WithdrawalModal user={user} userId={user?.userId} onClose={() => setModalState(prev => ({ ...prev, showWithdrawalModal: false }))} />}
-      {modalState.showCreditToWallet && <CreditToWalletModal user={user} userId={user?.userId} onClose={() => setModalState(prev => ({ ...prev, showCreditToWallet: false }))} />}
-      
+      {/* {modalState.showCreditToWallet && <CreditToWalletModal user={user} userId={user?.userId} onClose={() => setModalState(prev => ({ ...prev, showCreditToWallet: false }))} />}
+       */}
+
+       {/* Credit To Wallet Modal Disabled */}
+{false && (
+  <CreditToWalletModal
+    user={user}
+    userId={user?.userId}
+    onClose={() =>
+      setModalState(prev => ({
+        ...prev,
+        showCreditToWallet: false
+      }))
+    }
+  />
+)}
       {/* 🔥 UPDATE: CCT Transfer Modal ab liveCctBalance prop use kar raha hai */}
       {modalState.showCctTransfer && <TransferCctModal cctBalance={liveCctBalance} onClose={() => setModalState(prev => ({ ...prev, showCctTransfer: false }))} onSuccess={() => window.location.reload()} />}
 

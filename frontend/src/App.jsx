@@ -90,9 +90,18 @@ import FastTrackProgress from './pages/admin/FastTrackProgress.jsx';
 import ChangeSponsor from './pages/admin/ChangeSponsor';
 import WalletUpdateHistory from './pages/admin/WalletUpdateHistory'; // Path apne hisaab se adjust kar lena
 // 📜 Scroll Restoration
+// const ScrollToTop = () => {
+//   const { pathname } = useLocation();
+//   useEffect(() => window.scrollTo(0, 0), [pathname]);
+//   return null;
+// };
+
+// 📜 Scroll Restoration
 const ScrollToTop = () => {
   const { pathname } = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  useEffect(() => {
+      window.scrollTo(0, 0); // ✅ Curly braces ke andar daal diya
+  }, [pathname]);
   return null;
 };
 
