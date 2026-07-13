@@ -279,7 +279,23 @@ const UserLayout = ({ children }) => {
             <p className="text-[10px] md:text-xs text-slate-500 text-center font-bold uppercase tracking-wider mb-5">What do you want to transfer?</p>
 
             <div className="flex flex-col gap-3">
-              {/* 1. TOP-UP TRANSFER BUTTON */}
+
+                {/* 1. USDT BEP20 TRANSFER BUTTON 🔥 NAYA */}
+              <button
+                onClick={() => setModalState((prev) => ({ ...prev, showTransferSelection: false, showUsdtBep20Transfer: true }))}
+                className="w-full flex items-center justify-between bg-amber-50 hover:bg-amber-500 border border-amber-200 hover:border-amber-500 group p-4 rounded-2xl transition-all shadow-sm active:scale-95"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-amber-100 group-hover:bg-white/20 p-2.5 rounded-xl text-amber-600 group-hover:text-white transition-colors">
+                    <DollarSign size={20} strokeWidth={2.5} />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-black text-amber-800 group-hover:text-white text-sm uppercase tracking-wide transition-colors">USDT BEP20 Transfer</div>
+                    <div className="text-[10px] font-bold text-amber-600/80 group-hover:text-amber-100 uppercase tracking-widest transition-colors">Transfer Deposit Balance</div>
+                  </div>
+                </div>
+              </button>
+              {/* 2. TOP-UP TRANSFER BUTTON */}
               <button
                 onClick={() => setModalState((prev) => ({ ...prev, showTransferSelection: false, showWalletTransfer: true }))}
                 className="w-full flex items-center justify-between bg-green-50 hover:bg-green-600 border border-green-200 hover:border-green-600 group p-4 rounded-2xl transition-all shadow-sm active:scale-95"
@@ -295,21 +311,7 @@ const UserLayout = ({ children }) => {
                 </div>
               </button>
 
-              {/* 2. USDT BEP20 TRANSFER BUTTON 🔥 NAYA */}
-              <button
-                onClick={() => setModalState((prev) => ({ ...prev, showTransferSelection: false, showUsdtBep20Transfer: true }))}
-                className="w-full flex items-center justify-between bg-amber-50 hover:bg-amber-500 border border-amber-200 hover:border-amber-500 group p-4 rounded-2xl transition-all shadow-sm active:scale-95"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-amber-100 group-hover:bg-white/20 p-2.5 rounded-xl text-amber-600 group-hover:text-white transition-colors">
-                    <DollarSign size={20} strokeWidth={2.5} />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-black text-amber-800 group-hover:text-white text-sm uppercase tracking-wide transition-colors">USDT BEP20 Transfer</div>
-                    <div className="text-[10px] font-bold text-amber-600/80 group-hover:text-amber-100 uppercase tracking-widest transition-colors">Transfer Deposit Balance</div>
-                  </div>
-                </div>
-              </button>
+            
 
               {/* 3. CCT TRANSFER BUTTON */}
               <button

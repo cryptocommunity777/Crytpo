@@ -159,7 +159,7 @@ const SuccessModal = ({
       // 🔥 USDT TRANSFER (NORMAL)
       case "transfer":
         return (
-          <SuccessLayout title="Transfer Done" icon={ArrowRightLeft}>
+          <SuccessLayout title="Wallet Transfer Done" icon={ArrowRightLeft}>
             <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 w-full shadow-sm mt-2">
               <UserInfoBlock idLabel="Sent To" />
               <div className="flex flex-col items-center pt-1">
@@ -182,6 +182,20 @@ const SuccessModal = ({
                  <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Transfer Amount</span>
                  <span className="text-4xl font-black text-emerald-600 drop-shadow-sm">
                    {amount} CCT
+                 </span>
+              </div>
+            </div>
+          </SuccessLayout>
+        );
+      case "usdt_transfer":
+        return (
+          <SuccessLayout title="USDT Transfer Done" icon={ArrowRightLeft}>
+            <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 w-full shadow-sm mt-2">
+              <UserInfoBlock idLabel="Sent To" />
+              <div className="flex flex-col items-center pt-1">
+                 <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Transfer Amount</span>
+                 <span className="text-4xl font-black text-emerald-600 drop-shadow-sm">
+                  $ {amount} 
                  </span>
               </div>
             </div>

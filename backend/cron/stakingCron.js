@@ -6,7 +6,7 @@ const startStakingCron = () => {
     // Har raat 12:30 AM IST par chalega
     cron.schedule('30 0 * * *', async () => {
         try {
-            console.log("⏳ [CRON] Running CCT Staking Daily Distribution (Multi-Stake)...");
+            console.log("⏳ [CRON] Running CCT Staking Daily Distribution (Updated Multi-Stake)...");
             
             // Unko dhoondo jinka isStaked true hai
             const stakedUsers = await User.find({ isStaked: true });
@@ -45,7 +45,7 @@ const startStakingCron = () => {
                 let hasActiveStakes = false;
 
                 // =========================================================
-                // 🔹 HAR STAKE KO ALAG SE CHECK KARNA AUR PAYOUT DENA
+                // 🔹 HAR STAKE KO ALAG SE CHECK KARNA (Naye Rates Support Ke Sath)
                 // =========================================================
                 for (let stake of user.activeStakes) {
                     // Agar ye wala stake poora ho gaya hai, toh skip karo
@@ -54,8 +54,8 @@ const startStakingCron = () => {
                         continue;
                     }
 
-                    // Apne-apne rate ke hisaab se calculation (1% ya 0.5%)
-                    const ratePercent = stake.dailyRate || 1.0;
+                    // 🔥 NAYA FIX: Database se rate uthayega (1, 1.5, 2, or 2.5)
+                    const ratePercent = Number(stake.dailyRate) || 1.0;
                     const dailyIncome = stake.amount * (ratePercent / 100); 
 
                     // Pura rate milega ya bacha hua cap? (Limit check)
@@ -66,7 +66,7 @@ const startStakingCron = () => {
                         stake.earned += actualPayout;
                         totalDailyPayout += actualPayout;
                         
-                        // Agar is stake ne apni Maximum Cap achieve kar li hai
+                        // Agar is stake ne apni Maximum Cap (3x) achieve kar li hai
                         if (stake.earned >= stake.maxCap) {
                             stake.status = 'completed';
                         } else {
@@ -79,7 +79,7 @@ const startStakingCron = () => {
                 // 🔹 FINAL GLOBAL UPDATES & TRANSACTION
                 // =========================================================
                 if (totalDailyPayout > 0) {
-                    // UI ke 6 boxes ke liye global stats update
+                    // UI ke boxes ke liye global stats update
                     user.cctStakingIncome = (user.cctStakingIncome || 0) + totalDailyPayout;
                     user.stakedEarned = (user.stakedEarned || 0) + totalDailyPayout;
                     

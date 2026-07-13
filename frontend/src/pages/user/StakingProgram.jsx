@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axios'; 
-import { Coins, Clock } from 'lucide-react';
+import { Coins } from 'lucide-react';
 
 // Components
 import SpinnerOverlay from '../../components/common/SpinnerOverlay';
@@ -11,6 +11,7 @@ import WithdrawCctModal from '../../components/modals/WithdrawCctModal';
 const StakingProgram = () => {
     const [stats, setStats] = useState({ 
         walletBalance: 0, 
+        usdtBep20Balance: 0,
         cctBalance: 0, 
         cctStakingIncome: 0, 
         cctStakingDirectIncome: 0, 
@@ -25,7 +26,6 @@ const StakingProgram = () => {
     });
     
     const [loading, setLoading] = useState(true);
-    const [timeLeft, setTimeLeft] = useState(null);
 
     const [isConvertOpen, setIsConvertOpen] = useState(false);
     const [isStakeOpen, setIsStakeOpen] = useState(false);
@@ -46,44 +46,6 @@ const StakingProgram = () => {
 
     useEffect(() => { fetchStats(); }, []);
 
-    // 🔥 LIVE COUNTDOWN TIMER LOGIC
-    useEffect(() => {
-        // Agar Top-up nahi hai YA phir Stake ho chuka hai, toh timer hide kar do
-        if (!stats.isToppedUp || stats.isStaked) {
-            setTimeLeft(null);
-            return;
-        }
-
-        const calculateTime = () => {
-            const STAKING_START_DATE = new Date("2026-07-03T00:01:00+05:30").getTime();
-            
-            const fallbackDate = stats.topUpDate || stats.createdAt || new Date();
-            const userTopUpTime = new Date(fallbackDate).getTime();
-            
-            let deadlineTime = userTopUpTime < STAKING_START_DATE 
-                ? STAKING_START_DATE + (15 * 24 * 60 * 60 * 1000)
-                : userTopUpTime + (15 * 24 * 60 * 60 * 1000);
-
-            const now = new Date().getTime();
-            const difference = deadlineTime - now;
-
-            if (difference <= 0) {
-                setTimeLeft({ expired: true });
-            } else {
-                const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-                const minutes = Math.floor((difference / 1000 / 60) % 60);
-                const seconds = Math.floor((difference / 1000) % 60);
-                setTimeLeft({ days, hours, minutes, seconds, expired: false });
-            }
-        };
-
-        calculateTime(); 
-        const timer = setInterval(calculateTime, 1000); 
-
-        return () => clearInterval(timer); 
-    }, [stats.isToppedUp, stats.isStaked, stats.topUpDate, stats.createdAt]);
-
     if (loading) return <SpinnerOverlay />;
 
     return (
@@ -98,69 +60,35 @@ const StakingProgram = () => {
                     </h2>
                 </div>
 
-                {/* ⏳ STAKING WINDOW COUNTDOWN BANNER */}
-              {stats.isToppedUp && !stats.isStaked && timeLeft && (
-    <div className={`p-3 md:p-4 rounded-xl border flex flex-col gap-2 shadow-inner ${timeLeft.expired ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
-        
-        {/* Top Section: Timer & Main Heading */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-                <Clock className={timeLeft.expired ? "text-red-500" : "text-amber-500"} size={22} strokeWidth={2.5} />
-                <span className={`text-xs md:text-sm font-black uppercase tracking-wider ${timeLeft.expired ? 'text-red-700' : 'text-amber-800'}`}>
-                    {timeLeft.expired ? '1% daily reward Window Expired' : 'Staking Window Closes In:'}
-                </span>
-            </div>
-            
-            {!timeLeft.expired && (
-                <div className="flex gap-1.5 md:gap-2 text-amber-900 font-mono font-bold text-sm md:text-base">
-                    <div className="bg-amber-200/60 px-2.5 py-1 rounded-md shadow-sm border border-amber-300">{String(timeLeft.days).padStart(2, '0')}d</div>
-                    <div className="bg-amber-200/60 px-2.5 py-1 rounded-md shadow-sm border border-amber-300">{String(timeLeft.hours).padStart(2, '0')}h</div>
-                    <div className="bg-amber-200/60 px-2.5 py-1 rounded-md shadow-sm border border-amber-300">{String(timeLeft.minutes).padStart(2, '0')}m</div>
-                    <div className="bg-amber-200/60 px-2.5 py-1 rounded-md shadow-sm border border-amber-300 text-amber-700 animate-pulse">{String(timeLeft.seconds).padStart(2, '0')}s</div>
-                </div>
-            )}
-        </div>
-
-        {/* Bottom Section: Info Message (Niche likha hua text) */}
-        <div className={`text-[10px] md:text-xs font-bold text-center md:text-left mt-1 ${timeLeft.expired ? 'text-red-600' : 'text-amber-700'}`}>
-            {timeLeft.expired 
-                ? "* You missed the 1%  daily reward window. Any new stake will now generate 0.5% daily reward." 
-                : "* Stake before the timer ends to secure 1% daily reward . After this, the rate will drop to 0.5% daily reward ."}
-        </div>
-        
-    </div>
-)}
-
                 {/* STATS CARDS */}
                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-    <StatCard 
-        label="Available USDT Bep20 Balance" 
-       value={`$${(Math.floor((stats.usdtBep20Balance || 0) * 100) / 100).toFixed(2)}`}
-        // value={`$${(Math.floor((stats.walletBalance || 0) * 100) / 100).toFixed(2)}`} 
-    />
-    <StatCard 
-        label="Available CCT" 
-        value={`${(Math.floor((stats.cctBalance || 0) * 100) / 100).toFixed(2)}`} 
-    />
-    <StatCard 
-        label="Total Staked" 
-        value={`${(Math.floor((stats.totalCctStaked || 0) * 100) / 100).toFixed(2)}`} 
-    />
-    <StatCard 
-        label="Total Staking Income" 
-        value={`${(Math.floor((stats.stakedEarned || 0) * 100) / 100).toFixed(2)}`} 
-    />
-    
-    {/* 🔥 Naye CCT Direct aur Level Income (Abhi tak ka Total Earned) */}
-    <StatCard 
-        label="Staking Direct Income" 
-        value={`${(Math.floor((stats.cctStakingDirectIncome || 0) * 100) / 100).toFixed(2)}`} 
-    />
-    <StatCard 
-        label="Staking Level Income" 
-        value={`${(Math.floor((stats.cctStakingLevelIncome || 0) * 100) / 100).toFixed(2)}`} 
-    />
-</div>
+                    <StatCard 
+                        label="Available USDT Bep20 Balance" 
+                        value={`$${(Math.floor((stats.usdtBep20Balance || 0) * 100) / 100).toFixed(2)}`}
+                    />
+                    <StatCard 
+                        label="Available CCT" 
+                        value={`${(Math.floor((stats.cctBalance || 0) * 100) / 100).toFixed(2)}`} 
+                    />
+                    <StatCard 
+                        label="Total Staked" 
+                        value={`${(Math.floor((stats.totalCctStaked || 0) * 100) / 100).toFixed(2)}`} 
+                    />
+                    <StatCard 
+                        label="Total Staking Income" 
+                        value={`${(Math.floor((stats.stakedEarned || 0) * 100) / 100).toFixed(2)}`} 
+                    />
+                    
+                    {/* 🔥 Naye CCT Direct aur Level Income (Abhi tak ka Total Earned) */}
+                    <StatCard 
+                        label="Staking Direct Income" 
+                        value={`${(Math.floor((stats.cctStakingDirectIncome || 0) * 100) / 100).toFixed(2)}`} 
+                    />
+                    <StatCard 
+                        label="Staking Level Income" 
+                        value={`${(Math.floor((stats.cctStakingLevelIncome || 0) * 100) / 100).toFixed(2)}`} 
+                    />
+                </div>
 
                 {/* STAKING PROGRESS */}
                 {stats.isStaked && (
@@ -203,20 +131,34 @@ const StakingProgram = () => {
             </div>
 
             {/* Modals */}
-            {/* {isConvertOpen && <ConvertCctModal isOpen={isConvertOpen} onClose={() => setIsConvertOpen(false)} walletBalance={stats.walletBalance} onSuccess={fetchStats} />}
-           */}
-{/* Modals */}
-
-{isConvertOpen && (
-    <ConvertCctModal 
-        onClose={() => setIsConvertOpen(false)}
-        usdtBep20Balance={stats.usdtBep20Balance} 
-        onSuccess={fetchStats}
-    />
-)}
-
-{isStakeOpen && <StakeCctModal isOpen={isStakeOpen} onClose={() => setIsStakeOpen(false)} cctBalance={stats.cctBalance} onSuccess={fetchStats} />}
-{isWithdrawOpen && <WithdrawCctModal isOpen={isWithdrawOpen} onClose={() => setIsWithdrawOpen(false)} cctStakingIncome={stats.cctStakingIncome} cctStakingDirectIncome={stats.cctStakingDirectIncome} cctStakingLevelIncome={stats.cctStakingLevelIncome} onSuccess={fetchStats} />} </div>
+            {isConvertOpen && (
+                <ConvertCctModal 
+                    onClose={() => setIsConvertOpen(false)}
+                    usdtBep20Balance={stats.usdtBep20Balance} 
+                    onSuccess={fetchStats}
+                />
+            )}
+            
+            {isStakeOpen && (
+                <StakeCctModal 
+                    isOpen={isStakeOpen} 
+                    onClose={() => setIsStakeOpen(false)} 
+                    cctBalance={stats.cctBalance} 
+                    onSuccess={fetchStats} 
+                />
+            )}
+            
+            {isWithdrawOpen && (
+                <WithdrawCctModal 
+                    isOpen={isWithdrawOpen} 
+                    onClose={() => setIsWithdrawOpen(false)} 
+                    cctStakingIncome={stats.cctStakingIncome} 
+                    cctStakingDirectIncome={stats.cctStakingDirectIncome} 
+                    cctStakingLevelIncome={stats.cctStakingLevelIncome} 
+                    onSuccess={fetchStats} 
+                />
+            )} 
+        </div>
     );
 };
 

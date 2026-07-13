@@ -539,6 +539,9 @@ const Dashboard = ({ setModalState }) => {
              globalFakeCount={globalFakeCount} 
            />
         </section>
+         <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
+             <ReferralLink link={referralLink} />
+        </div>
 
         {/* 🔥 STAKING PROGRAM SECTION (Promo Video ke theek upar) */}
         <section className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
@@ -553,9 +556,7 @@ const Dashboard = ({ setModalState }) => {
             <PromoVideoBox />
         </div>
 
-        <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
-             <ReferralLink link={referralLink} />
-        </div>
+       
         
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {/* 1. Income Summary Box */}

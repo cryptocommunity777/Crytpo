@@ -260,7 +260,7 @@ const UsdtBep20TransferModal = ({ onClose }) => {
       <SuccessModal 
         isOpen={successOpen} 
         onClose={handleSuccessClose} 
-        type="transfer" 
+        type="usdt_transfer" 
         userId={userId}
         userName={userName} 
         amount={amount} 
