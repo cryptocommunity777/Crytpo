@@ -3,7 +3,7 @@ import {
   Users, UserPlus, UserCheck, 
   Wallet, ArrowDownToLine, Clock, 
   DollarSign, CheckCircle, AlertCircle,
-  Briefcase, TrendingUp, Crown, Zap, Shield, Star
+  Briefcase, TrendingUp, Crown, Zap, Shield, Star, Receipt
 } from 'lucide-react';
 
 function DashboardCards({ stats }) {
@@ -82,44 +82,78 @@ function DashboardCards({ stats }) {
       border: 'border-emerald-200'
     },
 
-    // --- WITHDRAWAL STATS (Red/Orange/Yellow) ---
+    // ==========================================
+    // 🔥 GROSS WITHDRAWAL STATS (Red/Orange/Yellow)
+    // ==========================================
     {
-      title: 'Total Withdrawals',
+      title: 'Total Gross Withdrawals',
       value: `$${stats.totalWithdrawal?.toLocaleString() || 0}`,
       icon: <DollarSign className="text-red-600" size={28} />,
       bg: 'bg-red-100',
       border: 'border-red-200'
     },
     {
-      title: 'Approved Withdrawals (Total)',
+      title: 'Approved Gross (Total)',
       value: `$${stats.approvedWithdrawalTotal?.toLocaleString() || 0}`,
       icon: <CheckCircle className="text-green-600" size={28} />,
       bg: 'bg-orange-100',
       border: 'border-orange-200'
     },
     {
-      title: 'Approved Withdrawals (Today)',
+      title: 'Approved Gross (Today)',
       value: `$${stats.approvedWithdrawalToday?.toLocaleString() || 0}`,
       icon: <CheckCircle className="text-amber-600" size={28} />,
       bg: 'bg-amber-100',
       border: 'border-amber-200'
     },
     {
-      title: 'Pending Withdrawals (Total)',
+      title: 'Pending Gross (Total)',
       value: `$${stats.pendingWithdrawalTotal?.toLocaleString() || 0}`,
       icon: <AlertCircle className="text-rose-600" size={28} />,
       bg: 'bg-rose-100',
       border: 'border-rose-200'
     },
     {
-      title: 'Pending Withdrawals (Today)',
+      title: 'Pending Gross (Today)',
       value: `$${stats.pendingWithdrawalToday?.toLocaleString() || 0}`,
       icon: <Clock className="text-pink-600" size={28} />,
       bg: 'bg-pink-100',
       border: 'border-pink-200'
     },
 
-    // 🔥 NEW: LEADER AUTO SETTLEMENT STATS (Pink/Rose)
+    // ==========================================
+    // 🔥 NEW: NET WITHDRAWAL STATS (Actual Payable)
+    // ==========================================
+    {
+      title: 'Net Approved (Total Payable)',
+      value: `$${stats.netApprovedTotal?.toLocaleString() || 0}`,
+      icon: <Receipt className="text-emerald-700" size={28} />,
+      bg: 'bg-emerald-100',
+      border: 'border-emerald-400'
+    },
+    {
+      title: 'Net Approved (Today)',
+      value: `$${stats.netApprovedToday?.toLocaleString() || 0}`,
+      icon: <Receipt className="text-teal-700" size={28} />,
+      bg: 'bg-teal-100',
+      border: 'border-teal-400'
+    },
+    {
+      title: 'Net Pending (To be Paid)',
+      value: `$${stats.netPendingTotal?.toLocaleString() || 0}`,
+      icon: <Receipt className="text-rose-700" size={28} />,
+      bg: 'bg-rose-100',
+      border: 'border-rose-400'
+    },
+    {
+      title: 'Net Pending (Today)',
+      value: `$${stats.netPendingToday?.toLocaleString() || 0}`,
+      icon: <Clock className="text-pink-700" size={28} />,
+      bg: 'bg-pink-100',
+      border: 'border-pink-400'
+    },
+
+    // --- LEADER AUTO SETTLEMENT STATS (Pink/Rose) ---
     {
       title: 'Leader Auto-Settlement (Total)',
       value: `$${stats.leaderAutoWithdrawTotal?.toLocaleString() || 0}`,

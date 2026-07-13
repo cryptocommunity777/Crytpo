@@ -21,6 +21,12 @@ const AdminDashboard = () => {
     pendingWithdrawalTotal: 0,
     pendingWithdrawalToday: 0,
 
+    // 🔥 NAYE FIELDS YAHAN ADD HUE HAIN
+    netApprovedTotal: 0,
+    netApprovedToday: 0,
+    netPendingTotal: 0,
+    netPendingToday: 0, // 🔥 YAHAN ADD KAREIN
+
     leaderAutoWithdrawTotal: 0,
     leaderAutoWithdrawToday: 0,
 
@@ -68,6 +74,12 @@ const AdminDashboard = () => {
         approvedWithdrawalToday: statsRes.data.approvedWithdrawalToday || 0,
         pendingWithdrawalTotal: statsRes.data.pendingWithdrawalTotal || 0,
         pendingWithdrawalToday: statsRes.data.pendingWithdrawalToday || 0,
+
+        // 🔥 NAYE FIELDS KO API SE MAP KIYA
+        netApprovedTotal: statsRes.data.netApprovedTotal || 0,
+        netApprovedToday: statsRes.data.netApprovedToday || 0,
+        netPendingTotal: statsRes.data.netPendingTotal || 0,
+        netPendingToday: statsRes.data.netPendingToday || 0, // 🔥 YAHAN ADD KAREIN
 
         leaderAutoWithdrawTotal: statsRes.data.leaderAutoWithdrawTotal || 0,
         leaderAutoWithdrawToday: statsRes.data.leaderAutoWithdrawToday || 0,

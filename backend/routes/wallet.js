@@ -1974,16 +1974,15 @@ router.get("/topup-history/:userId", async (req, res) => {
 // 🔥 1. Yahan 'authMiddleware' add kiya gaya hai
 router.get("/:userId", authMiddleware, async (req, res) => {
   try {
-    // 🔥 2. Iska naam wapas 'userId' kar diya taaki niche ka pura code bina crash hue chal sake
     const userId = Number(req.params.userId);
-    const loggedInUserId = Number(req.user.userId); // Token se nikala ID
+    const loggedInUserId = Number(req.user.userId); 
 
-    // 🔥 SECURITY LOCK: Sirf Admin ya wahi user apna data dekh sake
+    // 🔥 SECURITY LOCK
     if (req.user.role !== 'admin' && userId !== loggedInUserId) {
       return res.status(403).json({ success: false, message: "Unauthorized access: You can only view your own profile." });
     }
     
-    // 1. User validation (Ab yahan 'userId' perfectly kaam karega)
+    // 1. User validation 
     const user = await User.findOne({ userId }).select('-password -txnPassword -__v');
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -1995,7 +1994,7 @@ router.get("/:userId", authMiddleware, async (req, res) => {
         await user.save(); 
     }
 
-    // 2. Lifetime incomes nikalna (Yahan bhi 'userId' define ho gaya)
+    // 2. Lifetime incomes nikalna 
     const life = await getLifetimeIncomes(userId);
 
     // 3. Current Plan Income calculation
@@ -2006,7 +2005,7 @@ router.get("/:userId", authMiddleware, async (req, res) => {
       currentTotalPlanIncome += calculatePackageEarnings(user.packages, key);
     });
 
-    // 4. Final Response (Ab isme Fast Track Shamil Hai)
+    // 4. Final Response 
     res.json({
       success: true,
       user: user, 
@@ -2018,11 +2017,13 @@ router.get("/:userId", authMiddleware, async (req, res) => {
          totalLevelIncome:  life.level  || user.totalLevelIncome || user.levelIncome || 0,
          totalRewardIncome: life.reward || user.totalRewardIncome || user.rewardIncome || 0,
          totalSpinIncome:   life.spin   || user.totalSpinIncome || user.spinIncome || 0,
-         
-         // 🔥 NAYA: Fast Track Total Bonus for Dashboard Box
          totalFastTrackIncome: user.totalFastTrackIncome || user.fastTrackIncome || 0,
+         planIncome: currentTotalPlanIncome || 0,
          
-         planIncome: currentTotalPlanIncome || 0
+         // 🔥 NAYA: STAKING INCOMES YAHAN ADD KI HAIN 🔥
+         cctStakingIncome: user.cctStakingIncome || 0,
+         cctStakingDirectIncome: user.cctStakingDirectIncome || 0,
+         cctStakingLevelIncome: user.cctStakingLevelIncome || 0
       },
 
       // ✅ CURRENT WITHDRAWABLE BALANCES
@@ -2030,16 +2031,16 @@ router.get("/:userId", authMiddleware, async (req, res) => {
       levelIncome:  user.levelIncome || 0,
       spinIncome:   user.spinIncome || 0,
       rewardIncome: user.rewardIncome || 0, 
-      fastTrackIncome: user.fastTrackIncome || 0, // 🔥 Naya Field
+      fastTrackIncome: user.fastTrackIncome || 0, 
 
-      // Sabka total (Ab isme Fast Track bhi judega)
+      // Sabka total (Staking isme alag rakha hai dashboard design ke hisaab se)
       totalLifetimeIncome: (
         (life.direct || 0) + 
         (life.level || 0) + 
         (currentTotalPlanIncome || 0) + 
         (life.spin || 0) + 
         (life.reward || 0) + 
-        (user.totalFastTrackIncome || 0) // 🔥 Fast Track added here
+        (user.totalFastTrackIncome || 0)
       )
     });
 

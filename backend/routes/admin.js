@@ -74,6 +74,266 @@ const tokenABI = [
 // Dashboard summary (UPDATED WITH 100% BULLETPROOF JS COUNT FOR TOPUPS)
 // Dashboard summary
 // Dashboard summary
+
+
+
+
+// router.get('/dashboard', verifyAdmin, async (req, res) => {
+//   try {
+//     // 🔥 INDIA TIMEZONE FIX FOR "TODAY"
+//     const now = new Date();
+//     const formatter = new Intl.DateTimeFormat('en-US', { 
+//         timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' 
+//     });
+    
+//     const parts = formatter.formatToParts(now);
+//     let month, day, year;
+//     for (let p of parts) {
+//       if (p.type === 'month') month = p.value;
+//       if (p.type === 'day') day = p.value;
+//       if (p.type === 'year') year = p.value;
+//     }
+    
+//     // Exactly raat 12:00 AM IST
+//     const startOfTodayIST = new Date(`${year}-${month}-${day}T00:00:00+05:30`);
+//     const startOfTodayTime = startOfTodayIST.getTime();
+
+//     // SAARE ASYNC KAAM EK SATH KARENGE SPEED KE LIYE
+//     const [
+//       totalUsers,
+//       todayUsers,
+//       paidUsers,
+//       depositStats,
+//       withdrawalStats,
+//       // 🔥 TRANSACTION KI JHANJHAT KHATAM! SIRF USERS KO DIRECT FETCH KARENGE
+//       allUsers
+//     ] = await Promise.all([
+//       User.countDocuments(),
+//       User.countDocuments({ createdAt: { $gte: startOfTodayIST } }),
+//       User.countDocuments({ topUpAmount: { $gt: 0 } }),
+      
+//       // DEPOSIT STATS
+//       Deposit.aggregate([
+//         {
+//           $facet: {
+//             total: [{ $group: { _id: null, sum: { $sum: { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } } } } }],
+//             today: [
+//               { $match: { createdAt: { $gte: startOfTodayIST } } },
+//               { $group: { _id: null, sum: { $sum: { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } } } } }
+//             ],
+//             pendingToday: [
+//               { $match: { createdAt: { $gte: startOfTodayIST }, status: "pending" } },
+//               { $group: { _id: null, sum: { $sum: { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } } } } }
+//             ]
+//           }
+//         }
+//       ]),
+
+//       // WITHDRAWAL STATS (🔥 LEADER AUTO WITHDRAW EXCLUDED FROM NORMAL STATS)
+//       Withdrawal.aggregate([
+//         {
+//           $facet: {
+//             // ✅ NORMAL TOTALS (Excluding Leader Settlements via address checks or remarks)
+//             totalAll: [
+//               { $match: { walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
+//               { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+//             ],
+//             approvedTotal: [
+//               { $match: { status: "approved", walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
+//               { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+//             ],
+//             approvedToday: [
+//               { $match: { createdAt: { $gte: startOfTodayIST }, status: "approved", walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
+//               { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+//             ],
+//             pendingTotal: [
+//               { $match: { status: "pending", walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
+//               { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+//             ],
+//             pendingToday: [
+//               { $match: { createdAt: { $gte: startOfTodayIST }, status: "pending", walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
+//               { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+//             ],
+
+//             // ✅ LEADER AUTO-WITHDRAW BOX CALCULATION (Isme sirf wahi count honge)
+//             leaderAutoWithdrawTotal: [
+//               { $match: { $or: [{ remarks: "Leader Auto Settlement" }, { walletAddress: "-" }] } },
+//               { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+//             ],
+//             leaderAutoWithdrawToday: [
+//               { $match: { createdAt: { $gte: startOfTodayIST }, $or: [{ remarks: "Leader Auto Settlement" }, { walletAddress: "-" }] } },
+//               { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+//             ]
+//           }
+//         }
+//       ]),
+
+//       // 🔥 SIRF USERS FETCH KARO
+//       User.find({}, { userId: 1, role: 1, sponsorId: 1, isToppedUp: 1, topUpAmount: 1, createdAt: 1, topUpDate: 1 }).lean()
+//     ]);
+
+//     // ==============================================================
+//     // 🚀 DIRECT COUNTING ENGINE 
+//     // ==============================================================
+//     const userMap = {};
+//     allUsers.forEach(u => {
+//       userMap[Number(u.userId)] = u;
+//     });
+
+//     let leaderTopupTotal = 0;
+//     let leaderTopupToday = 0;
+//     let normalTopupTotal = 0;
+//     let normalTopupToday = 0;
+
+//     let leaderBusinessTotal = 0;
+//     let leaderBusinessToday = 0;
+//     let normalBusinessTotal = 0;
+//     let normalBusinessToday = 0;
+
+//     const specialNormalUsers = [1054948]; 
+
+//     allUsers.forEach(user => {
+//       if (!user.isToppedUp) return;
+
+//       const dateToCheck = user.topUpDate || user.createdAt || new Date(0);
+//       const isToday = new Date(dateToCheck).getTime() >= startOfTodayTime;
+      
+//       let amount = Number(user.topUpAmount) || 30;
+//       let isLeaderTopup = false;
+//       const sponsorId = user.sponsorId ? Number(user.sponsorId) : null; 
+//       const sponsorUser = userMap[sponsorId];
+
+//       if (sponsorId && sponsorUser) {
+//           if (sponsorUser.role === 'leader' || specialNormalUsers.includes(sponsorId)) {
+//               isLeaderTopup = true;
+//           }
+//       }
+
+//       if (isLeaderTopup) {
+//         leaderTopupTotal++;
+//         leaderBusinessTotal += amount;
+//         if (isToday) {
+//           leaderTopupToday++;
+//           leaderBusinessToday += amount;
+//         }
+//       } else {
+//         normalTopupTotal++;
+//         normalBusinessTotal += amount;
+//         if (isToday) {
+//           normalTopupToday++;
+//           normalBusinessToday += amount;
+//         }
+//       }
+//     });
+
+//     const totalTopupBusiness = leaderBusinessTotal + normalBusinessTotal;
+//     const todayTopupBusiness = leaderBusinessToday + normalBusinessToday;
+
+//     const dep = depositStats[0] || {};
+//     const withD = withdrawalStats[0] || {};
+
+//     res.json({
+//       totalUsers,
+//       todayUsers,
+//       paidUsers,
+      
+//       totalDeposit: dep.total?.[0]?.sum || 0,
+//       todayDeposit: dep.today?.[0]?.sum || 0,
+//       pendingDepositToday: dep.pendingDepositToday?.[0]?.sum || dep.pendingToday?.[0]?.sum || 0,
+      
+//       totalWithdrawal: withD.totalAll?.[0]?.sum || 0,
+//       approvedWithdrawalTotal: withD.approvedTotal?.[0]?.sum || 0,
+//       approvedWithdrawalToday: withD.approvedToday?.[0]?.sum || 0,
+//       pendingWithdrawalTotal: withD.pendingTotal?.[0]?.sum || 0,
+//       pendingWithdrawalToday: withD.pendingToday?.[0]?.sum || 0,
+
+//       // ✅ LEADER AUTO-WITHDRAWAL SENT TO FRONTEND
+//       leaderAutoWithdrawTotal: withD.leaderAutoWithdrawTotal?.[0]?.sum || 0,
+//       leaderAutoWithdrawToday: withD.leaderAutoWithdrawToday?.[0]?.sum || 0,
+
+//       totalTopupBusiness,
+//       todayTopupBusiness,
+
+//       leaderTopupTotal,
+//       leaderTopupToday,
+//       normalTopupTotal,
+//       normalTopupToday,
+
+//       leaderBusinessTotal,
+//       leaderBusinessToday,
+//       normalBusinessTotal,
+//       normalBusinessToday
+//     });
+
+//   } catch (error) {
+//     console.error('Dashboard error:', error);
+//     res.status(500).json({ message: 'Dashboard data fetch failed' });
+//   }
+// });
+
+// // GET /api/admin/stats
+// router.get("/stats", verifyAdmin, async (req, res) => {
+//   try {
+//     // 1. 🔥 INDIA (IST) TIMEZONE FIX FOR "TODAY"
+//     const now = new Date();
+//     const formatter = new Intl.DateTimeFormat('en-US', { 
+//         timeZone: 'Asia/Kolkata', 
+//         year: 'numeric', 
+//         month: '2-digit', 
+//         day: '2-digit' 
+//     });
+    
+//     const parts = formatter.formatToParts(now);
+//     let month, day, year;
+//     for (let p of parts) {
+//       if (p.type === 'month') month = p.value;
+//       if (p.type === 'day') day = p.value;
+//       if (p.type === 'year') year = p.value;
+//     }
+    
+//     // Exactly raat 12:00 AM IST
+//     const startOfTodayIST = new Date(`${year}-${month}-${day}T00:00:00+05:30`);
+
+//     // 2. 🔥 DATA FETCH WITH STRING-TO-NUMBER SAFETY
+//     const totalUsers = await User.countDocuments();
+    
+//     const todayUsers = await User.countDocuments({
+//       createdAt: { $gte: startOfTodayIST }
+//     });
+
+//     const totalDeposit = await Deposit.aggregate([
+//       { 
+//         $group: { 
+//           _id: null, 
+//           total: { $sum: { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } } } 
+//         } 
+//       }
+//     ]);
+
+//     const totalWithdrawal = await Withdrawal.aggregate([
+//       { 
+//         $group: { 
+//           _id: null, 
+//           // grossAmount aur amount dono ko safely check karega
+//           total: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } 
+//         } 
+//       }
+//     ]);
+
+//     res.json({
+//       totalUsers,
+//       todayUsers,
+//       totalDeposit: totalDeposit[0]?.total || 0,
+//       totalWithdrawal: totalWithdrawal[0]?.total || 0
+//     });
+
+//   } catch (error) {
+//     console.error('Stats error:', error);
+//     res.status(500).json({ message: 'Stats data fetch failed' });
+//   }
+// });
+
+
 router.get('/dashboard', verifyAdmin, async (req, res) => {
   try {
     // 🔥 INDIA TIMEZONE FIX FOR "TODAY"
@@ -132,23 +392,47 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
             // ✅ NORMAL TOTALS (Excluding Leader Settlements via address checks or remarks)
             totalAll: [
               { $match: { walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
-              { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+              { $group: { 
+                  _id: null, 
+                  sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } 
+                } 
+              }
             ],
             approvedTotal: [
               { $match: { status: "approved", walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
-              { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+              { $group: { 
+                  _id: null, 
+                  sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } },
+                  netTotal: { $sum: { $convert: { input: { $ifNull: ["$netAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } // 🔥 NET ADDED
+                } 
+              }
             ],
             approvedToday: [
               { $match: { createdAt: { $gte: startOfTodayIST }, status: "approved", walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
-              { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+              { $group: { 
+                  _id: null, 
+                  sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } },
+                  netTotal: { $sum: { $convert: { input: { $ifNull: ["$netAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } // 🔥 NET ADDED
+                } 
+              }
             ],
             pendingTotal: [
               { $match: { status: "pending", walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
-              { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+              { $group: { 
+                  _id: null, 
+                  sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } },
+                  netTotal: { $sum: { $convert: { input: { $ifNull: ["$netAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } // 🔥 NET ADDED
+                } 
+              }
             ],
             pendingToday: [
               { $match: { createdAt: { $gte: startOfTodayIST }, status: "pending", walletAddress: { $ne: "-" }, remarks: { $ne: "Leader Auto Settlement" } } },
-              { $group: { _id: null, sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } } }
+              { $group: { 
+                  _id: null, 
+                  sum: { $sum: { $convert: { input: { $ifNull: ["$grossAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } },
+                  netTotal: { $sum: { $convert: { input: { $ifNull: ["$netAmount", "$amount"] }, to: "double", onError: 0, onNull: 0 } } } // 🔥 NET ADDED
+                } 
+              }
             ],
 
             // ✅ LEADER AUTO-WITHDRAW BOX CALCULATION (Isme sirf wahi count honge)
@@ -237,12 +521,18 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
       todayDeposit: dep.today?.[0]?.sum || 0,
       pendingDepositToday: dep.pendingDepositToday?.[0]?.sum || dep.pendingToday?.[0]?.sum || 0,
       
+      // GROSS WITHDRAWALS
       totalWithdrawal: withD.totalAll?.[0]?.sum || 0,
       approvedWithdrawalTotal: withD.approvedTotal?.[0]?.sum || 0,
       approvedWithdrawalToday: withD.approvedToday?.[0]?.sum || 0,
       pendingWithdrawalTotal: withD.pendingTotal?.[0]?.sum || 0,
       pendingWithdrawalToday: withD.pendingToday?.[0]?.sum || 0,
 
+      // 🔥 NET WITHDRAWALS (SENT TO FRONTEND)
+      netApprovedTotal: withD.approvedTotal?.[0]?.netTotal || 0,
+      netApprovedToday: withD.approvedToday?.[0]?.netTotal || 0,
+      netPendingTotal: withD.pendingTotal?.[0]?.netTotal || 0,
+      netPendingToday: withD.pendingToday?.[0]?.netTotal || 0, // 🔥 YE NAYI LINE ADD KARNI HAI
       // ✅ LEADER AUTO-WITHDRAWAL SENT TO FRONTEND
       leaderAutoWithdrawTotal: withD.leaderAutoWithdrawTotal?.[0]?.sum || 0,
       leaderAutoWithdrawToday: withD.leaderAutoWithdrawToday?.[0]?.sum || 0,
@@ -328,8 +618,6 @@ router.get("/stats", verifyAdmin, async (req, res) => {
     res.status(500).json({ message: 'Stats data fetch failed' });
   }
 });
-
-
 
 
 
@@ -1097,11 +1385,93 @@ router.get('/global-team', verifyAdmin, async (req, res) => {
 // ==========================================
 // 🚀 FAST TRACK PROGRESS (100x SUPER FAST OPTIMIZED)
 // ==========================================
+// router.get('/fast-track-progress', verifyAdmin, async (req, res) => {
+//     try {
+//         const NEW_OFFER_START = new Date("2026-06-14T00:00:00+05:30");
+//         // 👇 YAHAN BHI 6 JULY CUTOFF ADD KIYA 👇
+//         const NEW_OFFER_END = new Date("2026-07-06T23:59:59+05:30"); 
+//         const now = new Date();
+
+//         // 1. 🔥 Ek hi baar saara zaroori data uthao 
+//         // 🛑 LEADERS KO LIST SE GAYAB KAR DIYA (role: { $ne: 'leader' })
+//         const allUsers = await User.find({ 
+//             isToppedUp: true,
+//             role: { $ne: 'leader' } 
+//         })
+//         .select('userId name topUpDate sponsorId role')
+//         .lean();
+
+//         // 2. RAM (Memory) me ek Map banayenge fast calculation ke liye
+//         const userMap = {};
+//         for (let user of allUsers) {
+//             if (!user.topUpDate) continue;
+            
+//             const topUpDate = new Date(user.topUpDate);
+//             // Sponsor ko apne top-up se 144 ghante milte hain
+//             const hourDeadline = new Date(topUpDate.getTime() + (144 * 60 * 60 * 1000));
+            
+//             // 🔥 SMART CUTOFF: Ya toh 144 ghante, ya 6 July raat 12 baje (Jo bhi pehle aaye)
+//             const finalCutoff = new Date(Math.min(hourDeadline.getTime(), NEW_OFFER_END.getTime()));
+            
+//             userMap[user.userId] = {
+//                 userId: user.userId,
+//                 name: user.name,
+//                 topUpDate: user.topUpDate,
+//                 deadline: finalCutoff, // Ab list is cutoff ke hisaab se chalegi
+//                 directs: 0
+//             };
+//         }
+
+//         // 3. 🔥 In-Memory Directs Calculation (Database par no load)
+//         for (let directUser of allUsers) {
+//             if (directUser.sponsorId && userMap[directUser.sponsorId] && directUser.topUpDate) {
+//                 const sponsor = userMap[directUser.sponsorId];
+//                 const directTopUpDate = new Date(directUser.topUpDate);
+
+//                 // Agar direct 14 June ke baad aaya hai aur sponsor ki Final Cutoff ke andar hai
+//                 if (directTopUpDate >= NEW_OFFER_START && directTopUpDate <= sponsor.deadline) {
+//                     sponsor.directs += 1;
+//                 }
+//             }
+//         }
+
+//         // 4. Sirf unko filter karenge jinke > 0 directs hain
+//         let progressList = [];
+//         for (let key in userMap) {
+//             const sponsor = userMap[key];
+//             if (sponsor.directs >= 1) {
+//                 let status = 'In Progress';
+                
+//                 if (sponsor.directs >= 6) {
+//                     status = 'Achieved';
+//                 } 
+//                 // Agar aaj ki date cutoff ko cross kar chuki hai, toh sidha Failed
+//                 else if (now > sponsor.deadline) {
+//                     status = 'Failed / Closed';
+//                 }
+
+//                 sponsor.status = status;
+//                 progressList.push(sponsor);
+//             }
+//         }
+
+//         // 5. Sabse zyada directs wale top par
+//         progressList.sort((a, b) => b.directs - a.directs);
+        
+//         res.json({ success: true, data: progressList });
+//     } catch (error) {
+//         console.error("Fast Track Progress Error:", error);
+//         res.status(500).json({ success: false, message: "Server Error" });
+//     }
+// });
+
 router.get('/fast-track-progress', verifyAdmin, async (req, res) => {
     try {
-        const NEW_OFFER_START = new Date("2026-06-14T00:00:00+05:30");
-        // 👇 YAHAN BHI 6 JULY CUTOFF ADD KIYA 👇
-        const NEW_OFFER_END = new Date("2026-07-06T23:59:59+05:30"); 
+        // 🔥 TIME CONFIGURATIONS (SYNCED WITH CRON)
+        const PHASE1_START = new Date("2026-06-14T00:00:00+05:30");
+        const PHASE1_END = new Date("2026-07-06T23:59:59+05:30"); 
+        const PHASE2_START = new Date("2026-07-11T00:00:00+05:30"); // 👇 NAYA PHASE 2 👇
+        
         const now = new Date();
 
         // 1. 🔥 Ek hi baar saara zaroori data uthao 
@@ -1119,17 +1489,40 @@ router.get('/fast-track-progress', verifyAdmin, async (req, res) => {
             if (!user.topUpDate) continue;
             
             const topUpDate = new Date(user.topUpDate);
+            
             // Sponsor ko apne top-up se 144 ghante milte hain
             const hourDeadline = new Date(topUpDate.getTime() + (144 * 60 * 60 * 1000));
             
-            // 🔥 SMART CUTOFF: Ya toh 144 ghante, ya 6 July raat 12 baje (Jo bhi pehle aaye)
-            const finalCutoff = new Date(Math.min(hourDeadline.getTime(), NEW_OFFER_END.getTime()));
+            let finalCutoff;
+            let directStartTime;
+            let phase = 0;
+
+            // 🔹 PHASE 1 LOGIC (14 June - 6 July)
+            if (topUpDate >= PHASE1_START && topUpDate <= PHASE1_END) {
+                phase = 1;
+                // SMART CUTOFF: Ya toh 144 ghante, ya 6 July raat 12 baje (Jo bhi pehle aaye)
+                finalCutoff = new Date(Math.min(hourDeadline.getTime(), PHASE1_END.getTime()));
+                directStartTime = PHASE1_START;
+            } 
+            // 🔹 PHASE 2 LOGIC (11 July Se)
+            else if (topUpDate >= PHASE2_START) {
+                phase = 2;
+                // Phase 2 me seedha 144 ghante milenge
+                finalCutoff = hourDeadline;
+                directStartTime = PHASE2_START;
+            } 
+            // 🔹 BLACKOUT ZONE YA OLD OFFER: Progress me nahi dikhayenge
+            else {
+                continue; 
+            }
             
             userMap[user.userId] = {
                 userId: user.userId,
                 name: user.name,
                 topUpDate: user.topUpDate,
-                deadline: finalCutoff, // Ab list is cutoff ke hisaab se chalegi
+                deadline: finalCutoff,
+                directStartTime: directStartTime,
+                phase: phase,
                 directs: 0
             };
         }
@@ -1140,8 +1533,8 @@ router.get('/fast-track-progress', verifyAdmin, async (req, res) => {
                 const sponsor = userMap[directUser.sponsorId];
                 const directTopUpDate = new Date(directUser.topUpDate);
 
-                // Agar direct 14 June ke baad aaya hai aur sponsor ki Final Cutoff ke andar hai
-                if (directTopUpDate >= NEW_OFFER_START && directTopUpDate <= sponsor.deadline) {
+                // Check: Direct user sponsor ki start time ke baad aur cutoff se pehle aaya ho
+                if (directTopUpDate >= sponsor.directStartTime && directTopUpDate <= sponsor.deadline) {
                     sponsor.directs += 1;
                 }
             }
@@ -1176,7 +1569,6 @@ router.get('/fast-track-progress', verifyAdmin, async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error" });
     }
 });
-
 
 
 // POST /auth/register (Admin adds a new user)

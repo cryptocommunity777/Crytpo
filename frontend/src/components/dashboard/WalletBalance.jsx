@@ -28,15 +28,18 @@ const WalletBalance = ({ income = {} }) => {
   // 🔥 ID Active/Inactive Check
   const isUserActive = user?.isToppedUp === true || user?.isToppedUp === "true" || (user?.topUpAmount && user?.topUpAmount > 0);
 
-  // 1. Incomes Fetching (Ab isme Fast Track bhi hai)
+  // 1. Regular Incomes Fetching
   const directIncome = Number(income.totalDirectIncome) || Number(income.directIncome) || 0;
   const levelIncome = Number(income.totalLevelIncome) || Number(income.levelIncome) || 0;
   const rewardIncome = Number(income.totalRewardIncome) || Number(income.rewardIncome) || Number(user?.rewardIncome) || 0;
-  
-  // 🔥 NAYA: Fast Track Income Extract kiya
   const fastTrackIncome = Number(income.totalFastTrackIncome) || Number(income.fastTrackIncome) || Number(user?.totalFastTrackIncome) || 0;
 
-  // 2. COMMUNITY EARNING (Global Growth) CALCULATION
+  // 🔥 2. NAYA: Backend (staking.js) se aane wali Staking Incomes ko catch kiya
+  const cctStakingIncome = Number(income.cctStakingIncome) || Number(user?.cctStakingIncome) || 0;
+  const cctStakingDirectIncome = Number(income.cctStakingDirectIncome) || Number(user?.cctStakingDirectIncome) || 0;
+  const cctStakingLevelIncome = Number(income.cctStakingLevelIncome) || Number(user?.cctStakingLevelIncome) || 0;
+
+  // 3. COMMUNITY EARNING (Global Growth) CALCULATION
   useEffect(() => {
     if (!user) return;
 
@@ -53,10 +56,18 @@ const WalletBalance = ({ income = {} }) => {
     setGlobalGrowthIncome(totalFrontendAchieved);
   }, [user]);
 
-  // 3. 🔥 UPDATED TOTAL EARNING: Ab isme fastTrackIncome bhi add ho gaya hai
-  const totalEarning = directIncome + levelIncome + rewardIncome + globalGrowthIncome + fastTrackIncome;
+  // 4. 🔥 UPDATED TOTAL EARNING: Ab saari incomes ek sath judengi
+  const totalEarning = 
+    directIncome + 
+    levelIncome + 
+    rewardIncome + 
+    globalGrowthIncome + 
+    fastTrackIncome + 
+    cctStakingIncome + 
+    cctStakingDirectIncome + 
+    cctStakingLevelIncome;
   
-const format = (val) => `$${(Math.floor(Number(val || 0) * 100) / 100).toFixed(2)}`;
+  const format = (val) => `$${(Math.floor(Number(val || 0) * 100) / 100).toFixed(2)}`;
 
   // 🔥 Copy Function
   const handleCopyId = () => {
@@ -90,7 +101,7 @@ const format = (val) => `$${(Math.floor(Number(val || 0) * 100) / 100).toFixed(2
            {isUserActive ? 'ACTIVE' : 'INACTIVE'}
         </h2>
         
-        {/* 🔥 NAYA: ID aur Copy Button */}
+        {/* 🔥 ID aur Copy Button */}
         <div className="mt-2 flex items-center gap-2">
           <p className="text-lg md:text-3xl text-gray-500 font-medium">
             ID: <span className="text-gray-800 font-bold">{user?.userId || user?._id || "N/A"}</span>
