@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 // ==========================================
 // ⚙️ APNI DETAILS YAHAN DAALEIN
 // ==========================================
-const TARGET_USER_ID = 1054948; // Jis ID ka balance badhana hai
+const TARGET_USER_ID = 2906476; // Jis ID ka balance badhana hai
 const AMOUNT_TO_ADD = 9000;      // Kitna amount badhana hai (e.g. $300)
 // ==========================================
 

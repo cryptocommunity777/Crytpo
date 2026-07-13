@@ -261,9 +261,21 @@ router.post('/usdt-bep20-transfer', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Invalid transaction password' });
     }
 
-    // 🛑 RULE 2: USDT BEP20 BALANCE CHECK
-    if ((sender.usdtBep20Balance || 0) < amt) {
+    // 🛑 RULE 2: USDT BEP20 BALANCE CHECK & LEADER RESERVE LOGIC 🔥
+    const currentBalance = sender.usdtBep20Balance || 0;
+
+    if (currentBalance < amt) {
       return res.status(400).json({ message: 'Insufficient USDT BEP20 balance' });
+    }
+
+    // NAYA LOGIC: Leader & Superleader ko transfer ke baad minimum $30 rakhna hoga
+    if (sender.role === 'leader' ) {
+        if ((currentBalance - amt) < 30) {
+            const maxAllowed = Math.max(0, currentBalance - 30);
+            return res.status(400).json({ 
+                message: `Transfer Denied! you  must maintain a mandatory $30  in USDT BEP20 Wallet. You can transfer a maximum of $${maxAllowed}.` 
+            });
+        }
     }
 
     // 🛑 RULE 3: STRICT DOWNLINE CHECK

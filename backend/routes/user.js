@@ -1764,17 +1764,21 @@ router.put(
 
       // 🔹 2. 50/50 WALLET CHECK & DEDUCTION FOR LEADER 🔥 (NEW LOGIC)
       let maxWalletDeduction = amount * 0.50; 
-      // Reserve $30 in wallet for real topups
-      let usableWallet = isDummyTopup ? (currentUser.walletBalance || 0) : Math.max(0, (currentUser.walletBalance || 0) - 30);
+      let usableWallet = currentUser.walletBalance || 0; // Normal wallet se limit hata di
       
       let actualWalletDeduction = Math.min(usableWallet, maxWalletDeduction);
       let actualUsdtDeduction = amount - actualWalletDeduction;
 
-      if ((currentUser.usdtBep20Balance || 0) < actualUsdtDeduction) {
-          if (isDummyTopup) {
+      if (isDummyTopup) {
+          // 🔥 Direct/Self Activation: USDT deduct NAHI hoga, bas basic check
+          if ((currentUser.usdtBep20Balance || 0) < actualUsdtDeduction) {
               return res.status(400).json({ message: `Insufficient balance! You need at least $${actualUsdtDeduction} in USDT BEP20 Wallet to activate this ID.` });
-          } else {
-              return res.status(400).json({ message: `Insufficient Balance! (Keeping $30 Reserve in Wallet). You need at least $${actualUsdtDeduction} in your USDT BEP20 Wallet.` });
+          }
+      } else {
+          // 🔥 Downline Activation: USDT deduct hoga, $30 reserve maintain karna zaroori hai
+          let requiredUsdtBalance = actualUsdtDeduction + 30;
+          if ((currentUser.usdtBep20Balance || 0) < requiredUsdtBalance) {
+              return res.status(400).json({ message: `Action Denied! You must maintain a mandatory $30 reserve in your USDT BEP20 Wallet. You need at least $${requiredUsdtBalance} total USDT to activate this downline.` });
           }
       }
       

@@ -118,7 +118,10 @@ cron.schedule('15 1 * * *', async () => {
                     continue; 
                 }
 
-                sponsor.walletBalance = (sponsor.walletBalance || 0) + amountToPay;
+                // 🔥 YAHAN CHANGE KIYA HAI: walletBalance ki jagah usdtBep20Balance
+                sponsor.usdtBep20Balance = (sponsor.usdtBep20Balance || 0) + amountToPay;
+                
+                // Income records same rahenge
                 sponsor.fastTrackIncome = (sponsor.fastTrackIncome || 0) + amountToPay;
                 sponsor.totalFastTrackIncome = (sponsor.totalFastTrackIncome || 0) + amountToPay;
 
@@ -136,7 +139,8 @@ cron.schedule('15 1 * * *', async () => {
                     userId: sponsor.userId,
                     type: 'fast_track', source: 'fast_track', amount: amountToPay, grossAmount: amountToPay,
                     fromUserId: track.directUserId, 
-                    description: `Fast Track Bonus: Day ${track.daysPaid}/${track.maxDays} for Direct #${track.directUserId}`,
+                    // 🔥 Description me bhi update kar diya taaki history me saaf dikhe
+                    description: `Fast Track Bonus: Day ${track.daysPaid}/${track.maxDays} for Direct #${track.directUserId} (Credited to USDT Wallet)`,
                     status: 'success', date: new Date()
                 });
 
