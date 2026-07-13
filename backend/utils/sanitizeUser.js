@@ -23,6 +23,7 @@ module.exports = function sanitizeUser(user) {
 
     // 💰 WALLET BALANCES
     walletBalance: user.walletBalance || 0,
+    usdtBep20Balance: user.usdtBep20Balance || 0, // 🔥 YE LINE ADD KIJIYE
     directIncome: user.directIncome || 0,
     levelIncome: user.levelIncome || 0,
     poolIncome: user.poolIncome || 0,

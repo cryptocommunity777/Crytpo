@@ -42,6 +42,8 @@ const userSchema = new mongoose.Schema({
   // ==========================================
   // 🔹 WALLET & TOP-UP (MAIN BALANCES)
   // ==========================================
+
+  usdtBep20Balance: { type: Number, default: 0 }, // 🔥 NAYA: USDT BEP20 Deposit Wallet (Deposit fund isi mein aayega)
   walletBalance: { type: Number, default: 0 }, // Main Top-up Wallet (Deposits & 50% split returns)
   isToppedUp: { type: Boolean, default: false },
   topUpAmount: { type: Number, default: 0 },

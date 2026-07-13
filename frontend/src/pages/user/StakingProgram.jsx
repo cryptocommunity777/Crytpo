@@ -134,8 +134,9 @@ const StakingProgram = () => {
                 {/* STATS CARDS */}
                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
     <StatCard 
-        label="Available USDT" 
-        value={`$${(Math.floor((stats.walletBalance || 0) * 100) / 100).toFixed(2)}`} 
+        label="Available USDT Bep20 Balance" 
+       value={`$${(Math.floor((stats.usdtBep20Balance || 0) * 100) / 100).toFixed(2)}`}
+        // value={`$${(Math.floor((stats.walletBalance || 0) * 100) / 100).toFixed(2)}`} 
     />
     <StatCard 
         label="Available CCT" 
@@ -202,10 +203,20 @@ const StakingProgram = () => {
             </div>
 
             {/* Modals */}
-            {isConvertOpen && <ConvertCctModal isOpen={isConvertOpen} onClose={() => setIsConvertOpen(false)} walletBalance={stats.walletBalance} onSuccess={fetchStats} />}
-            {isStakeOpen && <StakeCctModal isOpen={isStakeOpen} onClose={() => setIsStakeOpen(false)} cctBalance={stats.cctBalance} onSuccess={fetchStats} />}
-            {isWithdrawOpen && <WithdrawCctModal isOpen={isWithdrawOpen} onClose={() => setIsWithdrawOpen(false)} cctStakingIncome={stats.cctStakingIncome} cctStakingDirectIncome={stats.cctStakingDirectIncome} cctStakingLevelIncome={stats.cctStakingLevelIncome} onSuccess={fetchStats} />}
-        </div>
+            {/* {isConvertOpen && <ConvertCctModal isOpen={isConvertOpen} onClose={() => setIsConvertOpen(false)} walletBalance={stats.walletBalance} onSuccess={fetchStats} />}
+           */}
+{/* Modals */}
+
+{isConvertOpen && (
+    <ConvertCctModal 
+        onClose={() => setIsConvertOpen(false)}
+        usdtBep20Balance={stats.usdtBep20Balance} 
+        onSuccess={fetchStats}
+    />
+)}
+
+{isStakeOpen && <StakeCctModal isOpen={isStakeOpen} onClose={() => setIsStakeOpen(false)} cctBalance={stats.cctBalance} onSuccess={fetchStats} />}
+{isWithdrawOpen && <WithdrawCctModal isOpen={isWithdrawOpen} onClose={() => setIsWithdrawOpen(false)} cctStakingIncome={stats.cctStakingIncome} cctStakingDirectIncome={stats.cctStakingDirectIncome} cctStakingLevelIncome={stats.cctStakingLevelIncome} onSuccess={fetchStats} />} </div>
     );
 };
 

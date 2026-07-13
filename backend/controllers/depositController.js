@@ -283,7 +283,9 @@ const sweepFunds = async (user_id) => {
         const receipt = await sweepTx.wait(); 
         const actualHash = receipt.hash; 
 
-        user.walletBalance = (user.walletBalance || 0) + amountInUSDT;
+        //user.walletBalance = (user.walletBalance || 0) + amountInUSDT;
+       // Naya code - Deposit funds ke liye
+        user.usdtBep20Balance = (user.usdtBep20Balance || 0) + amountInUSDT;
         await user.save();
         
         await Transaction.create({

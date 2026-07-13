@@ -268,8 +268,9 @@ const AdminWithdrawalTable = () => {
 
       const gross = parseFloat(totalGross.toFixed(2));
       const fee = parseFloat(totalFee.toFixed(2));
-      const net = parseFloat((gross - fee).toFixed(2));
-      const createdAt = w.date ? new Date(w.date) : new Date(w.createdAt);
+     // const net = parseFloat((gross - fee).toFixed(2));
+     const net = parseFloat(Number(w.netAmount ?? (gross - fee)).toFixed(2)); 
+     const createdAt = w.date ? new Date(w.date) : new Date(w.createdAt);
 
       return {
         _id: w._id,

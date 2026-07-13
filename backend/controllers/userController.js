@@ -17,7 +17,8 @@ exports.getUserById = async (req, res) => {
       return res.status(400).json({ message: 'Invalid User ID format' });
     }
 
-    const user = await User.findOne({ userId: targetUserId });
+    const user = await User.findOne({ userId: targetUserId }).select("+usdtBep20Balance");
+    //const user = await User.findOne({ userId: targetUserId });
     
     if (!user) {
         return res.status(404).json({ message: 'User not found' });

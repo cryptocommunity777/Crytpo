@@ -15,6 +15,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
             success: true,
             data: {
                 walletBalance: user.walletBalance || 0,
+                usdtBep20Balance: user.usdtBep20Balance || 0, // 🔥 YAHAN ADD KIYA HAI 🔥
                 cctBalance: user.cctBalance || 0,
                 cctStakingIncome: user.cctStakingIncome || 0,
                 
@@ -39,6 +40,60 @@ router.get('/stats', authMiddleware, async (req, res) => {
     }
 });
 // 2. Convert Wallet Balance to CCT (100% conversion)
+// router.post('/convert', authMiddleware, async (req, res) => {
+//     try {
+//         const { amount, transactionPassword } = req.body;
+//         const user = await User.findOne({ userId: req.user.userId });
+        
+//         if (!user) return res.status(404).json({ message: "User not found" });
+//         if (user.transactionPassword.toLowerCase() !== transactionPassword.toLowerCase()) {
+//             return res.status(400).json({ message: "Invalid Transaction Password" });
+//         }
+        
+//         const convertAmt = Number(amount);
+//         if (convertAmt < 1) return res.status(400).json({ message: "Invalid amount. Minimum convert amount is $1." });
+        
+//         // Optional: Agar transfer ki tarah decimals allow nahi karne hain
+//         if (!Number.isInteger(convertAmt)) {
+//             return res.status(400).json({ message: "Convert amount must be a whole number." });
+//         }
+
+//         // 🔥 LEADER $30 LOCKED BALANCE CHECK 🔥
+//         let usableBalance = user.walletBalance;
+        
+//         if (user.role === 'leader') {
+//             usableBalance = user.walletBalance - 30; // Leader ka $30 fix/locked hai
+            
+//             if (convertAmt > usableBalance) {
+//                 return res.status(400).json({ 
+//                     message: `Insufficient Earned Balance! You cannot convert the $30 Leader Package Balance. You have $${usableBalance > 0 ? usableBalance.toFixed(2) : 0} available to convert.` 
+//                 });
+//             }
+//         } else {
+//             // Normal User Check
+//             if (convertAmt > usableBalance) {
+//                 return res.status(400).json({ message: "Insufficient Wallet Balance" });
+//             }
+//         }
+
+//         // Deduct from wallet, Add to CCT
+//         user.walletBalance -= convertAmt;
+//         user.cctBalance = (user.cctBalance || 0) + convertAmt;
+//         await user.save();
+
+//         await Transaction.create({
+//             userId: user.userId, type: 'convert_to_cct', amount: convertAmt, status: 'success',
+//             description: `Converted $${convertAmt} Wallet Balance to ${convertAmt} CCT`, date: new Date()
+//         });
+
+//         res.json({ success: true, message: `Successfully converted $${convertAmt} to CCT.` });
+//     } catch (err) {
+//         console.error("Convert Error:", err);
+//         res.status(500).json({ message: 'Server error during conversion' });
+//     }
+// });
+
+
 router.post('/convert', authMiddleware, async (req, res) => {
     try {
         const { amount, transactionPassword } = req.body;
@@ -58,10 +113,10 @@ router.post('/convert', authMiddleware, async (req, res) => {
         }
 
         // 🔥 LEADER $30 LOCKED BALANCE CHECK 🔥
-        let usableBalance = user.walletBalance;
+        let usableBalance = user.usdtBep20Balance || 0; // 🔥 Yahan walletBalance ki jagah usdtBep20Balance kiya
         
         if (user.role === 'leader') {
-            usableBalance = user.walletBalance - 30; // Leader ka $30 fix/locked hai
+            usableBalance = (user.usdtBep20Balance || 0) - 30; // Leader ka $30 fix/locked hai
             
             if (convertAmt > usableBalance) {
                 return res.status(400).json({ 
@@ -71,27 +126,26 @@ router.post('/convert', authMiddleware, async (req, res) => {
         } else {
             // Normal User Check
             if (convertAmt > usableBalance) {
-                return res.status(400).json({ message: "Insufficient Wallet Balance" });
+                return res.status(400).json({ message: "Insufficient USDT BEP20 Balance" }); // 🔥 Message update kiya
             }
         }
 
-        // Deduct from wallet, Add to CCT
-        user.walletBalance -= convertAmt;
+        // 🔥 Deduct from USDT BEP20 wallet, Add to CCT 🔥
+        user.usdtBep20Balance -= convertAmt; 
         user.cctBalance = (user.cctBalance || 0) + convertAmt;
         await user.save();
 
         await Transaction.create({
             userId: user.userId, type: 'convert_to_cct', amount: convertAmt, status: 'success',
-            description: `Converted $${convertAmt} Wallet Balance to ${convertAmt} CCT`, date: new Date()
+            description: `Converted $${convertAmt} USDT BEP20 Balance to ${convertAmt} CCT`, date: new Date() // 🔥 Description update kiya
         });
 
-        res.json({ success: true, message: `Successfully converted $${convertAmt} to CCT.` });
+        res.json({ success: true, message: `Successfully converted $${convertAmt} USDT BEP20 to CCT.` });
     } catch (err) {
         console.error("Convert Error:", err);
         res.status(500).json({ message: 'Server error during conversion' });
     }
 });
-
 
 router.post('/cct-transfer', authMiddleware, async (req, res) => {
   try {

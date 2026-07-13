@@ -2853,13 +2853,18 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
         source: w.source,
         grossAmount: Number(w.grossAmount || 0),
         fee: Number(w.fee || 0),
-        netAmount: +(Number(w.grossAmount || 0) - Number(w.fee || 0)).toFixed(2),
+       netAmount: +(Number(w.netAmount || 0)).toFixed(2),
+
+      //  netAmount: +(Number(w.grossAmount || 0) - Number(w.fee || 0)).toFixed(2),
         status: w.status || 'pending',
         date: dateObj,
         txnHash: w.txnHash || '',
         isInRange: isInRange(dateObj),
         isFirstWithdrawal // 🔥 Ye frontend jayega
       }];
+
+
+   
     });
 
     const result = showAll ? flattened : flattened.filter(r => r.isInRange);

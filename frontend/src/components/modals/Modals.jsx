@@ -10,8 +10,10 @@ import SuccessModal from "./SuccessModal";
 import SpinButton from "./SpinButton";
 // 🔥 NAYA: CCT Transfer Modal import kiya
 import TransferCctModal from "./TransferCctModal";
-// 🔥 NAYA: Icons for Selection Modal
-import { X, DollarSign, Coins } from "lucide-react"; 
+// 🔥 NAYA: USDT BEP20 Transfer Modal import kiya
+import UsdtBep20TransferModal from "./UsdtBep20TransferModal";
+// 🔥 NAYA: Icons for Selection Modal (Wallet icon added)
+import { X, DollarSign, Coins, Wallet } from "lucide-react"; 
 
 const Modals = ({ user, modalState, setModalState, setUser }) => {
   const [successData, setSuccessData] = useState(null);
@@ -51,6 +53,9 @@ const Modals = ({ user, modalState, setModalState, setUser }) => {
       {/* ========================================================
           🚀 TRANSFER SELECTION MODAL (USDT OR CCT?) 
           ======================================================== */}
+    {/* ========================================================
+          🚀 TRANSFER SELECTION MODAL (3 Buttons) 
+          ======================================================== */}
       {modalState.showTransferSelection && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-5 md:p-6 animate-in zoom-in-95 duration-300 relative">
@@ -69,7 +74,7 @@ const Modals = ({ user, modalState, setModalState, setUser }) => {
             </p>
 
             <div className="flex flex-col gap-3">
-              {/* USDT TRANSFER BUTTON */}
+              {/* 1. TOP-UP WALLET TRANSFER BUTTON */}
               <button
                 onClick={() => {
                   closeModal("showTransferSelection");
@@ -79,16 +84,35 @@ const Modals = ({ user, modalState, setModalState, setUser }) => {
               >
                 <div className="flex items-center gap-3">
                   <div className="bg-green-100 group-hover:bg-white/20 p-2.5 rounded-xl text-green-600 group-hover:text-white transition-colors">
-                    <DollarSign size={20} strokeWidth={2.5} />
+                    <Wallet size={20} strokeWidth={2.5} />
                   </div>
                   <div className="text-left">
-                    <div className="font-black text-green-800 group-hover:text-white text-sm uppercase tracking-wide transition-colors">USDT Transfer</div>
-                    <div className="text-[10px] font-bold text-green-600/80 group-hover:text-green-100 uppercase tracking-widest transition-colors">Transfer Wallet Balance</div>
+                    <div className="font-black text-green-800 group-hover:text-white text-sm uppercase tracking-wide transition-colors">Wallet Transfer</div>
+                    <div className="text-[10px] font-bold text-green-600/80 group-hover:text-green-100 uppercase tracking-widest transition-colors">Transfer Top-up Balance</div>
                   </div>
                 </div>
               </button>
 
-              {/* CCT TRANSFER BUTTON */}
+              {/* 2. USDT BEP20 TRANSFER BUTTON 🔥 (YE WALA MISSING THA) */}
+              <button
+                onClick={() => {
+                  closeModal("showTransferSelection");
+                  setModalState((prev) => ({ ...prev, showUsdtBep20Transfer: true }));
+                }}
+                className="w-full flex items-center justify-between bg-amber-50 hover:bg-amber-500 border border-amber-200 hover:border-amber-500 group p-4 rounded-2xl transition-all shadow-sm active:scale-95"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-amber-100 group-hover:bg-white/20 p-2.5 rounded-xl text-amber-600 group-hover:text-white transition-colors">
+                    <DollarSign size={20} strokeWidth={2.5} />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-black text-amber-800 group-hover:text-white text-sm uppercase tracking-wide transition-colors">USDT BEP20 Transfer</div>
+                    <div className="text-[10px] font-bold text-amber-600/80 group-hover:text-amber-100 uppercase tracking-widest transition-colors">Transfer Deposit Balance</div>
+                  </div>
+                </div>
+              </button>
+
+              {/* 3. CCT TRANSFER BUTTON */}
               <button
                 onClick={() => {
                   closeModal("showTransferSelection");
@@ -139,13 +163,23 @@ const Modals = ({ user, modalState, setModalState, setUser }) => {
         />
       )}
 
+      {/* 🔥 NAYA: USDT BEP20 Transfer Modal */}
+      {modalState.showUsdtBep20Transfer && (
+        <UsdtBep20TransferModal
+          onClose={() => closeModal("showUsdtBep20Transfer")}
+          onSuccess={(userId, amount) =>
+            setSuccessData({ userId, amount, type: "transfer" })
+          }
+        />
+      )}
+
       {/* 🔥 NAYA: CCT Transfer Modal */}
       {modalState.showCctTransfer && (
         <TransferCctModal
           onClose={() => closeModal("showCctTransfer")}
           cctBalance={user?.cctBalance || 0} // Passing CCT balance from user object
           onSuccess={(userId, amount) =>
-            setSuccessData({ userId, amount, type: "transfer" }) // You can make type "cct_transfer" if needed
+            setSuccessData({ userId, amount, type: "transfer" }) 
           }
         />
       )}
