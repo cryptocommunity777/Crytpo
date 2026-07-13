@@ -26,6 +26,7 @@ module.exports = function sanitizeUser(user) {
     usdtBep20Balance: user.usdtBep20Balance || 0, // 🔥 YE LINE ADD KIJIYE
     directIncome: user.directIncome || 0,
     levelIncome: user.levelIncome || 0,
+    totalLevelIncome: user.totalLevelIncome || 0, // 👈 YE MISSING THA!
     poolIncome: user.poolIncome || 0,
     rewardIncome: user.rewardIncome || 0,
     totalWithdrawn: user.totalWithdrawn || 0,

@@ -28,6 +28,7 @@ const IncomeSummary = ({ income = {}, user = {} }) => {
   const levelIncome = Number(income.totalLevelIncome) || Number(income.levelIncome) || 0;
   const rewardIncome = Number(income.totalRewardIncome) || Number(income.rewardIncome) || Number(user.rewardIncome) || 0;
   
+  
   // 🔥 2. Fast Track Income Extract Kiya
   const fastTrackIncome = Number(income.totalFastTrackIncome) || Number(income.fastTrackIncome) || 0;
 

@@ -1699,6 +1699,7 @@ router.put(
 );
 
 
+
 // ==========================================
 // 🚀 LEADER SPECIAL: TOPUP ROUTE
 // ==========================================
@@ -2630,14 +2631,30 @@ router.get('/:userId', authMiddleware, async (req, res) => {
     }
 
     // 💰 6. Response
+    // res.json({ 
+    //     success: true,
+    //     user: user, 
+    //     income: {
+    //         totalDirectIncome: user.totalDirectIncome || user.directIncome || 0,
+    //         totalLevelIncome: user.levelIncome || 0,
+    //         totalRewardIncome: user.totalRewardIncome || user.rewardIncome || 0,
+    //         totalIncome: (user.totalDirectIncome || 0) + (user.levelIncome || 0) + (user.totalRewardIncome || 0)
+    //     }
+    // });
+    // 💰 6. Response
     res.json({ 
         success: true,
         user: user, 
         income: {
             totalDirectIncome: user.totalDirectIncome || user.directIncome || 0,
-            totalLevelIncome: user.levelIncome || 0,
+            
+            // 🔥 FIX: Yahan user.totalLevelIncome add kar diya hai
+            totalLevelIncome: user.totalLevelIncome || user.levelIncome || 0, 
+            
             totalRewardIncome: user.totalRewardIncome || user.rewardIncome || 0,
-            totalIncome: (user.totalDirectIncome || 0) + (user.levelIncome || 0) + (user.totalRewardIncome || 0)
+            
+            // 🔥 FIX: Total income mein bhi totalLevelIncome add kar diya
+            totalIncome: (user.totalDirectIncome || 0) + (user.totalLevelIncome || user.levelIncome || 0) + (user.totalRewardIncome || 0)
         }
     });
 
