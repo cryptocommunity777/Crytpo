@@ -378,7 +378,7 @@ const FastTrackProgress = () => {
                                             : 'bg-white hover:bg-indigo-50 text-indigo-600 border-indigo-200'
                                     }`}
                                 >
-                                    Next
+                                    Nextt
                                 </button>
                             </div>
                         </div>
