@@ -335,8 +335,94 @@ export default function Plan() {
                     <p>🚀 The faster you complete your Directs, the faster your My Community will grow and unlock new levels!</p>
                   </div>
 
+                  {/* Community Withdrawal Table */}
+<div className="mt-6">
+  <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-3">
+    Community Withdrawal Distribution
+  </h4>
+
+  <div className="overflow-x-auto rounded-lg border border-slate-200">
+    <table className="min-w-full text-sm md:text-base">
+      <thead className="bg-slate-100">
+        <tr>
+          <th className="px-4 py-3 text-left font-bold text-slate-700">Team Size</th>
+          <th className="px-4 py-3 text-center font-bold text-slate-700">Withdrawal</th>
+          <th className="px-4 py-3 text-center font-bold text-slate-700">Wallet</th>
+          <th className="px-4 py-3 text-center font-bold text-slate-700">
+            Community Net Withdrawal
+          </th>
+        </tr>
+      </thead>
+
+      <tbody className="divide-y divide-slate-200 bg-white">
+        <tr>
+          <td className="px-4 py-3 font-semibold">0</td>
+          <td className="px-4 py-3 text-center text-green-600 font-bold">20%</td>
+          <td className="px-4 py-3 text-center text-blue-600 font-bold">80%</td>
+          <td className="px-4 py-3 text-center font-semibold">$2,440</td>
+        </tr>
+
+        <tr>
+          <td className="px-4 py-3 font-semibold">30+</td>
+          <td className="px-4 py-3 text-center text-green-600 font-bold">30%</td>
+          <td className="px-4 py-3 text-center text-blue-600 font-bold">70%</td>
+          <td className="px-4 py-3 text-center font-semibold">$3,660</td>
+        </tr>
+
+        <tr>
+          <td className="px-4 py-3 font-semibold">50+</td>
+          <td className="px-4 py-3 text-center text-green-600 font-bold">40%</td>
+          <td className="px-4 py-3 text-center text-blue-600 font-bold">60%</td>
+          <td className="px-4 py-3 text-center font-semibold">$4,880</td>
+        </tr>
+
+        <tr>
+          <td className="px-4 py-3 font-semibold">100+</td>
+          <td className="px-4 py-3 text-center text-green-600 font-bold">50%</td>
+          <td className="px-4 py-3 text-center text-blue-600 font-bold">50%</td>
+          <td className="px-4 py-3 text-center font-semibold">$6,100</td>
+        </tr>
+
+        <tr>
+          <td className="px-4 py-3 font-semibold">300+</td>
+          <td className="px-4 py-3 text-center text-green-600 font-bold">60%</td>
+          <td className="px-4 py-3 text-center text-blue-600 font-bold">40%</td>
+          <td className="px-4 py-3 text-center font-semibold">$7,320</td>
+        </tr>
+
+        <tr>
+          <td className="px-4 py-3 font-semibold">500+</td>
+          <td className="px-4 py-3 text-center text-green-600 font-bold">80%</td>
+          <td className="px-4 py-3 text-center text-blue-600 font-bold">20%</td>
+          <td className="px-4 py-3 text-center font-semibold">$9,760</td>
+        </tr>
+
+        <tr className="bg-green-50">
+          <td className="px-4 py-3 font-bold">1000+</td>
+          <td className="px-4 py-3 text-center text-green-700 font-extrabold">100%</td>
+          <td className="px-4 py-3 text-center text-red-600 font-extrabold">0%</td>
+          <td className="px-4 py-3 text-center font-extrabold text-green-700">
+            $12,200
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div className="mt-4 bg-slate-50 border border-slate-200 rounded-lg p-4">
+    <p className="text-sm md:text-base text-slate-700">
+      <strong>Note:</strong> As your Team Size increases, a larger percentage of
+      your Community Income becomes available for direct withdrawal, while the
+      Wallet allocation decreases. At <strong>1000+ Team Members</strong>, you
+      can withdraw <strong>100%</strong> of your Community Income.
+    </p>
+  </div>
+</div>
+
                 </div>
               )}
+
+              
             </div>
 
           </div>
