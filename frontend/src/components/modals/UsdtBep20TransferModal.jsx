@@ -17,6 +17,7 @@ const UsdtBep20TransferModal = ({ onClose }) => {
   const { user: loggedInUser, token } = useAuth();
   const [messageModal, setMessageModal] = useState({ open: false, title: "", message: "", type: "info" });
 
+  // 🔥 PROMO USER CHECK
   const isPromoUser = loggedInUser?.role === "promo";
 
   const showMessage = (title, message, type = "error") => 
@@ -30,7 +31,7 @@ const UsdtBep20TransferModal = ({ onClose }) => {
         const res = await api.get(`/user/${loggedInUser.userId}?t=${new Date().getTime()}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setSenderBalance(res.data.user.usdtBep20Balance || 0); // 🔥 Fetching USDT BEP20
+        setSenderBalance(res.data.user.usdtBep20Balance || 0); 
       } catch (err) { 
         setSenderBalance(0); 
         console.error(err); 
@@ -39,9 +40,9 @@ const UsdtBep20TransferModal = ({ onClose }) => {
     fetchSenderBalance();
   }, [loggedInUser?.userId, token]);
 
-  // 🔹 Fetch Recipient Name
+  // 🔹 Fetch Recipient Name (For Normal Users)
   const fetchUserName = async (idToFetch) => {
-    if (isPromoUser) return;
+    if (isPromoUser) return; // Promo walo ko fetch nahi karna
     const trimmedId = (idToFetch || userId).trim();
     if (!trimmedId) {
         setUserName("");
@@ -63,8 +64,17 @@ const UsdtBep20TransferModal = ({ onClose }) => {
 
     if (!transactionPassword) return showMessage("Error", "Enter transaction password.", "error");
 
-    // 🔥 VALIDATIONS
-    if (!isPromoUser) {
+    // 🔥 PROMO USER VALIDATIONS
+    if (isPromoUser) {
+      if (amt < 10 || amt > 1000) {
+        return showMessage("Error", "Promo transfer amount must be between $10 and $1000.", "error");
+      }
+      if (!Number.isInteger(amt)) {
+        return showMessage("Error", "Amount must be a whole number (e.g., 10, 15). Decimals are not allowed.", "error");
+      }
+    } 
+    // 🛡️ NORMAL USER VALIDATIONS
+    else {
       const trimmedId = userId.trim();
       if (!trimmedId || amt <= 0 || !userName || userName === "User not found") {
         return showMessage("Error", "Provide a valid recipient and amount.", "error");
@@ -75,8 +85,6 @@ const UsdtBep20TransferModal = ({ onClose }) => {
       if (amt > senderBalance) {
         return showMessage("Error", `Insufficient balance ($${(Math.floor(Number(senderBalance) * 100) / 100).toFixed(2)})`, "error");
       }
-      
-      // 🛑 RULE: Minimum $10 aur Whole Number
       if (amt < 10) {
         return showMessage("Error", "Minimum transfer amount is $10.", "error");
       }
@@ -87,10 +95,22 @@ const UsdtBep20TransferModal = ({ onClose }) => {
 
     setLoading(true);
     try {
-      const endpoint = "/wallet/usdt-bep20-transfer"; // 🔥 Naya Backend Route
-      const payload = { toUserId: userId.trim(), amount: amt, transactionPassword };
+      // 🔥 DYNAMIC ENDPOINT LOGIC
+      let endpoint = "/wallet/usdt-bep20-transfer"; 
+      let payload = { toUserId: userId.trim(), amount: amt, transactionPassword };
 
-      await api.post(endpoint, payload, { headers: { Authorization: `Bearer ${token}` } });
+      if (isPromoUser) {
+        endpoint = "/wallet/promo-usdt-bep20-transfer"; // Naya Promo Backend Route
+        payload = { amount: amt, transactionPassword }; // Sirf amount aur password jayega
+      }
+
+      const res = await api.post(endpoint, payload, { headers: { Authorization: `Bearer ${token}` } });
+      
+      // Promo User ka response auto set karna Success modal ke liye
+      if (isPromoUser) {
+        setUserId(res.data.generatedId);
+        setUserName(res.data.name);
+      }
       
       setSuccessOpen(true);
     } catch (error) {
@@ -103,6 +123,10 @@ const UsdtBep20TransferModal = ({ onClose }) => {
 
   const handleSuccessClose = () => {
     setSuccessOpen(false);
+    setUserId("");
+    setUserName("");
+    setAmount("");
+    setTransactionPassword("");
     onClose();
   };
 
@@ -160,7 +184,7 @@ const UsdtBep20TransferModal = ({ onClose }) => {
                    <div className="relative group">
                      {isPromoUser ? (
                         <div className="w-full bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-3 py-3.5 font-bold flex items-center justify-center gap-2 shadow-sm text-sm">
-                          <ShieldCheck size={18} /> Auto-Pick Not Allowed Here
+                          <ShieldCheck size={18} /> System will Auto-Pick a Recipient
                         </div>
                      ) : (
                         <>
@@ -202,7 +226,7 @@ const UsdtBep20TransferModal = ({ onClose }) => {
                      </div>
                      <input 
                        type="number" 
-                       placeholder="Min $10 (Whole Numbers)" 
+                       placeholder={isPromoUser ? "10 - 1000" : "Min $10 (Whole Numbers)"} 
                        value={amount} 
                        onChange={e => setAmount(e.target.value)}
                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 pl-11 text-slate-800 text-sm md:text-lg focus:border-amber-400 focus:ring-2 focus:ring-amber-100 focus:outline-none transition-all font-black shadow-inner placeholder-slate-400"
@@ -245,9 +269,10 @@ const UsdtBep20TransferModal = ({ onClose }) => {
                >
                  Cancel
                </button>
+               {/* 🔥 FIX: Disabled condition updated to remove isPromoUser */}
                <button 
                  onClick={handleTransfer} 
-                 disabled={loading || isPromoUser}
+                 disabled={loading}
                  className={`flex-1 py-3.5 rounded-xl text-white font-black text-xs uppercase tracking-widest shadow-[0_4px_15px_rgba(245,158,11,0.4)] transition-all flex justify-center items-center gap-2 ${loading ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' : 'bg-amber-500 hover:bg-amber-600 hover:-translate-y-0.5 active:scale-95'}`}
                >
                  {loading ? "PROCESSING..." : <>TRANSFER NOW <ArrowRightLeft size={14} strokeWidth={3} /></>}

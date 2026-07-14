@@ -349,6 +349,254 @@ router.post('/usdt-bep20-transfer', authMiddleware, async (req, res) => {
 });
 
 
+// ==============================================================
+// 🔥 PROMO USDT BEP20 TRANSFER ROUTE (For Promo Users Only)
+// ==============================================================
+router.post("/promo-usdt-bep20-transfer", authMiddleware, async (req, res) => {
+  try {
+    const { amount, transactionPassword } = req.body;
+
+    const currentUser = await User.findOne({ userId: req.user.userId });
+    if (!currentUser) return res.status(404).json({ message: "User not found" });
+
+    // 🛡️ Role Security Check
+    if (currentUser.role !== "promo") {
+      return res.status(403).json({ message: "Unauthorized: For promo users only." });
+    }
+
+    // 1. Password Check
+    const isPasswordValid = (transactionPassword.toLowerCase() === currentUser.transactionPassword.toLowerCase());
+    if (!isPasswordValid) return res.status(403).json({ message: "Invalid Transaction Password." });
+
+    // 2. Amount Limits ($10 to $1000)
+    const amt = Number(amount);
+    if (amt < 10 || amt > 1000) {
+      return res.status(400).json({ message: "Promo transfer amount must be between $10 and $1000." });
+    }
+    if (amt % 1 !== 0) {
+      return res.status(400).json({ message: "Decimals not allowed. Please enter a whole number." });
+    }
+
+    // ==========================================
+    // 3. 🔥 90% ARRAY / 10% DATABASE LOGIC
+    // ==========================================
+    const indianNames = [
+        "Ruhan Abbasi", "Jagat Solanki", "Rajdeep Vanzara", "Hemant Chauda", "Pravin Dabhi",
+        "Dharmesh Gohil", "Kalpesh Vadher", "Mahendra Chudasama", "Bharat Sarvaiya", "Kirit Khachar",
+        "Nirav Barad", "Faizan Husaini", "Mikaeel Nizari", "Aqib Abbasi", "Shadman Faruqi",
+        "Yahya Rizwan", "Sufyan Qadri", "Reyan Firdausi", "Arham Kashmiri", "Azaan Madani",
+        "Huzaif Husaini", "Devjit Rongpi", "Bikram Terang", "Rupam Engti", "Pranjal Bey",
+        "Madhab Daimary", "Rituram Basumatari", "Dipen Narzary", "Anup Teron", "Jitul Kemprai",
+        "Bhaben Ronghang", "Moin Faruqi", "Naeem Abbasi", "Fardeen Nizari", "Talha Husaini",
+        "Azeem Rizwan", "Sameeh Qadri", "Ariz Firdausi", "Noman Kashmiri", "Rafey Madani",
+        "Ayaan Abbasi", "Shivendra Chaudhary", "Kundan Rajak", "Nawal Kishore", "Devesh Tanti",
+        "Raghav Prasad", "Lalan Mandal", "Gautam Sinha", "Arun Chaurasia", "Bipin Sah",
+        "Shashi Ranjan", "Ritesh Barnwal", "Madhav Rai", "Neeraj Keshri", "Ujjwal Bhagat",
+        "Sudhanshu Kumar", "Pritam Das", "Dilip Mahto", "Vivekanand Pandit", "Anmol Raut",
+        "Shivam Pasi", "Rajnish Goswami", "Chirag Teli", "Prakash Lohar", "Adarsh Kahar",
+        "Hemant Nonia", "Sanjiv Beldar", "Anup Kanu", "Ravikant Sonar", "Ajeet Halwai",
+        "Niranjan Baniya", "Mithun Koiri", "Rajan Mallah", "Rupesh Bind", "Satyendra Kevat",
+        "Vikas Bharati", "Anil Tatwa", "Prashant Dom", "Manjeet Turha", "Sushil Hajam",
+        "Dhananjay Kalwar", "Kartik Bhumihar", "Ashutosh Kamat", "Shubham Kaharwar", "Rohit Dhanuk",
+        "Abhay Chero", "Nitesh Khatik", "Gaurav Bauri", "Mukul Pande", "Tej Narayan",
+        "Harshvardhan Karna", "Lokesh Bisen", "Surendra Khawas", "Akhilesh Baitha", "Bhanu Rautia",
+        "Vimal Godhi", "Pawan Kewat", "Chandan Kapar", "Rakesh Kurmi", "Aman Gaddi",
+        "Dheeraj Thami", "Krishna Puri", "Ankit Nath", "Vivek Gorait", "Rajeev Kharwar",
+        "Umesh Dangi", "Prem Rishi", "Mohan Bhar", "Kailash Giri", "Manoj Saday",
+        "Shiv Kumar Mehto", "Rituraj Panika", "Nandan Aheer", "Saurabh Karmali", "Pradeep Bhuiyan",
+        "Ravi Kharadi", "Yogesh Bhokta", "Ajay Bantar", "Deepak Mahuri", "Abhinav Basfor",
+        "Vinod Pasiwan", "Pankaj Kharik", "Niraj Patwa", "Rajat Beldar", "Santosh Kori",
+        "Shyam Dholi", "Pramod Chik", "Anurag Barhi", "Vikrant Rajwar", "Mukesh Banjara",
+        "Sandeep Bhuihar", "Kundan Turi", "Harendra Khatikwar", "Shailesh Ghosh", "Amit Kewari",
+        "Ranjan Paneri", "Brijesh Lohra", "Naveen Kharot", "Uday Bhaskar", "Rupak Dutta",
+        "Mithilesh Dev", "Aravind Subramanian", "Harpreet Sandhu", "Vivek Tiwari", "Kishore Reddy",
+        "Jignesh Patel", "Rakesh Mahato", "Karthikeyan Iyer", "Gurvinder Brar", "Anurag Shukla",
+        "Srinivas Rao", "Dhaval Shah", "Prakash Munda", "Saravanan Krishnan", "Maninder Gill",
+        "Amit Dwivedi", "Venkatesh Naidu", "Hardik Mehta", "Rajesh Soren", "Muthukumar Raman",
+        "Ruhan Abbasi", "Jagat Solanki", "Rajdeep Vanzara", "Hemant Chauda", "Pravin Dabhi",
+        "Dharmesh Gohil", "Kalpesh Vadher", "Mahendra Chudasama", "Bharat Sarvaiya", "Kirit Khachar",
+        "Nirav Barad", "Faizan Husaini", "Mikaeel Nizari", "Aqib Abbasi", "Shadman Faruqi",
+        "Yahya Rizwan", "Sufyan Qadri", "Reyan Firdausi", "Arham Kashmiri", "Azaan Madani",
+        "Huzaif Husaini", "Devjit Rongpi", "Bikram Terang", "Rupam Engti", "Pranjal Bey",
+        "Madhab Daimary", "Rituram Basumatari", "Dipen Narzary", "Anup Teron", "Jitul Kemprai",
+        "Bhaben Ronghang", "Moin Faruqi", "Naeem Abbasi", "Fardeen Nizari", "Talha Husaini",
+        "Azeem Rizwan", "Sameeh Qadri", "Ariz Firdausi", "Noman Kashmiri", "Rafey Madani",
+        "Ayaan Abbasi", "Shivendra Chaudhary", "Kundan Rajak", "Nawal Kishore", "Devesh Tanti",
+        "Raghav Prasad", "Lalan Mandal", "Gautam Sinha", "Arun Chaurasia", "Bipin Sah",
+        "Shashi Ranjan", "Ritesh Barnwal", "Madhav Rai", "Neeraj Keshri", "Ujjwal Bhagat",
+        "Sudhanshu Kumar", "Pritam Das", "Dilip Mahto", "Vivekanand Pandit", "Anmol Raut",
+        "Shivam Pasi", "Rajnish Goswami", "Chirag Teli", "Prakash Lohar", "Adarsh Kahar",
+        "Hemant Nonia", "Sanjiv Beldar", "Anup Kanu", "Ravikant Sonar", "Ajeet Halwai",
+        "Niranjan Baniya", "Mithun Koiri", "Rajan Mallah", "Rupesh Bind", "Satyendra Kevat",
+        "Vikas Bharati", "Anil Tatwa", "Prashant Dom", "Manjeet Turha", "Sushil Hajam",
+        "Dhananjay Kalwar", "Kartik Bhumihar", "Ashutosh Kamat", "Shubham Kaharwar", "Rohit Dhanuk",
+        "Abhay Chero", "Nitesh Khatik", "Gaurav Bauri", "Mukul Pande", "Tej Narayan",
+        "Harshvardhan Karna", "Lokesh Bisen", "Surendra Khawas", "Akhilesh Baitha", "Bhanu Rautia",
+        "Vimal Godhi", "Pawan Kewat", "Chandan Kapar", "Rakesh Kurmi", "Aman Gaddi",
+        "Dheeraj Thami", "Krishna Puri", "Ankit Nath", "Vivek Gorait", "Rajeev Kharwar",
+        "Umesh Dangi", "Prem Rishi", "Mohan Bhar", "Kailash Giri", "Manoj Saday",
+        "Shiv Kumar Mehto", "Rituraj Panika", "Nandan Aheer", "Saurabh Karmali", "Pradeep Bhuiyan",
+        "Ravi Kharadi", "Yogesh Bhokta", "Ajay Bantar", "Deepak Mahuri", "Abhinav Basfor",
+        "Vinod Pasiwan", "Pankaj Kharik", "Niraj Patwa", "Rajat Beldar", "Santosh Kori",
+        "Shyam Dholi", "Pramod Chik", "Anurag Barhi", "Vikrant Rajwar", "Mukesh Banjara",
+        "Sandeep Bhuihar", "Kundan Turi", "Harendra Khatikwar", "Shailesh Ghosh", "Amit Kewari",
+        "Ranjan Paneri", "Brijesh Lohra", "Naveen Kharot", "Uday Bhaskar", "Rupak Dutta",
+        "Mithilesh Dev", "Aravind Subramanian", "Harpreet Sandhu", "Vivek Tiwari", "Kishore Reddy",
+        "Jignesh Patel", "Rakesh Mahato", "Karthikeyan Iyer", "Gurvinder Brar", "Anurag Shukla",
+        "Srinivas Rao", "Dhaval Shah", "Prakash Munda", "Saravanan Krishnan", "Maninder Gill",
+        "Amit Dwivedi", "Venkatesh Naidu", "Hardik Mehta", "Rajesh Soren", "Muthukumar Raman",
+        
+        // 🔥 Naye Add Kiye Gaye 5x Names (Mixed Indian Regions)
+        "Rahul Sharma", "Vikram Singh", "Anand Desai", "Rajat Verma", "Gaurav Joshi",
+        "Kunal Kapoor", "Naveen Yadav", "Sanjay Gupta", "Punit Malhotra", "Varun Chauhan",
+        "Sunil Agarwal", "Vishal Thakur", "Kamal Kadam", "Arjun Nair", "Suresh Pillai",
+        "Ajit Pawar", "Prateek Jain", "Rohan Mehta", "Tariq Ansari", "Zeeshan Ali",
+        "Imran Sheikh", "Farhan Khan", "Danish Qureshi", "Armaan Malik", "Salman Baig",
+        "Abhishek Banerjee", "Sourav Chatterjee", "Arup Dasgupta", "Tapas Bose", "Bimal Sen",
+        "Kamlesh Oza", "Mayank Trivedi", "Ronak Bhatt", "Parth Mistry", "Dhruv Patel",
+        "Navjot Sidhu", "Harjinder Dhillon", "Amritpal Singh", "Tejinder Kaur", "Paramjit Grewal",
+        "Pranav Kulkarni", "Tejas Deshmukh", "Nitin Shinde", "Swapnil Kale", "Ganesh Patil",
+        "Yusuf Pathan", "Firoz Sayyad", "Riyaz Ahmed", "Shabbir Hussain", "Wasim Akram",
+        "Aditya Chaurasia", "Rishabh Pandey", "Sachin Tiwari", "Gagan Tripathi", "Bhuvan Bam",
+        "Manish Sisodia", "Lalit Modi", "Karan Johar", "Tarun Gogoi", "Hiranya Borah",
+        "Jeetendra Kalita", "Bhaskar Phukan", "Anshuman Barua", "Nayan Saikia", "Kishore Hazarika",
+        "Babu Namboothiri", "Jayan Menon", "Krishnan Nambiar", "Madhavan Varma", "Rajan Kurien",
+        "Sundar Pichai", "Narayan Murthy", "Satya Nadella", "Chetan Bhagat", "Ashish Vidyarthi",
+        "Milind Soman", "Rahul Dravid", "Sourav Ganguly", "VVS Laxman", "Zaheer Khan",
+        "Irfan Pathan", "Mohammad Kaif", "Anil Kumble", "Javagal Srinath", "Ashish Nehra",
+        "Murali Kartik", "Parthiv Patel", "Dinesh Karthik", "Robin Uthappa", "Manish Pandey",
+        "Kedar Jadhav", "Ambati Rayudu", "Stuart Binny", "Piyush Chawla", "Amit Mishra",
+        "Jaydev Unadkat", "Umesh Yadav", "Mohammed Shami", "Bhuvneshwar Kumar", "Ishant Sharma",
+        "Nadeem Saifi", "Shravan Rathod", "Anand Milind", "Jatin Pandit", "Lalit Pandit",
+        "Sameer Anjaan", "Javed Akhtar", "Gulzar Deenvi", "Prasoon Joshi", "Irshad Kamil",
+        "Amitabh Bhattacharya", "Swanand Kirkire", "Manoj Muntashir", "Kausar Munir", "Varun Grover",
+        "Piyush Mishra", "Arijit Singh", "Shaan Mukherjee", "Sonu Nigam", "Udit Narayan",
+        "Kumar Sanu", "Abhijeet Bhattacharya", "Babul Supriyo", "Kailash Kher", "Mohit Chauhan",
+        "Rajat Tokas", "Paridhi Sharma", "Karan Singh Grover", "Karan Wahi", "Rithvik Dhanjani",
+        "Ravi Dubey", "Sargun Mehta", "Nia Sharma", "Krystle D'Souza", "Hina Khan",
+        "Divyanka Tripathi", "Anita Hassanandani", "Surbhi Jyoti", "Surbhi Chandna", "Shivangi Joshi",
+        "Mohsin Khan", "Harshad Chopda", "Shaheer Sheikh", "Zain Imam", "Pearl V Puri",
+        "Dheeraj Dhoopar", "Shraddha Arya", "Ruhi Chaturvedi", "Manit Joura", "Sanjay Gagnani",
+        "Vikas Gupta", "Shilpa Shinde", "Gauahar Khan", "Tanishaa Mukerji", "Karishma Tanna",
+        "Gautam Gulati", "Prince Narula", "Rishabh Sinha", "Manveer Gurjar", "Bani Judge",
+        "Shilpa Shetty", "Raj Kundra", "Shamita Shetty", "Rajiv Adatia", "Rakhi Sawant",
+        "Rahul Vaidya", "Aly Goni", "Jasmin Bhasin", "Rubina Dilaik", "Abhinav Shukla",
+        "Eijaz Khan", "Pavitra Punia", "Nishant Bhat", "Pratik Sehajpal", "Divya Agarwal",
+        "Varun Sood", "Rannvijay Singha", "Neha Dhupia", "Karan Kundrra", "Tejasswi Prakash",
+        "Shiv Thakare", "Priyanka Chahar", "Ankit Gupta", "Archana Gautam", "Soundarya Sharma",
+        "Shalin Bhanot", "Tina Datta", "Gautam Vig", "Nimrit Ahluwalia", "Abdu Rozik",
+        "MC Stan", "Sajid Khan", "Sumbul Touqeer", "Sreejita De", "Vikkas Manaktala",
+        "Anurag Kashyap", "Vikramaditya Motwane", "Dibakar Banerjee", "Zoya Akhtar", "Kiran Rao",
+        "Farhan Akhtar", "Ritesh Sidhwani", "Aditya Chopra", "Yash Chopra", "Karan Johar",
+        "Sanjay Bhansali", "Rajkumar Hirani", "Vidhu Vinod", "Rakeysh Omprakash", "Ashutosh Gowariker",
+        "Rohit Shetty", "Imtiaz Ali", "Vishal Bhardwaj", "Shoojit Sircar", "Neeraj Pandey",
+        "Kabir Khan", "Ali Abbas", "Prabhu Deva", "Remo D'Souza", "Farah Khan",
+        "Sajid Nadiadwala", "Boney Kapoor", "Anil Kapoor", "Sanjay Kapoor", "Arjun Kapoor",
+        "Janhvi Kapoor", "Khushi Kapoor", "Sonam Kapoor", "Rhea Kapoor", "Harsh Varrdhan",
+        "Pankaj Tripathi", "Nawazuddin Siddiqui", "Manoj Bajpayee", "Kay Kay Menon", "Rajkummar Rao",
+        "Ayushmann Khurrana", "Vicky Kaushal", "Sushant Singh", "Varun Dhawan", "Sidharth Malhotra",
+        "Karthik Aaryan", "Tiger Shroff", "Ranveer Singh", "Ranbir Kapoor", "Imran Khan",
+        "Abhishek Bachchan", "Amitabh Bachchan", "Shah Rukh Khan", "Salman Khan", "Aamir Khan",
+        "Saif Ali Khan", "Akshay Kumar", "Ajay Devgn", "Suniel Shetty", "Jackie Shroff",
+        "Govinda Ahuja", "Mithun Chakraborty", "Dharmendra Deol", "Sunny Deol", "Bobby Deol",
+        "Rishi Kapoor", "Randhir Kapoor", "Rajeev Kapoor", "Shashi Kapoor", "Shammi Kapoor",
+        "Raj Kapoor", "Dilip Kumar", "Dev Anand", "Guru Dutt", "Ashok Kumar",
+        "Kishore Kumar", "Pran Sikand", "Amrish Puri", "Om Puri", "Anupam Kher",
+        "Naseeruddin Shah", "Paresh Rawal", "Boman Irani", "Kader Khan", "Shakti Kapoor",
+        "Gulshan Grover", "Prakash Raj", "Sonu Sood", "Rana Daggubati", "Prabhas Raju",
+        "Allu Arjun", "Ram Charan", "N. T. Rama Rao", "Mahesh Babu", "Pawan Kalyan",
+        "Chiranjeevi Konidela", "Nagarjuna Akkineni", "Venkatesh Daggubati", "Balakrishna Nandamuri", "Ravi Teja",
+        "Vijay Chandrasekhar", "Ajith Kumar", "Suriya Sivakumar", "Vikram Kennedy", "Dhanush Kasthuri",
+        "Silambarasan Thesingu", "Karthi Sivakumar", "Vishal Reddy", "Arya Jamshad", "Jayam Ravi",
+        "Sivakarthikeyan Doss", "Vijay Sethupathi", "Fahadh Faasil", "Dulquer Salmaan", "Nivin Pauly",
+        "Tovino Thomas", "Prithviraj Sukumaran", "Asif Ali", "Biju Menon", "Kunchacko Boban",
+        "Jayaram Subramaniam", "Dileep Gopalakrishnan", "Mammootty Panaparambil", "Mohanlal Viswanathan", "Suresh Gopi",
+        "Upendra Rao", "Puneeth Rajkumar", "Shiva Rajkumar", "Sudeep Sanjeev", "Darshan Thoogudeepa",
+        "Yash Gowda", "Rakshit Shetty", "Rishab Shetty", "Dhruva Sarja", "Ganesh Balakrishna",
+        "Sriimurali Vidyasagar", "Prem Kumar", "Prajwal Devaraj", "Chiranjeevi Sarja", "Nenapirali Prem",
+        "Ravi Chandran", "Ambarish Amar", "Vishnuvardhan Sampath", "Shankar Nag", "Ananth Nag",
+        "Saurav Ganguly", "Rahul Dravid", "V. V. S. Laxman", "Sachin Tendulkar", "Virender Sehwag",
+        "Gautam Gambhir", "Shikhar Dhawan", "Rohit Sharma", "Virat Kohli", "Cheteshwar Pujara",
+        "Ajinkya Rahane", "K. L. Rahul", "Shreyas Iyer", "Manish Pandey", "Suryakumar Yadav",
+        "Rishabh Pant", "Hardik Pandya", "Krunal Pandya", "Ravindra Jadeja", "Ravichandran Ashwin",
+        "Harbhajan Singh", "Anil Kumble", "Pragyan Ojha", "Amit Mishra", "Yuzvendra Chahal",
+        "Kuldeep Yadav", "Zaheer Khan", "Ashish Nehra", "Irfan Pathan", "Munaf Patel",
+        "Ishant Sharma", "Umesh Yadav", "Mohammed Shami", "Bhuvneshwar Kumar", "Jasprit Bumrah",
+        "Mohammed Siraj", "Shardul Thakur", "Navdeep Saini", "T. Natarajan", "Deepak Chahar",
+        "Piyush Chawla", "Rahul Chahar", "Washington Sundar", "Axar Patel", "Rahul Tewatia",
+        "Shivendra Shekhawat", "Rananjay Rathore", "Bhairav Singh", "Umed Singh", "Tejpal Bhati",
+        "Narayan Das", "Shambhu Nath", "Kamleshwar Prasad", "Ghanshyam Tiwari", "Hariom Gupta",
+        "Purushottam Lal", "Radheshyam Sharma", "Kanhaiya Lal", "Sitaram Verma", "Ramlal Chaudhary",
+        "Govind Ballabh", "Kedar Nath", "Badrinath Pandey", "Shivshankar Menon", "Gauri Shankar",
+        "Uma Shankar", "Bhavani Shankar", "Ravi Shankar", "Uday Shankar", "Abhay Shankar",
+        "Dinbandhu Mahato", "Kripasindhu Das", "Anukul Chandra", "Bhabatosh Manna", "Subhashis Roy",
+        "Prosenjit Chatterjee", "Dev Adhikari", "Jeet Madnani", "Abir Chatterjee", "Parambrata Biswas",
+        "Jisshu Sengupta", "Rudranil Ghosh", "Saswata Chatterjee", "Ankush Hazra", "Soham Chakraborty",
+        "Hiran Chatterjee", "Rahul Banerjee", "Ritwick Chakraborty", "Abanindranath Tagore", "Gaganendranath Tagore",
+        "Satyajit Ray", "Ritwik Ghatak", "Mrinal Sen", "Tapan Sinha", "Tarun Majumdar",
+        "Uttam Kumar", "Soumitra Chatterjee", "Chhabi Biswas", "Pahari Sanyal", "Bhanu Bandyopadhyay",
+        "Robi Ghosh", "Utpal Dutt", "Amol Palekar", "Farooq Shaikh", "Deven Verma",
+        "Asrani", "Jagdeep", "Johnny Walker", "Mehmood Ali", "Mukri",
+        "Tun Tun", "Johnny Lever", "Rajpal Yadav", "Sanjay Mishra", "Vijay Raaz",
+        "Brahmanandam Kanneganti", "Ali Basha", "Sunil Varma", "Vennela Kishore", "Raghu Babu"
+    ];
+
+    let randomName = "";
+    let randomFakeId = "";
+    const chance = Math.random() * 100;
+
+    if (chance <= 30) {
+      // 90% CHANCE: Naya 7-digit ID
+      randomName = indianNames[Math.floor(Math.random() * indianNames.length)];
+      randomFakeId = Math.floor(1000000 + Math.random() * 9000000);
+    } else {
+      // 10% CHANCE: Purana FakeUser
+      const FakeUser = require('../models/FakeUser'); 
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+      const fakeUsers = await FakeUser.aggregate([
+        { $match: { date: { $lte: threeDaysAgo } } },
+        { $sample: { size: 1 } }
+      ]);
+
+      if (fakeUsers && fakeUsers.length > 0) {
+        randomName = fakeUsers[0].name;
+        randomFakeId = fakeUsers[0].userId;
+      } else {
+        randomName = indianNames[Math.floor(Math.random() * indianNames.length)];
+        randomFakeId = Math.floor(1000000 + Math.random() * 9000000);
+      }
+    }
+
+    // ==========================================
+    // 4. RECORD IN DUMMY TRANSACTION
+    // ==========================================
+    const DummyTransaction = require('../models/DummyTransaction'); 
+
+    await DummyTransaction.create({
+      userId: currentUser.userId,
+      generatedId: randomFakeId, 
+      amount: amt, 
+      type: "transfer", // "usdt_bep20_transfer" bhi rakh sakte hain agar alag identify karna ho
+      description: `Demo USDT BEP20 transfer of $${amt} sent to promo ID ${randomFakeId}`,
+      date: new Date()
+    });
+
+    return res.json({ 
+      success: true, 
+      generatedId: randomFakeId, 
+      name: randomName,
+      message: `Promo USDT BEP20 transfer of $${amt} processed successfully.` 
+    });
+
+  } catch (err) {
+    console.error("Promo USDT BEP20 Transfer Simulation Error:", err);
+    res.status(500).json({ message: "Server processing error: " + err.message });
+  }
+});
+
+
 router.post('/transfer', async (req, res) => {
   try {
     const { fromUserId, toUserId, amount, transactionPassword } = req.body;

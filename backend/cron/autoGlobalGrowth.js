@@ -41,17 +41,17 @@ const startGlobalGrowthCron = () => {
         for (const user of activeUsers) {
             const team = user.globalTeamCount || 0;
             const directs = user.directCount || 0;
-            let isLocked = false;
+            // let isLocked = false;
             
-            if (team >= 2360 && team < 4360 && directs < 6) isLocked = true;
-            else if (team >= 4360 && team < 7360 && directs < 8) isLocked = true;
-            else if (team >= 7360 && team < 11360 && directs < 10) isLocked = true;
-            else if (team >= 11360 && team < 16360 && directs < 12) isLocked = true;
-            else if (team >= 16360 && team < 23860 && directs < 14) isLocked = true;
-            else if (team >= 23860 && team < 33860 && directs < 16) isLocked = true;
-            else if (team >= 33860 && directs < 18) isLocked = true;
+            // if (team >= 2360 && team < 4360 && directs < 6) isLocked = true;
+            // else if (team >= 4360 && team < 7360 && directs < 8) isLocked = true;
+            // else if (team >= 7360 && team < 11360 && directs < 10) isLocked = true;
+            // else if (team >= 11360 && team < 16360 && directs < 12) isLocked = true;
+            // else if (team >= 16360 && team < 23860 && directs < 14) isLocked = true;
+            // else if (team >= 23860 && team < 33860 && directs < 16) isLocked = true;
+            // else if (team >= 33860 && directs < 18) isLocked = true;
 
-            if (isLocked) continue;
+            // if (isLocked) continue;
 
             if (user.lastGlobalTeamAddDate !== todayStr) {
                 bulkOps.push({
