@@ -1,10 +1,63 @@
+// import React, { useState, useEffect } from "react";
+
+// const TotalSystemUsers = ({ user, totalRealUsersFromDB = 0, globalFakeCount = 0 }) => {
+//   const [totalSystemUsers, setTotalSystemUsers] = useState(0);
+//   const [displayGlobalTeam, setDisplayGlobalTeam] = useState(0);
+
+//   const isUserActive = user?.isToppedUp === true || user?.isToppedUp === "true" || (user?.topUpAmount && user?.topUpAmount > 0);
+
+//   useEffect(() => {
+//     const BASE_TOTAL_USERS = 100; 
+//     const finalTotal = BASE_TOTAL_USERS + totalRealUsersFromDB + globalFakeCount;
+//     setTotalSystemUsers(finalTotal);
+//     setDisplayGlobalTeam(user?.globalTeamCount || 0);
+//   }, [user?.globalTeamCount, totalRealUsersFromDB, globalFakeCount]);
+
+//   return (
+//     <div className="w-full mb-4">
+//       <div className="grid grid-cols-2 gap-3 md:gap-4 w-full mb-4">
+        
+//         {/* BOX 1: TOTAL COMMUNITY */}
+//         <div className="bg-white p-5 md:p-6 rounded-[20px] border border-emerald-50 shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px]">
+//           <p className="text-black text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
+//             Total Community
+//           </p>
+//           <h2 className="text-[28px] sm:text-3xl md:text-[40px] font-black text-emerald-600 tracking-tight leading-none">
+//             {totalSystemUsers.toLocaleString()}
+//           </h2>
+//         </div>
+
+//         {/* BOX 2: MY COMMUNITY */}
+//         <div className={`bg-white p-5 md:p-6 rounded-[20px] border shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px] ${isUserActive ? 'border-emerald-50' : 'border-red-50'}`}>
+//           <p className="text-black text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
+//             My Community
+//           </p>
+//           <h2 className="text-[28px] sm:text-3xl md:text-[40px] font-black text-emerald-600 tracking-tight leading-none">
+//             {displayGlobalTeam.toLocaleString()}
+//           </h2>
+//         </div>
+//       </div>
+
+     
+      
+//     </div>
+//   );
+// };
+
+// export default TotalSystemUsers;
+
+
 import React, { useState, useEffect } from "react";
 
-const TotalSystemUsers = ({ user, totalRealUsersFromDB = 0, globalFakeCount = 0 }) => {
+// 🔥 activeDownlineCount prop add kiya hai
+const TotalSystemUsers = ({ user, totalRealUsersFromDB = 0, globalFakeCount = 0, activeDownlineCount = 0 }) => {
   const [totalSystemUsers, setTotalSystemUsers] = useState(0);
   const [displayGlobalTeam, setDisplayGlobalTeam] = useState(0);
 
   const isUserActive = user?.isToppedUp === true || user?.isToppedUp === "true" || (user?.topUpAmount && user?.topUpAmount > 0);
+  
+  // 🔥 Backend se aane wala data yahan map hoga (Prop se ya User object se)
+  const displayActiveDownline = activeDownlineCount || user?.activeDownlineCount || 0;
 
   useEffect(() => {
     const BASE_TOTAL_USERS = 100; 
@@ -15,7 +68,8 @@ const TotalSystemUsers = ({ user, totalRealUsersFromDB = 0, globalFakeCount = 0 
 
   return (
     <div className="w-full mb-4">
-      <div className="grid grid-cols-2 gap-3 md:gap-4 w-full mb-4">
+      {/* 🔥 md:grid-cols-3 kiya taaki 3 boxes perfect fit hon Desktop pe */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 w-full mb-4">
         
         {/* BOX 1: TOTAL COMMUNITY */}
         <div className="bg-white p-5 md:p-6 rounded-[20px] border border-emerald-50 shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px]">
@@ -36,10 +90,19 @@ const TotalSystemUsers = ({ user, totalRealUsersFromDB = 0, globalFakeCount = 0 
             {displayGlobalTeam.toLocaleString()}
           </h2>
         </div>
-      </div>
 
-     
-      
+        {/* BOX 3: MY DOWNLINE ACTIVE (🔥 NAYA BOX) */}
+        {/* Mobile me full width (col-span-2) aur Desktop me 1 column lega */}
+        <div className={`bg-white p-5 md:p-6 rounded-[20px] border shadow-sm flex flex-col justify-center h-full min-h-[100px] md:min-h-[120px] ${isUserActive ? 'border-emerald-50' : 'border-red-50'} col-span-2 md:col-span-1`}>
+          <p className="text-black text-[11px] md:text-sm font-bold uppercase tracking-wider mb-1 md:mb-2">
+            My Downline Active
+          </p>
+          <h2 className="text-[28px] sm:text-3xl md:text-[40px] font-black text-blue-600 tracking-tight leading-none">
+            {displayActiveDownline.toLocaleString()}
+          </h2>
+        </div>
+
+      </div>
     </div>
   );
 };

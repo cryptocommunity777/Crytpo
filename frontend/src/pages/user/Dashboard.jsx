@@ -350,6 +350,7 @@ const Dashboard = ({ setModalState }) => {
   
   const [totalRealUsers, setTotalRealUsers] = useState(0);
   const [globalFakeCount, setGlobalFakeCount] = useState(0);
+  const [activeDownlineCount, setActiveDownlineCount] = useState(0);
   
   const [latestGlobalUsers, setLatestGlobalUsers] = useState([]);
   
@@ -384,6 +385,7 @@ const Dashboard = ({ setModalState }) => {
             const parsedData = JSON.parse(cachedData);
             setTotalRealUsers(parsedData.totalRealUsers || 0);
             setGlobalFakeCount(parsedData.globalFakeCount || 0);
+            setActiveDownlineCount(parsedData.activeDownlineCount || 0);
             setIncome(parsedData.income || income);
             setLatestGlobalUsers(parsedData.latestGlobalUsers || []);
             // Agar Cache mil gaya, toh loading spinner on nahi karenge, seedha UI dikhayenge!
@@ -405,6 +407,7 @@ const Dashboard = ({ setModalState }) => {
         setUser(userRes.data.user); 
         setTotalRealUsers(userRes.data.totalRealUsers || 0);
         setGlobalFakeCount(userRes.data.globalFakeCount || 0);
+        setActiveDownlineCount(incomeRes.data.activeDownlineCount || 0);
 
         const newIncome = {
           directIncome: incomeRes.data.directIncome || 0,
@@ -438,6 +441,7 @@ const Dashboard = ({ setModalState }) => {
         localStorage.setItem(cacheKey, JSON.stringify({
             totalRealUsers: userRes.data.totalRealUsers || 0,
             globalFakeCount: userRes.data.globalFakeCount || 0,
+            activeDownlineCount: incomeRes.data.activeDownlineCount || 0,
             income: newIncome,
             latestGlobalUsers: newGlobalUsers
         }));
@@ -532,13 +536,14 @@ const Dashboard = ({ setModalState }) => {
           <WalletBalance userId={user.userId} refreshKey={walletRefreshKey} income={income} />
         </section>
          
-        <section>
-           <TotalSystemUsers 
-             user={user} 
-             totalRealUsersFromDB={totalRealUsers} 
-             globalFakeCount={globalFakeCount} 
-           />
-        </section>
+       <section>
+        <TotalSystemUsers 
+            user={user} 
+            totalRealUsersFromDB={totalRealUsers} 
+            globalFakeCount={globalFakeCount} 
+            activeDownlineCount={activeDownlineCount}
+        />
+    </section>
          <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
              <ReferralLink link={referralLink} />
         </div>

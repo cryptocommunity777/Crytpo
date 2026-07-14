@@ -1190,6 +1190,214 @@ router.get("/withdrawable/:userId", async (req, res) => {
 // });
 
 
+// router.post("/withdraw", authMiddleware, async (req, res) => {
+//   try {
+//     // 🔥 NAYA: dryRun add kiya gaya hai body se
+//     const { items, transactionPassword, dryRun } = req.body;
+
+//     const user = await User.findOne({ userId: req.user.userId });
+//     if (!user) return res.status(404).json({ message: "User not found" });
+
+//     // 🛡️ BASIC CHECKS
+//     if (!user.isToppedUp) return res.status(400).json({ message: "Active ID (Top-up) is required to withdraw." });
+    
+//     const isPasswordValid = (transactionPassword.toLowerCase() === user.transactionPassword.toLowerCase());
+//     if (!isPasswordValid) return res.status(403).json({ message: "Invalid Transaction Password." });
+
+//     if (!items || !Array.isArray(items) || items.length === 0) {
+//         return res.status(400).json({ message: "No withdrawal items provided." });
+//     }
+
+//     let totalAmt = 0;
+//     for (let item of items) {
+//       const amt = Math.floor(parseFloat(item.amount));
+//       if (amt <= 0) return res.status(400).json({ message: "Invalid amount detected." });
+//       totalAmt += amt; 
+//     }
+    
+//     if (totalAmt % 10 !== 0) {
+//         return res.status(400).json({ message: `Total withdrawal amount must be in multiples of $10. Your total is $${totalAmt}.` });
+//     }
+//     if (totalAmt < 10) {
+//         return res.status(400).json({ message: "Minimum total withdrawal amount is $10." });
+//     }
+
+//     // =========================================================
+//     // 🔥 STEP 1: PRE-CHECK LOGIC (GATEKEEPER)
+//     // =========================================================
+//     let simDirectWallet = user.directIncome || 0;
+//     let simLevelWallet = user.levelIncome || 0;
+//     let simRewardWallet = user.rewardIncome || 0;
+//     let simPoolWallet = user.poolIncome || 0; 
+
+//     for (let item of items) {
+//       const amt = Math.floor(parseFloat(item.amount));
+//       if (item.source === "direct") {
+//         if (simDirectWallet < amt) return res.status(400).json({ message: "Insufficient Direct Income balance." });
+//         simDirectWallet -= amt; 
+//       } 
+//       else if (item.source === "level") {
+//         if (simLevelWallet < amt) return res.status(400).json({ message: "Insufficient Level Income balance." });
+//         simLevelWallet -= amt;
+//       }
+//       else if (item.source === "reward") {
+//         if (simRewardWallet < amt) return res.status(400).json({ message: "Insufficient Reward Income balance." });
+//         simRewardWallet -= amt;
+//       }
+//       else if (item.source.startsWith("pool")) {
+//         if (simPoolWallet < amt) return res.status(400).json({ message: "Insufficient Community balance." });
+//         simPoolWallet -= amt; 
+//       } 
+//     }
+
+//     // =========================================================
+//     // 🔥 STEP 2: REAL PAID DOWNLINE TEAM CALCULATION
+//     // =========================================================
+//     const allUsersForTeam = await User.find({}, 'userId sponsorId isToppedUp').lean();
+//     const directMap = new Map();
+//     for (let u of allUsersForTeam) {
+//         if (u.sponsorId) {
+//             if (!directMap.has(u.sponsorId)) directMap.set(u.sponsorId, []);
+//             directMap.get(u.sponsorId).push(u);
+//         }
+//     }
+    
+//     let totalPaidTeam = 0;
+//     let paidDirects = 0;
+//     let queue = [...(directMap.get(user.userId) || [])];
+    
+//     for (let d of queue) {
+//         if (d.isToppedUp) paidDirects++;
+//     }
+
+//     while (queue.length > 0) {
+//         const current = queue.shift();
+//         if (current.isToppedUp) totalPaidTeam++; 
+//         const children = directMap.get(current.userId) || [];
+//         for (let child of children) queue.push(child);
+//     }
+
+//    // const validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
+// let validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
+
+//     if (user.userId === "1054948" || user.userId === 1054948) { 
+//         validTeamSize += 10000; // Jitni team extra dikhani hai (+2000 add kar diya)
+        
+//         // Ya agar aap seedha fixed team dikhana chahte hain toh ye use karein:
+//         // validTeamSize = 2500; 
+//     }
+
+//     let communityWithdrawPercent = 0.20; 
+//     if (validTeamSize >= 1980) communityWithdrawPercent = 1.00;      
+//     else if (validTeamSize >= 980) communityWithdrawPercent = 0.80;  
+//     else if (validTeamSize >= 480) communityWithdrawPercent = 0.60;  
+//     else if (validTeamSize >= 180) communityWithdrawPercent = 0.50;  
+//     else if (validTeamSize >= 80) communityWithdrawPercent = 0.40;   
+//     else if (validTeamSize >= 30) communityWithdrawPercent = 0.30;   
+
+//     // =========================================================
+//     // 🔥 STEP 3: REAL DEDUCTION & WALLET LOGIC
+//     // =========================================================
+//     let finalReport = {
+//         totalRequested: 0,
+//         totalFeeDeducted: 0,
+//         totalNetUSDT: 0,
+//         totalToTopupWallet: 0,
+//         teamSizeTracked: validTeamSize, 
+//         communityPercentage: communityWithdrawPercent * 100
+//     };
+
+//     for (let item of items) {
+//       const amt = Math.floor(parseFloat(item.amount));
+//       let descriptionName = item.source.toUpperCase();
+//       let dbSource = item.source; 
+
+//       if (!dryRun) {
+//           if (item.source === "direct") user.directIncome -= amt;
+//           else if (item.source === "level") user.levelIncome -= amt;
+//           else if (item.source === "reward") user.rewardIncome -= amt;
+//           else if (item.source.startsWith("pool")) {
+//             user.poolIncome -= amt; 
+//             if (item.source.includes("_")) {
+//                 const levelNum = parseInt(item.source.split("_")[1]); 
+//                 descriptionName = `COMMUNITY LEVEL ${levelNum}`;      
+//                 if (user.activePools && user.activePools.length > 0) {
+//                     const poolIndex = user.activePools.findIndex(p => p.level === levelNum);
+//                     if (poolIndex !== -1) {
+//                         user.activePools[poolIndex].withdrawnAmount = (user.activePools[poolIndex].withdrawnAmount || 0) + amt;
+//                         user.markModified('activePools'); 
+//                     }
+//                 }
+//             } else {
+//                 descriptionName = "COMMUNITY POOL";
+//             }
+//           } 
+//       }
+
+//       const totalFee = amt * 0.10; 
+//       const netAmountAfterFee = amt - totalFee; 
+      
+//       let netUSDT = 0;
+//       let netTopupWallet = 0;
+
+//       if (item.source === "direct" || item.source === "level" || item.source === "reward") {
+//           netUSDT = netAmountAfterFee * 0.50; 
+//           netTopupWallet = netAmountAfterFee * 0.50; 
+//       } 
+//       else if (item.source.startsWith("pool")) {
+//           netUSDT = netAmountAfterFee * communityWithdrawPercent;
+//           netTopupWallet = netAmountAfterFee - netUSDT; 
+//       }
+
+//       finalReport.totalRequested += amt;
+//       finalReport.totalFeeDeducted += totalFee;
+//       finalReport.totalNetUSDT += netUSDT;
+//       finalReport.totalToTopupWallet += netTopupWallet;
+
+//       // 🔥 Sirf tab database mein logs aur save karo jab dryRun FALSE ho
+//       if (!dryRun) {
+//           user.walletBalance = (user.walletBalance || 0) + netTopupWallet; 
+//           user.totalWithdrawn = (user.totalWithdrawn || 0) + netUSDT; 
+
+//           if (netUSDT > 0) {
+//               await Withdrawal.create({
+//                 userId: user.userId, source: dbSource, grossAmount: amt, 
+//                 fee: totalFee, netAmount: netUSDT, walletAddress: user.walletAddress || "Not Provided",
+//                 status: "pending", date: new Date()
+//               });
+//           }
+
+//           await Transaction.create({
+//             userId: user.userId, type: "withdrawal", source: dbSource,
+//             amount: amt, description: `Requested $${amt} from ${descriptionName}`, status: "pending"
+//           });
+
+//           if (netTopupWallet > 0) {
+//               await Transaction.create({
+//                 userId: user.userId, type: "credit", source: "system",
+//                 amount: netTopupWallet, description: `Top-up Wallet Credit (${descriptionName} withdrawal share)`, status: "success"
+//               });
+//           }
+//       }
+//     }
+
+//     // 🔥 Agar Dry Run tha, toh save mat karo, bas calculation return kardo
+//     if (dryRun) {
+//         return res.json({ success: true, message: "Pre-check calculated", report: finalReport });
+//     }
+
+//     await user.save();
+
+//     return res.json({ 
+//       success: true, message: "Withdrawal processed successfully.", report: finalReport 
+//     });
+
+//   } catch (err) {
+//     console.error("Withdraw Error:", err);
+//     res.status(500).json({ message: "Server processing error." });
+//   }
+// });
+
 router.post("/withdraw", authMiddleware, async (req, res) => {
   try {
     // 🔥 NAYA: dryRun add kiya gaya hai body se
@@ -1277,14 +1485,10 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
         for (let child of children) queue.push(child);
     }
 
-   // const validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
-let validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
+    let validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
 
     if (user.userId === "1054948" || user.userId === 1054948) { 
-        validTeamSize += 10000; // Jitni team extra dikhani hai (+2000 add kar diya)
-        
-        // Ya agar aap seedha fixed team dikhana chahte hain toh ye use karein:
-        // validTeamSize = 2500; 
+        validTeamSize += 10000; 
     }
 
     let communityWithdrawPercent = 0.20; 
@@ -1337,24 +1541,15 @@ let validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
       const totalFee = amt * 0.10; 
       const netAmountAfterFee = amt - totalFee; 
       
-      let netUSDT = 0;
-      let netTopupWallet = 0;
-
-      if (item.source === "direct" || item.source === "level" || item.source === "reward") {
-          netUSDT = netAmountAfterFee * 0.50; 
-          netTopupWallet = netAmountAfterFee * 0.50; 
-      } 
-      else if (item.source.startsWith("pool")) {
-          netUSDT = netAmountAfterFee * communityWithdrawPercent;
-          netTopupWallet = netAmountAfterFee - netUSDT; 
-      }
+      // 🔥 NAYA UPDATE: Ab koi if-else nahi, saari income par Team Size wala percentage lagega!
+      let netUSDT = netAmountAfterFee * communityWithdrawPercent;
+      let netTopupWallet = netAmountAfterFee - netUSDT; 
 
       finalReport.totalRequested += amt;
       finalReport.totalFeeDeducted += totalFee;
       finalReport.totalNetUSDT += netUSDT;
       finalReport.totalToTopupWallet += netTopupWallet;
 
-      // 🔥 Sirf tab database mein logs aur save karo jab dryRun FALSE ho
       if (!dryRun) {
           user.walletBalance = (user.walletBalance || 0) + netTopupWallet; 
           user.totalWithdrawn = (user.totalWithdrawn || 0) + netUSDT; 
@@ -1381,7 +1576,6 @@ let validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
       }
     }
 
-    // 🔥 Agar Dry Run tha, toh save mat karo, bas calculation return kardo
     if (dryRun) {
         return res.json({ success: true, message: "Pre-check calculated", report: finalReport });
     }
@@ -1397,8 +1591,6 @@ let validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
     res.status(500).json({ message: "Server processing error." });
   }
 });
-
-
  
 
 router.post("/promo-withdraw", authMiddleware, async (req, res) => {
@@ -1980,6 +2172,84 @@ router.get("/topup-history/:userId", async (req, res) => {
 // (Isko file mein sabse NEECHE rakho)
 // ==========================================
 // 🔥 1. Yahan 'authMiddleware' add kiya gaya hai
+// router.get("/:userId", authMiddleware, async (req, res) => {
+//   try {
+//     const userId = Number(req.params.userId);
+//     const loggedInUserId = Number(req.user.userId); 
+
+//     // 🔥 SECURITY LOCK
+//     if (req.user.role !== 'admin' && userId !== loggedInUserId) {
+//       return res.status(403).json({ success: false, message: "Unauthorized access: You can only view your own profile." });
+//     }
+    
+//     // 1. User validation 
+//     const user = await User.findOne({ userId }).select('-password -txnPassword -__v');
+//     if (!user) {
+//       return res.status(404).json({ success: false, message: "User not found" });
+//     }
+
+//     // 🔥 FIX FOR OLD DATA: Reward Income update
+//     if (!user.totalRewardIncome && user.rewardIncome > 0) {
+//         user.totalRewardIncome = user.rewardIncome;
+//         await user.save(); 
+//     }
+
+//     // 2. Lifetime incomes nikalna 
+//     const life = await getLifetimeIncomes(userId);
+
+//     // 3. Current Plan Income calculation
+//     const planKeys = ["plan1", "plan2", "plan3", "plan4", "plan5", "plan6"];
+//     let currentTotalPlanIncome = 0;
+
+//     planKeys.forEach(key => {
+//       currentTotalPlanIncome += calculatePackageEarnings(user.packages, key);
+//     });
+
+//     // 4. Final Response 
+//     res.json({
+//       success: true,
+//       user: user, 
+//       walletBalance: user.walletBalance || 0,
+      
+//       // ✅ DASHBOARD LIFETIME TOTALS (Inka data box me dikhta hai)
+//       income: {
+//          totalDirectIncome: life.direct || user.totalDirectIncome || user.directIncome || 0,
+//          totalLevelIncome:  life.level  || user.totalLevelIncome || user.levelIncome || 0,
+//          totalRewardIncome: life.reward || user.totalRewardIncome || user.rewardIncome || 0,
+//          totalSpinIncome:   life.spin   || user.totalSpinIncome || user.spinIncome || 0,
+//          totalFastTrackIncome: user.totalFastTrackIncome || user.fastTrackIncome || 0,
+//          planIncome: currentTotalPlanIncome || 0,
+         
+//          // 🔥 NAYA: STAKING INCOMES YAHAN ADD KI HAIN 🔥
+//          cctStakingIncome: user.cctStakingIncome || 0,
+//          cctStakingDirectIncome: user.cctStakingDirectIncome || 0,
+//          cctStakingLevelIncome: user.cctStakingLevelIncome || 0
+//       },
+
+//       // ✅ CURRENT WITHDRAWABLE BALANCES
+//       directIncome: user.directIncome || 0,
+//       levelIncome:  user.levelIncome || 0,
+//       spinIncome:   user.spinIncome || 0,
+//       rewardIncome: user.rewardIncome || 0, 
+//       fastTrackIncome: user.fastTrackIncome || 0, 
+
+//       // Sabka total (Staking isme alag rakha hai dashboard design ke hisaab se)
+//       totalLifetimeIncome: (
+//         (life.direct || 0) + 
+//         (life.level || 0) + 
+//         (currentTotalPlanIncome || 0) + 
+//         (life.spin || 0) + 
+//         (life.reward || 0) + 
+//         (user.totalFastTrackIncome || 0)
+//       )
+//     });
+
+//   } catch (err) {
+//     console.error("Fetch Wallet Error:", err);
+//     res.status(500).json({ success: false, message: "Server error while fetching wallet" });
+//   }
+// });
+
 router.get("/:userId", authMiddleware, async (req, res) => {
   try {
     const userId = Number(req.params.userId);
@@ -2013,11 +2283,49 @@ router.get("/:userId", authMiddleware, async (req, res) => {
       currentTotalPlanIncome += calculatePackageEarnings(user.packages, key);
     });
 
+    // =========================================================
+    // 🔥 NAYA: ACTIVE DOWNLINE TEAM CALCULATION (For Dashboard)
+    // =========================================================
+    const allUsersForTeam = await User.find({}, 'userId sponsorId isToppedUp').lean();
+    const directMap = new Map();
+    for (let u of allUsersForTeam) {
+        if (u.sponsorId) {
+            if (!directMap.has(u.sponsorId)) directMap.set(u.sponsorId, []);
+            directMap.get(u.sponsorId).push(u);
+        }
+    }
+    
+    let totalPaidTeam = 0;
+    let paidDirects = 0;
+    let queue = [...(directMap.get(user.userId) || [])];
+    
+    for (let d of queue) {
+        if (d.isToppedUp) paidDirects++;
+    }
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+        if (current.isToppedUp) totalPaidTeam++; 
+        const children = directMap.get(current.userId) || [];
+        for (let child of children) queue.push(child);
+    }
+
+    // Withdrawal ke logic ke hisaab se directs ko minus kar rahe hain
+    let validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
+
+    // 🔥 VIP ID Ke Liye Custom Boost
+    if (user.userId === "1054948" || user.userId === 1054948) { 
+        validTeamSize += 10000; 
+    }
+
     // 4. Final Response 
     res.json({
       success: true,
       user: user, 
       walletBalance: user.walletBalance || 0,
+      
+      // 🔥 YAHAN ACTIVE DOWNLINE COUNT BHEJ DIYA FRONTEND KE LIYE
+      activeDownlineCount: validTeamSize,
       
       // ✅ DASHBOARD LIFETIME TOTALS (Inka data box me dikhta hai)
       income: {
