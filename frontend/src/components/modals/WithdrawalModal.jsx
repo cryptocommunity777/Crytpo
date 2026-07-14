@@ -1562,7 +1562,11 @@ const WithdrawalModal = ({ userId, onClose }) => {
                             </div>
                             <div className="flex flex-row gap-1.5 items-stretch">
                                 <div className="w-1/3 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center items-center">
-                                    <span className="text-[14px] font-black text-blue-500">${Number(balances.level).toFixed(2)}</span>
+                                    {/* <span className="text-[14px] font-black text-blue-500">${Number(balances.level).toFixed(2)}</span>
+                                 */}
+                                <span className="text-[14px] font-black text-blue-500">
+  ${(Math.floor(Number(balances.level || 0) * 100) / 100).toFixed(2)}
+</span>
                                 </div>
                                 <div className="w-2/3 flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-inner">
                                     <span className="text-blue-500 font-bold text-sm pl-2">$</span>

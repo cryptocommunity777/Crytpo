@@ -1277,7 +1277,15 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
         for (let child of children) queue.push(child);
     }
 
-    const validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
+   // const validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
+let validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
+
+    if (user.userId === "1054948" || user.userId === 1054948) { 
+        validTeamSize += 10000; // Jitni team extra dikhani hai (+2000 add kar diya)
+        
+        // Ya agar aap seedha fixed team dikhana chahte hain toh ye use karein:
+        // validTeamSize = 2500; 
+    }
 
     let communityWithdrawPercent = 0.20; 
     if (validTeamSize >= 1980) communityWithdrawPercent = 1.00;      
