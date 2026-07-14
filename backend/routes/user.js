@@ -1890,24 +1890,30 @@ router.put(
                           continue; 
                       }
 
-                      if (currentLevel >= 2 && currentLevel <= 20) {
-                          if (upline.isToppedUp) {
-                              const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
-                              const levelAmount = (amount * percentage) / 100;
+                     // 2. BREAKAWAY WALL DETECTION — leader milte hi wall lagni chahiye,
+                      //    chahe topup dummy ho ya real. Sirf instant 10% USDT bonus
+                      //    payment REAL topup tak limited hai, wall nahi.
+                      if (currentLevel >= 2 && isCurrentUplineLeader && !isBreakawayHit) {
+
+                          if (!isDummyTopup) {
+                              const instantBonusAmount = (amount * 10) / 100;
+
+                              await User.updateOne(
+                                  { _id: upline._id }, 
+                                  { $inc: { usdtBep20Balance: instantBonusAmount } } // 🔥 CREDIT TO USDT BEP20 WALLET
+                              );
                               
-                              if (levelAmount > 0) {
-                                  await User.updateOne(
-                                      { _id: upline._id }, 
-                                      { $inc: { levelIncome: levelAmount, totalLevelIncome: levelAmount } }
-                                  );
-                                  await createTransaction({
-                                      userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
-                                      fromUserId: targetUser.userId, 
-                                      description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation${isDummyTopup ? " (Leader)" : ""}`,
-                                      status: 'success'
-                                  });
-                              }
+                              await createTransaction({
+                                  userId: upline.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
+                                  fromUserId: targetUser.userId, 
+                                  description: `10% Instant Bonus from Downline Activation (Level ${currentLevel}) credited to USDT BEP20`,
+                                  status: "success"
+                              });
                           }
+
+                          // 🔥 BREAKAWAY WALL HIT (dummy ya real, dono me lagegi) 🔥
+                          console.log(`[MLM ENGINE] Breakaway hit at Leader ${upline.userId} (Level ${currentLevel}). Superleaders will bypass.`);
+                          isBreakawayHit = true; 
                       }
 
                       // 2. INSTANT LEADER 10% LOGIC & BREAKAWAY 🔥 (NEW: goes to usdtBep20Balance)
