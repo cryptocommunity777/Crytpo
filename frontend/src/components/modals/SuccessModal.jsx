@@ -195,7 +195,7 @@ const SuccessModal = ({
               <div className="flex flex-col items-center pt-1">
                  <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Transfer Amount</span>
                  <span className="text-4xl font-black text-emerald-600 drop-shadow-sm">
-                  $ {amount} 
+                  ${amount} 
                  </span>
               </div>
             </div>
