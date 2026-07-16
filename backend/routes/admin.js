@@ -2251,231 +2251,6 @@ router.get('/monthly-reward-progress', async (req, res) => {
 // });
 
 
-// router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
-//     try {
-//         const { fromDate, toDate } = req.query;
-
-//         // 🔥 DATE FILTER LOGIC
-//         let dateFilter = {};
-//         if (fromDate || toDate) {
-//             dateFilter.date = {}; 
-//             if (fromDate) {
-//                 dateFilter.date.$gte = new Date(`${fromDate}T00:00:00+05:30`);
-//             }
-//             if (toDate) {
-//                 dateFilter.date.$lte = new Date(`${toDate}T23:59:59+05:30`);
-//             }
-//         }
-
-//         const amountToNumber = { 
-//             $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } 
-//         };
-
-//         const stats = await User.aggregate([
-//             {
-//                 $project: {
-//                     userId: 1,
-//                     name: 1,
-//                     role: 1, 
-//                     walletBalance: { $ifNull: ["$walletBalance", 0] },
-//                     usdtBep20Balance: { $ifNull: ["$usdtBep20Balance", 0] }, // 🔥 NAYA: USDT BEP20 Balance
-//                 }
-//             },
-//             {
-//                 $lookup: {
-//                     from: "users", 
-//                     localField: "userId",
-//                     foreignField: "sponsorId",
-//                     pipeline: [
-//                         { $match: { isToppedUp: true } }, 
-//                         { $count: "paidDirects" }
-//                     ],
-//                     as: "directsData"
-//                 }
-//             },
-//             {
-//                 // 🔥 TRANSACTIONS BREAKDOWN CALCULATION 🔥
-//                 $lookup: {
-//                     from: "transactions", 
-//                     let: { uid: "$userId" },
-//                     pipeline: [
-//                         {
-//                             $match: {
-//                                 $expr: {
-//                                     $or: [
-//                                         { $eq: ["$userId", "$$uid"] },
-//                                         { $eq: ["$toUserId", "$$uid"] }
-//                                     ]
-//                                 },
-//                                 ...(dateFilter.date ? { date: dateFilter.date } : {})
-//                             }
-//                         },
-//                         {
-//                             $group: {
-//                                 _id: null,
-                                
-//                                 p2pReceived: {
-//                                     $sum: {
-//                                         $cond: [
-//                                             { $or: [
-//                                                 { $and: [
-//                                                     { $eq: ["$userId", "$$uid"] },
-//                                                     { $in: ["$type", ["p2p_receive", "p2p_transfer_receive", "transfer_receive"]] }
-//                                                 ]},
-//                                                 { $and: [
-//                                                     { $eq: ["$toUserId", "$$uid"] },
-//                                                     { $in: ["$type", ["transfer", "p2p_transfer", "fund_transfer"]] }
-//                                                 ]}
-//                                             ]},
-//                                             amountToNumber,
-//                                             0
-//                                         ]
-//                                     }
-//                                 },
-                                
-//                                 totalDeposit: {
-//                                     $sum: {
-//                                         $cond: [
-//                                             { $and: [
-//                                                 { $eq: ["$userId", "$$uid"] }, 
-//                                                 { $in: ["$status", ["success", "approved", "completed"]] },
-//                                                 { $in: ["$type", ["deposit", "add_fund", "fund_added"]] }
-//                                             ]},
-//                                             amountToNumber,
-//                                             0
-//                                         ]
-//                                     }
-//                                 },
-                                
-//                                 fastTrackIncome: {
-//                                     $sum: {
-//                                         $cond: [
-//                                             { $and: [
-//                                                 { $eq: ["$userId", "$$uid"] }, 
-//                                                 { $in: ["$status", ["success", "approved", "completed"]] },
-//                                                 { $in: ["$type", ["fast_track", "fast_track_income"]] }
-//                                             ]},
-//                                             amountToNumber,
-//                                             0
-//                                         ]
-//                                     }
-//                                 },
-                                
-//                                 leaderBonus: {
-//                                     $sum: {
-//                                         $cond: [
-//                                             { $and: [
-//                                                 { $eq: ["$userId", "$$uid"] }, 
-//                                                 { $in: ["$status", ["success", "approved", "completed"]] },
-//                                                 { $eq: ["$type", "credit_to_wallet"] },
-//                                                 { $eq: ["$source", "instant_leader_bonus"] } 
-//                                             ]},
-//                                             amountToNumber,
-//                                             0
-//                                         ]
-//                                     }
-//                                 },
-
-//                                 creditToWallet: {
-//                                     $sum: {
-//                                         $cond: [
-//                                             { $and: [
-//                                                 { $eq: ["$userId", "$$uid"] }, 
-//                                                 { $in: ["$status", ["success", "approved", "completed"]] },
-//                                                 { $or: [
-//                                                     { $and: [
-//                                                         { $eq: ["$type", "credit_to_wallet"] },
-//                                                         { $ne: ["$source", "instant_leader_bonus"] }, 
-//                                                         { $not: { $regexMatch: { input: { $ifNull: ["$source", ""] }, regex: /p2p/i } } }
-//                                                     ]},
-//                                                     { $and: [
-//                                                         { $eq: ["$type", "credit"] },
-//                                                         { $eq: ["$source", "system"] }
-//                                                     ]}
-//                                                 ]}
-//                                             ]},
-//                                             amountToNumber,
-//                                             0
-//                                         ]
-//                                     }
-//                                 },
-                                
-//                                 totalWithdrawal: {
-//                                     $sum: {
-//                                         $cond: [
-//                                             { $and: [
-//                                                 { $eq: ["$userId", "$$uid"] }, 
-//                                                 { $in: ["$type", ["withdrawal", "withdraw", "payout"]] }
-//                                             ]}, 
-//                                             amountToNumber, 
-//                                             0
-//                                         ]
-//                                     }
-//                                 }
-//                             }
-//                         }
-//                     ],
-//                     as: "txStats"
-//                 }
-//             },
-//             {
-//                 // 🔥 MAIN ADD FIELDS 
-//                 $addFields: {
-//                     paidDirectCount: { $ifNull: [{ $arrayElemAt: ["$directsData.paidDirects", 0] }, 0] },
-//                     p2pReceived: { $ifNull: [{ $arrayElemAt: ["$txStats.p2pReceived", 0] }, 0] },
-//                     totalDeposit: { $ifNull: [{ $arrayElemAt: ["$txStats.totalDeposit", 0] }, 0] },
-//                     fastTrackIncome: { $ifNull: [{ $arrayElemAt: ["$txStats.fastTrackIncome", 0] }, 0] },
-                    
-//                     leaderBonus: { $ifNull: [{ $arrayElemAt: ["$txStats.leaderBonus", 0] }, 0] },
-                    
-//                     // 🛑 LEADER RULE FOR CREDIT TO WALLET
-//                     creditToWallet: { 
-//                         $cond: [
-//                             { $eq: ["$role", "leader"] }, 
-//                             0, 
-//                             { $ifNull: [{ $arrayElemAt: ["$txStats.creditToWallet", 0] }, 0] } 
-//                         ] 
-//                     }, 
-                    
-//                     // 🛑 LEADER RULE FOR TOTAL WITHDRAWAL
-//                     totalWithdrawal: { 
-//                         $cond: [
-//                             { $eq: ["$role", "leader"] }, 
-//                             0, 
-//                             { $ifNull: [{ $arrayElemAt: ["$txStats.totalWithdrawal", 0] }, 0] } 
-//                         ] 
-//                     }
-//                 }
-//             },
-//             {
-//                 $project: { directsData: 0, txStats: 0 } 
-//             },
-//             {
-//                 $match: {
-//                     $or: [
-//                         { walletBalance: { $gt: 0 } },
-//                         { usdtBep20Balance: { $gt: 0 } }, // 🔥 NAYA MATCH CONDITION
-//                         { paidDirectCount: { $gt: 0 } },
-//                         { p2pReceived: { $gt: 0 } },
-//                         { totalDeposit: { $gt: 0 } },
-//                         { fastTrackIncome: { $gt: 0 } },
-//                         { leaderBonus: { $gt: 0 } },
-//                         { creditToWallet: { $gt: 0 } },
-//                         { totalWithdrawal: { $gt: 0 } }
-//                     ]
-//                 }
-//             },
-//             { $sort: { walletBalance: -1 } } 
-//         ]);
-
-//         res.json({ success: true, data: stats });
-//     } catch (error) {
-//         console.error("Wallet Direct Stats Error:", error);
-//         res.status(500).json({ success: false, message: "Server error" });
-//     }
-// });
-
-
 router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
     try {
         const { fromDate, toDate } = req.query;
@@ -2503,7 +2278,7 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                     name: 1,
                     role: 1, 
                     walletBalance: { $ifNull: ["$walletBalance", 0] },
-                    usdtBep20Balance: { $ifNull: ["$usdtBep20Balance", 0] },
+                    usdtBep20Balance: { $ifNull: ["$usdtBep20Balance", 0] }, // 🔥 NAYA: USDT BEP20 Balance
                 }
             },
             {
@@ -2538,41 +2313,69 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                         {
                             $group: {
                                 _id: null,
+                                
                                 p2pReceived: {
                                     $sum: {
                                         $cond: [
                                             { $or: [
-                                                { $and: [{ $eq: ["$userId", "$$uid"] }, { $in: ["$type", ["p2p_receive", "p2p_transfer_receive", "transfer_receive"]] }]},
-                                                { $and: [{ $eq: ["$toUserId", "$$uid"] }, { $in: ["$type", ["transfer", "p2p_transfer", "fund_transfer"]] }]}
+                                                { $and: [
+                                                    { $eq: ["$userId", "$$uid"] },
+                                                    { $in: ["$type", ["p2p_receive", "p2p_transfer_receive", "transfer_receive"]] }
+                                                ]},
+                                                { $and: [
+                                                    { $eq: ["$toUserId", "$$uid"] },
+                                                    { $in: ["$type", ["transfer", "p2p_transfer", "fund_transfer"]] }
+                                                ]}
                                             ]},
-                                            amountToNumber, 0
+                                            amountToNumber,
+                                            0
                                         ]
                                     }
                                 },
+                                
                                 totalDeposit: {
                                     $sum: {
                                         $cond: [
-                                            { $and: [{ $eq: ["$userId", "$$uid"] }, { $in: ["$status", ["success", "approved", "completed"]] }, { $in: ["$type", ["deposit", "add_fund", "fund_added"]] }]},
-                                            amountToNumber, 0
+                                            { $and: [
+                                                { $eq: ["$userId", "$$uid"] }, 
+                                                { $in: ["$status", ["success", "approved", "completed"]] },
+                                                { $in: ["$type", ["deposit", "add_fund", "fund_added"]] }
+                                            ]},
+                                            amountToNumber,
+                                            0
                                         ]
                                     }
                                 },
+                                
                                 fastTrackIncome: {
                                     $sum: {
                                         $cond: [
-                                            { $and: [{ $eq: ["$userId", "$$uid"] }, { $in: ["$status", ["success", "approved", "completed"]] }, { $in: ["$type", ["fast_track", "fast_track_income"]] }]},
-                                            amountToNumber, 0
+                                            { $and: [
+                                                { $eq: ["$userId", "$$uid"] }, 
+                                                { $in: ["$status", ["success", "approved", "completed"]] },
+                                                { $in: ["$type", ["fast_track", "fast_track_income"]] }
+                                            ]},
+                                            amountToNumber,
+                                            0
                                         ]
                                     }
                                 },
+                                
                                 leaderBonus: {
                                     $sum: {
                                         $cond: [
-                                            { $and: [{ $eq: ["$userId", "$$uid"] }, { $in: ["$status", ["success", "approved", "completed"]] }, { $eq: ["$type", "credit_to_wallet"] }, { $eq: ["$source", "instant_leader_bonus"] }]},
-                                            amountToNumber, 0
+                                            { $and: [
+                                                { $eq: ["$userId", "$$uid"] }, 
+                                                { $in: ["$status", ["success", "approved", "completed"]] },
+                                                { $eq: ["$type", "credit_to_wallet"] },
+                                                { $eq: ["$source", "instant_leader_bonus"] } 
+                                            ]},
+                                            amountToNumber,
+                                            0
                                         ]
                                     }
                                 },
+
                                 creditToWallet: {
                                     $sum: {
                                         $cond: [
@@ -2580,19 +2383,32 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                                                 { $eq: ["$userId", "$$uid"] }, 
                                                 { $in: ["$status", ["success", "approved", "completed"]] },
                                                 { $or: [
-                                                    { $and: [{ $eq: ["$type", "credit_to_wallet"] }, { $ne: ["$source", "instant_leader_bonus"] }, { $not: { $regexMatch: { input: { $ifNull: ["$source", ""] }, regex: /p2p/i } } }]},
-                                                    { $and: [{ $eq: ["$type", "credit"] }, { $eq: ["$source", "system"] }]}
+                                                    { $and: [
+                                                        { $eq: ["$type", "credit_to_wallet"] },
+                                                        { $ne: ["$source", "instant_leader_bonus"] }, 
+                                                        { $not: { $regexMatch: { input: { $ifNull: ["$source", ""] }, regex: /p2p/i } } }
+                                                    ]},
+                                                    { $and: [
+                                                        { $eq: ["$type", "credit"] },
+                                                        { $eq: ["$source", "system"] }
+                                                    ]}
                                                 ]}
                                             ]},
-                                            amountToNumber, 0
+                                            amountToNumber,
+                                            0
                                         ]
                                     }
                                 },
+                                
                                 totalWithdrawal: {
                                     $sum: {
                                         $cond: [
-                                            { $and: [{ $eq: ["$userId", "$$uid"] }, { $in: ["$type", ["withdrawal", "withdraw", "payout"]] }]}, 
-                                            amountToNumber, 0
+                                            { $and: [
+                                                { $eq: ["$userId", "$$uid"] }, 
+                                                { $in: ["$type", ["withdrawal", "withdraw", "payout"]] }
+                                            ]}, 
+                                            amountToNumber, 
+                                            0
                                         ]
                                     }
                                 }
@@ -2603,64 +2419,49 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                 }
             },
             {
-                // 🔥 NAYA LOOKUP: ACTUAL NET USDT PAID FIND KARNE KE LIYE
-                $lookup: {
-                    from: "withdrawals", // Collection ka naam lowercase 'withdrawals' hona chahiye
-                    let: { uid: "$userId" },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: { $eq: ["$userId", "$$uid"] },
-                                status: { $in: ["success", "approved", "completed"] }, // Sirf wo jo admin ne pay kar diye hain
-                                ...(dateFilter.date ? { date: dateFilter.date } : {})
-                            }
-                        },
-                        {
-                            $group: {
-                                _id: null,
-                                netPaid: { $sum: { $convert: { input: "$netAmount", to: "double", onError: 0, onNull: 0 } } }
-                            }
-                        }
-                    ],
-                    as: "wdStats"
-                }
-            },
-            {
+                // 🔥 MAIN ADD FIELDS 
                 $addFields: {
                     paidDirectCount: { $ifNull: [{ $arrayElemAt: ["$directsData.paidDirects", 0] }, 0] },
                     p2pReceived: { $ifNull: [{ $arrayElemAt: ["$txStats.p2pReceived", 0] }, 0] },
                     totalDeposit: { $ifNull: [{ $arrayElemAt: ["$txStats.totalDeposit", 0] }, 0] },
                     fastTrackIncome: { $ifNull: [{ $arrayElemAt: ["$txStats.fastTrackIncome", 0] }, 0] },
+                    
                     leaderBonus: { $ifNull: [{ $arrayElemAt: ["$txStats.leaderBonus", 0] }, 0] },
                     
+                    // 🛑 LEADER RULE FOR CREDIT TO WALLET
                     creditToWallet: { 
-                        $cond: [{ $eq: ["$role", "leader"] }, 0, { $ifNull: [{ $arrayElemAt: ["$txStats.creditToWallet", 0] }, 0] } ] 
+                        $cond: [
+                            { $eq: ["$role", "leader"] }, 
+                            0, 
+                            { $ifNull: [{ $arrayElemAt: ["$txStats.creditToWallet", 0] }, 0] } 
+                        ] 
                     }, 
+                    
+                    // 🛑 LEADER RULE FOR TOTAL WITHDRAWAL
                     totalWithdrawal: { 
-                        $cond: [{ $eq: ["$role", "leader"] }, 0, { $ifNull: [{ $arrayElemAt: ["$txStats.totalWithdrawal", 0] }, 0] } ] 
-                    },
-                    // 🔥 NAYA FIELD: NET USDT PAID
-                    netUsdtPaid: { 
-                        $cond: [{ $eq: ["$role", "leader"] }, 0, { $ifNull: [{ $arrayElemAt: ["$wdStats.netPaid", 0] }, 0] } ] 
+                        $cond: [
+                            { $eq: ["$role", "leader"] }, 
+                            0, 
+                            { $ifNull: [{ $arrayElemAt: ["$txStats.totalWithdrawal", 0] }, 0] } 
+                        ] 
                     }
                 }
             },
             {
-                $project: { directsData: 0, txStats: 0, wdStats: 0 } 
+                $project: { directsData: 0, txStats: 0 } 
             },
             {
                 $match: {
                     $or: [
                         { walletBalance: { $gt: 0 } },
-                        { usdtBep20Balance: { $gt: 0 } }, 
+                        { usdtBep20Balance: { $gt: 0 } }, // 🔥 NAYA MATCH CONDITION
                         { paidDirectCount: { $gt: 0 } },
                         { p2pReceived: { $gt: 0 } },
                         { totalDeposit: { $gt: 0 } },
                         { fastTrackIncome: { $gt: 0 } },
                         { leaderBonus: { $gt: 0 } },
                         { creditToWallet: { $gt: 0 } },
-                        { totalWithdrawal: { $gt: 0 } },
-                        { netUsdtPaid: { $gt: 0 } } // 🔥 ADDED HERE
+                        { totalWithdrawal: { $gt: 0 } }
                     ]
                 }
             },
@@ -2673,6 +2474,205 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
         res.status(500).json({ success: false, message: "Server error" });
     }
 });
+
+
+// router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
+//     try {
+//         const { fromDate, toDate } = req.query;
+
+//         // 🔥 DATE FILTER LOGIC
+//         let dateFilter = {};
+//         if (fromDate || toDate) {
+//             dateFilter.date = {}; 
+//             if (fromDate) {
+//                 dateFilter.date.$gte = new Date(`${fromDate}T00:00:00+05:30`);
+//             }
+//             if (toDate) {
+//                 dateFilter.date.$lte = new Date(`${toDate}T23:59:59+05:30`);
+//             }
+//         }
+
+//         const amountToNumber = { 
+//             $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } 
+//         };
+
+//         const stats = await User.aggregate([
+//             {
+//                 $project: {
+//                     userId: 1,
+//                     name: 1,
+//                     role: 1, 
+//                     walletBalance: { $ifNull: ["$walletBalance", 0] },
+//                     usdtBep20Balance: { $ifNull: ["$usdtBep20Balance", 0] },
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "users", 
+//                     localField: "userId",
+//                     foreignField: "sponsorId",
+//                     pipeline: [
+//                         { $match: { isToppedUp: true } }, 
+//                         { $count: "paidDirects" }
+//                     ],
+//                     as: "directsData"
+//                 }
+//             },
+//             {
+//                 // 🔥 TRANSACTIONS BREAKDOWN CALCULATION 🔥
+//                 $lookup: {
+//                     from: "transactions", 
+//                     let: { uid: "$userId" },
+//                     pipeline: [
+//                         {
+//                             $match: {
+//                                 $expr: {
+//                                     $or: [
+//                                         { $eq: ["$userId", "$$uid"] },
+//                                         { $eq: ["$toUserId", "$$uid"] }
+//                                     ]
+//                                 },
+//                                 ...(dateFilter.date ? { date: dateFilter.date } : {})
+//                             }
+//                         },
+//                         {
+//                             $group: {
+//                                 _id: null,
+//                                 p2pReceived: {
+//                                     $sum: {
+//                                         $cond: [
+//                                             { $or: [
+//                                                 { $and: [{ $eq: ["$userId", "$$uid"] }, { $in: ["$type", ["p2p_receive", "p2p_transfer_receive", "transfer_receive"]] }]},
+//                                                 { $and: [{ $eq: ["$toUserId", "$$uid"] }, { $in: ["$type", ["transfer", "p2p_transfer", "fund_transfer"]] }]}
+//                                             ]},
+//                                             amountToNumber, 0
+//                                         ]
+//                                     }
+//                                 },
+//                                 totalDeposit: {
+//                                     $sum: {
+//                                         $cond: [
+//                                             { $and: [{ $eq: ["$userId", "$$uid"] }, { $in: ["$status", ["success", "approved", "completed"]] }, { $in: ["$type", ["deposit", "add_fund", "fund_added"]] }]},
+//                                             amountToNumber, 0
+//                                         ]
+//                                     }
+//                                 },
+//                                 fastTrackIncome: {
+//                                     $sum: {
+//                                         $cond: [
+//                                             { $and: [{ $eq: ["$userId", "$$uid"] }, { $in: ["$status", ["success", "approved", "completed"]] }, { $in: ["$type", ["fast_track", "fast_track_income"]] }]},
+//                                             amountToNumber, 0
+//                                         ]
+//                                     }
+//                                 },
+//                                 leaderBonus: {
+//                                     $sum: {
+//                                         $cond: [
+//                                             { $and: [{ $eq: ["$userId", "$$uid"] }, { $in: ["$status", ["success", "approved", "completed"]] }, { $eq: ["$type", "credit_to_wallet"] }, { $eq: ["$source", "instant_leader_bonus"] }]},
+//                                             amountToNumber, 0
+//                                         ]
+//                                     }
+//                                 },
+//                                 creditToWallet: {
+//                                     $sum: {
+//                                         $cond: [
+//                                             { $and: [
+//                                                 { $eq: ["$userId", "$$uid"] }, 
+//                                                 { $in: ["$status", ["success", "approved", "completed"]] },
+//                                                 { $or: [
+//                                                     { $and: [{ $eq: ["$type", "credit_to_wallet"] }, { $ne: ["$source", "instant_leader_bonus"] }, { $not: { $regexMatch: { input: { $ifNull: ["$source", ""] }, regex: /p2p/i } } }]},
+//                                                     { $and: [{ $eq: ["$type", "credit"] }, { $eq: ["$source", "system"] }]}
+//                                                 ]}
+//                                             ]},
+//                                             amountToNumber, 0
+//                                         ]
+//                                     }
+//                                 },
+//                                 totalWithdrawal: {
+//                                     $sum: {
+//                                         $cond: [
+//                                             { $and: [{ $eq: ["$userId", "$$uid"] }, { $in: ["$type", ["withdrawal", "withdraw", "payout"]] }]}, 
+//                                             amountToNumber, 0
+//                                         ]
+//                                     }
+//                                 }
+//                             }
+//                         }
+//                     ],
+//                     as: "txStats"
+//                 }
+//             },
+//             {
+//                 // 🔥 NAYA LOOKUP: ACTUAL NET USDT PAID FIND KARNE KE LIYE
+//                 $lookup: {
+//                     from: "withdrawals", // Collection ka naam lowercase 'withdrawals' hona chahiye
+//                     let: { uid: "$userId" },
+//                     pipeline: [
+//                         {
+//                             $match: {
+//                                 $expr: { $eq: ["$userId", "$$uid"] },
+//                                 status: { $in: ["success", "approved", "completed"] }, // Sirf wo jo admin ne pay kar diye hain
+//                                 ...(dateFilter.date ? { date: dateFilter.date } : {})
+//                             }
+//                         },
+//                         {
+//                             $group: {
+//                                 _id: null,
+//                                 netPaid: { $sum: { $convert: { input: "$netAmount", to: "double", onError: 0, onNull: 0 } } }
+//                             }
+//                         }
+//                     ],
+//                     as: "wdStats"
+//                 }
+//             },
+//             {
+//                 $addFields: {
+//                     paidDirectCount: { $ifNull: [{ $arrayElemAt: ["$directsData.paidDirects", 0] }, 0] },
+//                     p2pReceived: { $ifNull: [{ $arrayElemAt: ["$txStats.p2pReceived", 0] }, 0] },
+//                     totalDeposit: { $ifNull: [{ $arrayElemAt: ["$txStats.totalDeposit", 0] }, 0] },
+//                     fastTrackIncome: { $ifNull: [{ $arrayElemAt: ["$txStats.fastTrackIncome", 0] }, 0] },
+//                     leaderBonus: { $ifNull: [{ $arrayElemAt: ["$txStats.leaderBonus", 0] }, 0] },
+                    
+//                     creditToWallet: { 
+//                         $cond: [{ $eq: ["$role", "leader"] }, 0, { $ifNull: [{ $arrayElemAt: ["$txStats.creditToWallet", 0] }, 0] } ] 
+//                     }, 
+//                     totalWithdrawal: { 
+//                         $cond: [{ $eq: ["$role", "leader"] }, 0, { $ifNull: [{ $arrayElemAt: ["$txStats.totalWithdrawal", 0] }, 0] } ] 
+//                     },
+//                     // 🔥 NAYA FIELD: NET USDT PAID
+//                     netUsdtPaid: { 
+//                         $cond: [{ $eq: ["$role", "leader"] }, 0, { $ifNull: [{ $arrayElemAt: ["$wdStats.netPaid", 0] }, 0] } ] 
+//                     }
+//                 }
+//             },
+//             {
+//                 $project: { directsData: 0, txStats: 0, wdStats: 0 } 
+//             },
+//             {
+//                 $match: {
+//                     $or: [
+//                         { walletBalance: { $gt: 0 } },
+//                         { usdtBep20Balance: { $gt: 0 } }, 
+//                         { paidDirectCount: { $gt: 0 } },
+//                         { p2pReceived: { $gt: 0 } },
+//                         { totalDeposit: { $gt: 0 } },
+//                         { fastTrackIncome: { $gt: 0 } },
+//                         { leaderBonus: { $gt: 0 } },
+//                         { creditToWallet: { $gt: 0 } },
+//                         { totalWithdrawal: { $gt: 0 } },
+//                         { netUsdtPaid: { $gt: 0 } } // 🔥 ADDED HERE
+//                     ]
+//                 }
+//             },
+//             { $sort: { walletBalance: -1 } } 
+//         ]);
+
+//         res.json({ success: true, data: stats });
+//     } catch (error) {
+//         console.error("Wallet Direct Stats Error:", error);
+//         res.status(500).json({ success: false, message: "Server error" });
+//     }
+// });
 
 // 🟢 GET STAKING STATS FOR ADMIN
 router.get('/staking-stats', verifyAdmin, async (req, res) => {
