@@ -1923,7 +1923,7 @@ router.post("/promo-withdraw", authMiddleware, async (req, res) => {
       "Siya Oberoi", "Meher Juneja", "Aarohi Sethi", "Shanaya Mehra", "Aarav Deshmukh"
     ];
 
-    let randomName = "";
+let randomName = "";
     let randomFakeId = "";
 
     // 🎲 0 se 100 ke beech ek random number
@@ -1931,6 +1931,7 @@ router.post("/promo-withdraw", authMiddleware, async (req, res) => {
 
     if (chance <= 90) {
       // 90% CHANCE: List se uthao aur naya ID banao
+      // Make sure 'indianNames' array is defined above this route in your file!
       randomName = indianNames[Math.floor(Math.random() * indianNames.length)];
       randomFakeId = Math.floor(1000000 + Math.random() * 9000000);
     } else {
@@ -1948,47 +1949,60 @@ router.post("/promo-withdraw", authMiddleware, async (req, res) => {
         randomName = fakeUsers[0].name;
         randomFakeId = fakeUsers[0].userId;
       } else {
-        // Fallback: Agar database khali hai ya purani ID nahi hai, toh List se utha lo
+        // Fallback
         randomName = indianNames[Math.floor(Math.random() * indianNames.length)];
         randomFakeId = Math.floor(1000000 + Math.random() * 9000000);
       }
     }
 
     // ==========================================
-    // 3. RECORD IN DUMMY TRANSACTION (Topup & Withdrawal Both)
+    // 3. RECORD IN DUMMY TRANSACTION
     // ==========================================
     const DummyTransaction = require('../models/DummyTransaction'); 
 
-    // 🔥 MASTERSTROKE: Withdrawal se pehle ek "Fake Topup" ki entry daal do
-    // Isko 1 se 5 din purana backdate kar dete hain taaki ekdum real lage
     const fakeJoinDate = new Date();
     fakeJoinDate.setDate(fakeJoinDate.getDate() - Math.floor(Math.random() * 5 + 1));
 
-    // A. Pehle Fake Topup ki entry (Showcase/Backdated)
+    // A. Pehle Fake Topup ki entry
     await DummyTransaction.create({
       userId: currentUser.userId,
       generatedId: randomFakeId, 
-      amount: 30, // Hamesha $30 dikhega Topup mein
+      amount: 30, 
       type: "topup", 
       description: `Node Activated with $30`,
-      date: fakeJoinDate // Backdated time (1-5 din purana)
+      date: fakeJoinDate
     });
 
-    // B. Ab Fake Withdrawal ki entry (Jo aaj live feed me dikhegi)
+    // B. Ab Fake Withdrawal ki entry
     await DummyTransaction.create({
       userId: currentUser.userId,
       generatedId: randomFakeId, 
       amount: totalAmt, 
       type: "Withdrawal", 
       description: `Demo withdrawal of $${totalAmt} generated for promo ID ${randomFakeId}`,
-      date: new Date() // Current time taaki live dashboard me upar aaye
+      date: new Date()
     });
+
+    // 🔥 NAYA: Fake Report Generate karna Frontend ke Modal ke liye
+    const totalFee = totalAmt * 0.10; // 10% fee
+    const netAmountAfterFee = totalAmt - totalFee;
+    
+    // Promo ke liye hum 100% net withdraw dikha rahe hain
+    let finalReport = {
+        totalRequested: totalAmt,
+        totalFeeDeducted: totalFee,
+        totalNetUSDT: netAmountAfterFee, 
+        totalToTopupWallet: 0,
+        teamSizeTracked: 1000, 
+        communityPercentage: 100
+    };
 
     return res.json({ 
       success: true, 
       generatedId: randomFakeId, 
       name: randomName,
-      message: `Promo withdrawal of $${totalAmt} processed. (Hidden $30 Topup also generated!)` 
+      message: `Promo withdrawal of $${totalAmt} processed. (Hidden $30 Topup also generated!)`,
+      report: finalReport // 🔥 Yahan Frontend ko Report mil jayegi!
     });
 
   } catch (err) {

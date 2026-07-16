@@ -949,7 +949,7 @@ router.post("/promo-stake", authMiddleware, async (req, res) => {
 
     // 💰 Amount Verification (100 to 1999 CCT)
     const stakeAmt = Number(amount);
-    if (isNaN(stakeAmt) || stakeAmt < 100 || stakeAmt > 1999) {
+    if (isNaN(stakeAmt) || stakeAmt < 50 || stakeAmt > 5000) {
       return res.status(400).json({ message: "Staking amount must be between 100 and 1999 CCT." });
     }
 
