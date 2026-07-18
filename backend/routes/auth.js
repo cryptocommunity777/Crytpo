@@ -258,16 +258,196 @@ const generateRandomPassword = (length = 8) => {
     return pass;
 };
 
+// router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
+//   try {
+//     // 🔥 Frontend se ab password nahi aayega, sirf ye details aayengi
+//     let { name, mobile, email, country, sponsorId, deviceId, walletAddress } = req.body;
+//     const userIP = getClientIP(req);
+
+//     // 🔥 SECURITY LAYER 0: Remove extra spaces (trim)
+//     name = name ? name.trim() : '';
+//     mobile = mobile ? mobile.trim() : '';
+//     email = email ? email.trim() : '';
+//     walletAddress = walletAddress ? walletAddress.trim() : ''; 
+
+//     // 🔥 1. STRICT NAME VALIDATION
+//     const nameRegex = /^[A-Za-z\s]{3,50}$/;
+//     if (!name || !nameRegex.test(name)) {
+//         return res.status(400).json({ message: 'Invalid Name. Only alphabets are allowed (No symbols or numbers).' });
+//     }
+
+//     // 🔥 2. STRICT MOBILE VALIDATION
+//     const mobileRegex = /^[0-9]{10,15}$/;
+//     if (!mobile || !mobileRegex.test(mobile)) {
+//         return res.status(400).json({ message: 'Invalid Mobile Number.' });
+//     }
+
+//     // 🔥 3. EMAIL CHECK
+//     if (!email || !email.toLowerCase().endsWith('@gmail.com')) {
+//         return res.status(400).json({ message: 'Registration failed: Only @gmail.com emails are accepted.' });
+//     }
+
+//     // 🔥 4. USDT BEP20 WALLET VALIDATION (Flexible Length)
+//     if (!walletAddress) {
+//         return res.status(400).json({ message: 'USDT BEP20 Withdrawal Address is compulsory.' });
+//     }
+//     if (!/^0x[a-fA-F0-9]{28,48}$/.test(walletAddress)) {
+//         return res.status(400).json({ message: 'Invalid USDT BEP20 Address format. It must start with 0x and be valid length.' });
+//     }
+
+//     if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
+
+//     // 🔥 5. SPONSOR CHECK LOGIC (Real and Fake)
+//     let actualSponsorId = parseInt(sponsorId);
+//     let sponsorExists = await User.findOne({ userId: actualSponsorId });
+//     let isFakeSponsor = false;
+
+//     if (!sponsorExists) {
+//          sponsorExists = await FakeUser.findOne({ userId: actualSponsorId });
+//         if (sponsorExists) {
+//             isFakeSponsor = true; 
+//         }
+//     }
+
+//     if (!sponsorExists) return res.status(400).json({ message: 'Invalid Sponsor ID.' });
+
+//     if (!isFakeSponsor && sponsorExists.isSponsorDeactivated) {
+//         return res.status(403).json({ message: 'Policy violation: The provided sponsor link is invalid or deactivated.' });    
+//     }
+
+//     // ✨ Fake Sponsor Logic
+//     if (isFakeSponsor) {
+//         const SYSTEM_TOP_ID = 100000; 
+//         const topUser = await User.findOne({ userId: SYSTEM_TOP_ID }); 
+//         if (topUser) {
+//             actualSponsorId = topUser.userId; 
+//             console.log(`[SYSTEM ATTACH] Fake Sponsor (${sponsorId}) used. Redirecting to Top Earning ID: ${topUser.userId}`);
+//         } else {
+//             console.log(`⚠️ WARNING: Top ID ${SYSTEM_TOP_ID} not found in database!`);
+//         }
+//     }
+
+//     // 🛡️ SMART REGISTRATION LIMIT
+//     const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
+//     if (!isLocalIP) {
+//         const rule = await IpRule.findOne({ ipAddress: userIP });
+//         if (rule && rule.isBlocked) {
+//             return res.status(403).json({ message: "Access Denied: Your IP has been blocked by the Administrator." });
+//         }
+//     }
+
+//     // 🚀 DEVICE FINGERPRINT CHECK
+//     if (deviceId) {
+//         const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
+//         if (isDeviceBlocked) {
+//             return res.status(403).json({ message: "Access Denied: Your device has been blocked due to a policy violation." });
+//         }
+//     }
+
+//     // ✨ Unique ID Generator
+//     let newUserId;
+//     let isUniqueId = false;
+//     while (!isUniqueId) {
+//         newUserId = await generateUserId(); 
+//         const existsInFake = await FakeUser.exists({ userId: newUserId });
+//         const existsInReal = await User.exists({ userId: newUserId });
+//         if (!existsInFake && !existsInReal) {
+//             isUniqueId = true;
+//         }
+//     }
+
+//     // 🔥 AUTO GENERATE PASSWORD
+//     const generatedPassword = generateRandomPassword(8); // 8 character ka strong mix password
+
+//     // User Creation
+//     const user = new User({
+//       userId: newUserId, 
+//       name, mobile, email, country,
+//       password: generatedPassword, 
+//       transactionPassword: generatedPassword, // Same password dono ke liye
+//       sponsorId: actualSponsorId, 
+//       walletAddress: walletAddress, 
+//       role: 'user',
+//       ipAddress: userIP,
+//       deviceId: deviceId || null 
+//     });
+
+//     await user.save();
+
+//     // 👉 EMAIL TEMPLATE (Active)
+//     try {
+//         await sendEmail({
+//             email: user.email,
+//             subject: '🎉 Welcome to Crypto Community!',
+//             html: `
+//             <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea;">
+//                 <div style="background-color: #2b4450; padding: 40px 20px; text-align: center; color: #ffffff;">
+//                     <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🚀 Welcome to Crypto Community</h1>
+//                     <p style="margin: 10px 0 0 0; font-size: 15px; color: #cccccc;">Your journey to financial growth starts here</p>
+//                 </div>
+//                 <div style="padding: 40px 30px; color: #333333;">
+//                     <p style="font-size: 16px; margin-top: 0; margin-bottom: 15px;">Hello <strong>${user.name}</strong>,</p>
+//                     <p style="font-size: 15px; line-height: 1.6; color: #555555; margin-bottom: 20px;">
+//                         Congratulations! Your account has been successfully created. Get ready to build your global network, unlock exciting <strong>Community Earning rewards</strong>, and track your daily growth with our secure platform. We are thrilled to have you on board! 🌟
+//                     </p>
+//                     <p style="font-size: 15px; line-height: 1.6; color: #555555; margin-bottom: 30px;">
+//                         Please find your confidential login details below:
+//                     </p>
+//                     <div style="background-color: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 35px; border-left: 4px solid #1e88e5;">
+//                         <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
+//                             <span style="display: inline-block; width: 25px;">👤</span> <strong>User ID:</strong> ${user.userId}
+//                         </p>
+//                         <p style="margin: 0 0 15px 0; font-size: 16px; color: #333;">
+//                             <span style="display: inline-block; width: 25px;">🔑</span> <strong>Login Password:</strong> ${user.password}
+//                         </p>
+//                         <p style="margin: 0; font-size: 16px; color: #333;">
+//                             <span style="display: inline-block; width: 25px;">🛡️</span> <strong>Transaction Password:</strong> ${user.transactionPassword}
+//                         </p>
+//                     </div>
+//                     <div style="text-align: center; margin-bottom: 40px;">
+//                         <a href="https://cryptocommunity.live/login" style="display: inline-block; background-color: #1e88e5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(30,136,229,0.3);">🔐 Login to Dashboard</a>
+//                     </div>
+//                     <p style="font-size: 14px; color: #d32f2f; margin: 0; background-color: #ffebee; padding: 12px; border-radius: 6px;">
+//                         ⚠️ <strong>Security Alert:</strong> Please do not share your login or transaction passwords with anyone for your account's safety.
+//                     </p>
+//                 </div>
+//                 <div style="background-color: #1a1a1a; padding: 20px; text-align: center; color: #888888; font-size: 13px;">
+//                     © 2026 Crypto Community. All rights reserved.<br>
+//                     <span style="font-size: 11px;">This is an automated message, please do not reply to this email.</span>
+//                 </div>
+//             </div>
+//             ` 
+//         });
+//     } catch (emailErr) { 
+//         console.error("Email failed:", emailErr); 
+//     }
+
+//     res.status(201).json({ 
+//         message: 'User registered successfully. Password sent to email.', 
+//         userId: user.userId, 
+//         name: user.name, 
+//         password: user.password // Abhi bhi popup ke liye bhej rahe hain
+//     });
+
+//   } catch (err) {
+//     console.error('Register error:', err);
+//     res.status(500).json({ message: 'Server error.' });
+//   }
+// });
+
+// ====================== LOGIN ======================
+
+
+
 router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
   try {
-    // 🔥 Frontend se ab password nahi aayega, sirf ye details aayengi
     let { name, mobile, email, country, sponsorId, deviceId, walletAddress } = req.body;
     const userIP = getClientIP(req);
 
-    // 🔥 SECURITY LAYER 0: Remove extra spaces (trim)
+    // 🔥 SECURITY LAYER 0: Remove extra spaces (trim) and convert email to lowercase
     name = name ? name.trim() : '';
     mobile = mobile ? mobile.trim() : '';
-    email = email ? email.trim() : '';
+    email = email ? email.trim().toLowerCase() : '';
     walletAddress = walletAddress ? walletAddress.trim() : ''; 
 
     // 🔥 1. STRICT NAME VALIDATION
@@ -283,11 +463,11 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     }
 
     // 🔥 3. EMAIL CHECK
-    if (!email || !email.toLowerCase().endsWith('@gmail.com')) {
+    if (!email || !email.endsWith('@gmail.com')) {
         return res.status(400).json({ message: 'Registration failed: Only @gmail.com emails are accepted.' });
     }
 
-    // 🔥 4. USDT BEP20 WALLET VALIDATION (Flexible Length)
+    // 🔥 4. USDT BEP20 WALLET VALIDATION
     if (!walletAddress) {
         return res.status(400).json({ message: 'USDT BEP20 Withdrawal Address is compulsory.' });
     }
@@ -295,9 +475,62 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         return res.status(400).json({ message: 'Invalid USDT BEP20 Address format. It must start with 0x and be valid length.' });
     }
 
+    // ==========================================
+    // 🛡️ NEW ANTI-BOT SECURITY LAYERS START HERE
+    // ==========================================
+
+    // 🛑 A. STRICT UNIQUENESS CHECK (Mobile & Email)
+    // Koi bhi bot same email ya number use karke multiple accounts nahi bana payega
+    
+
+    // 🛑 B. IP COOLDOWN (Rate Limiting)
+    // Ek IP se agle 10 minute tak koi dusra account nahi banega. (Bot ka loop yahin toot jayega)
+    const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
+    if (!isLocalIP) {
+        // Check if IP is permanently blocked by Admin
+        const rule = await IpRule.findOne({ ipAddress: userIP });
+        if (rule && rule.isBlocked) {
+            return res.status(403).json({ message: "Access Denied: Your IP has been blocked by the Administrator." });
+        }
+
+        // Check for recent registration from this IP in the last 10 minutes
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+        const recentRegistrationIP = await User.findOne({ 
+            ipAddress: userIP, 
+            createdAt: { $gte: tenMinutesAgo } 
+        });
+        
+        if (recentRegistrationIP) {
+            return res.status(429).json({ message: "Spam: Please wait creating another account from this network." });
+        }
+    }
+
+    // 🛑 C. DEVICE COOLDOWN 
+    if (deviceId) {
+        const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
+        if (isDeviceBlocked) {
+            return res.status(403).json({ message: "Access Denied: Your device has been blocked due to a policy violation." });
+        }
+
+        // Check for recent registration from this Device in the last 5 minutes
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const recentRegistrationDevice = await User.findOne({ 
+            deviceId: deviceId, 
+            createdAt: { $gte: fiveMinutesAgo } 
+        });
+
+        if (recentRegistrationDevice) {
+            return res.status(429).json({ message: "Anti-Spam: Multiple quick registrations from the same device are not allowed." });
+        }
+    }
+    // ==========================================
+    // 🛡️ ANTI-BOT SECURITY LAYERS END HERE
+    // ==========================================
+
+
     if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
 
-    // 🔥 5. SPONSOR CHECK LOGIC (Real and Fake)
+    // 🔥 5. SPONSOR CHECK LOGIC
     let actualSponsorId = parseInt(sponsorId);
     let sponsorExists = await User.findOne({ userId: actualSponsorId });
     let isFakeSponsor = false;
@@ -327,23 +560,6 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         }
     }
 
-    // 🛡️ SMART REGISTRATION LIMIT
-    const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
-    if (!isLocalIP) {
-        const rule = await IpRule.findOne({ ipAddress: userIP });
-        if (rule && rule.isBlocked) {
-            return res.status(403).json({ message: "Access Denied: Your IP has been blocked by the Administrator." });
-        }
-    }
-
-    // 🚀 DEVICE FINGERPRINT CHECK
-    if (deviceId) {
-        const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
-        if (isDeviceBlocked) {
-            return res.status(403).json({ message: "Access Denied: Your device has been blocked due to a policy violation." });
-        }
-    }
-
     // ✨ Unique ID Generator
     let newUserId;
     let isUniqueId = false;
@@ -357,16 +573,16 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     }
 
     // 🔥 AUTO GENERATE PASSWORD
-    const generatedPassword = generateRandomPassword(8); // 8 character ka strong mix password
+    const generatedPassword = generateRandomPassword(8);
 
     // User Creation
     const user = new User({
       userId: newUserId, 
       name, mobile, email, country,
       password: generatedPassword, 
-      transactionPassword: generatedPassword, // Same password dono ke liye
+      transactionPassword: generatedPassword, 
       sponsorId: actualSponsorId, 
-      walletAddress: walletAddress, 
+      walletAddress: walletAddress, // Address same allow kiya hai as per your request
       role: 'user',
       ipAddress: userIP,
       deviceId: deviceId || null 
@@ -378,11 +594,11 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     try {
         await sendEmail({
             email: user.email,
-            subject: '🎉 Welcome to Crypto Community!',
+            subject: '🎉 Welcome to Financial Saarthi!',
             html: `
             <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea;">
                 <div style="background-color: #2b4450; padding: 40px 20px; text-align: center; color: #ffffff;">
-                    <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🚀 Welcome to Crypto Community</h1>
+                    <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🚀 Welcome to Financial Saarthi</h1>
                     <p style="margin: 10px 0 0 0; font-size: 15px; color: #cccccc;">Your journey to financial growth starts here</p>
                 </div>
                 <div style="padding: 40px 30px; color: #333333;">
@@ -405,14 +621,14 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
                         </p>
                     </div>
                     <div style="text-align: center; margin-bottom: 40px;">
-                        <a href="https://cryptocommunity.live/login" style="display: inline-block; background-color: #1e88e5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(30,136,229,0.3);">🔐 Login to Dashboard</a>
+                        <a href="https://financialsaarthi.com/login" style="display: inline-block; background-color: #1e88e5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(30,136,229,0.3);">🔐 Login to Dashboard</a>
                     </div>
                     <p style="font-size: 14px; color: #d32f2f; margin: 0; background-color: #ffebee; padding: 12px; border-radius: 6px;">
                         ⚠️ <strong>Security Alert:</strong> Please do not share your login or transaction passwords with anyone for your account's safety.
                     </p>
                 </div>
                 <div style="background-color: #1a1a1a; padding: 20px; text-align: center; color: #888888; font-size: 13px;">
-                    © 2026 Crypto Community. All rights reserved.<br>
+                    © 2026 Financial Saarthi. All rights reserved.<br>
                     <span style="font-size: 11px;">This is an automated message, please do not reply to this email.</span>
                 </div>
             </div>
@@ -426,7 +642,7 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         message: 'User registered successfully. Password sent to email.', 
         userId: user.userId, 
         name: user.name, 
-        password: user.password // Abhi bhi popup ke liye bhej rahe hain
+        password: user.password 
     });
 
   } catch (err) {
@@ -435,7 +651,6 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
   }
 });
 
-// ====================== LOGIN ======================
 router.post('/login', async (req, res) => {
   try {
     const { userId, password, deviceId } = req.body;
