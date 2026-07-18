@@ -60,7 +60,7 @@ const TotalSystemUsers = ({ user, totalRealUsersFromDB = 0, globalFakeCount = 0,
   const displayActiveDownline = activeDownlineCount || user?.activeDownlineCount || 0;
 
   useEffect(() => {
-    const BASE_TOTAL_USERS = 100; 
+    const BASE_TOTAL_USERS = 587; 
     const finalTotal = BASE_TOTAL_USERS + totalRealUsersFromDB + globalFakeCount;
     setTotalSystemUsers(finalTotal);
     setDisplayGlobalTeam(user?.globalTeamCount || 0);
