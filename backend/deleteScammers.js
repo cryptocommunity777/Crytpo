@@ -2,6 +2,9 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const readline = require('readline');
 
+// Jis address ko delete karna hai
+const TARGET_ADDRESS = "0x6943B1e4719c29C645cA04f75FffAd2dA3E7A028";
+
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -10,7 +13,7 @@ const rl = readline.createInterface({
 async function run() {
     try {
         if (!process.env.MONGO_URI) {
-            console.error("❌ Error: MONGO_URI missing in .env file.");
+            console.error("❌ Error: MONGO_URI nahi mili .env file mein. Dhyan rahe ki aap backend folder mein hain aur wahan .env file maujood hai!");
             process.exit(1);
         }
         
@@ -19,39 +22,37 @@ async function run() {
         console.log("✅ Database Connected!\n");
 
         const db = mongoose.connection.db;
-        const txCollection = db.collection('transactions');
-        const usersCollection = db.collection('users');
+        const usersCollection = db.collection('users'); 
 
-        console.log("🔍 Scanning Database... Check kar raha hoon aisi transactions jinke Users delete ho chuke hain...");
+        // Address ko match karne ke liye query (case-insensitive)
+        const query = { walletAddress: { $regex: new RegExp(`^${TARGET_ADDRESS}$`, "i") } };
+        const usersFound = await usersCollection.find(query).toArray();
 
-        // 1. Saare Zinda (Valid) Users ki ID nikal lo
-        const allValidUsers = await usersCollection.distinct("userId");
-        
-        // 2. Aisi Transactions dhoondo jinka userId valid users ki list mein NAHI hai
-        const orphanQuery = { userId: { $nin: allValidUsers } };
-        const orphanCount = await txCollection.countDocuments(orphanQuery);
-
-        if (orphanCount === 0) {
-            console.log("\n✅ Ledger ekdum saaf hai! Koi bhi fake/orphaned transaction nahi mili.");
-            mongoose.connection.close();
+        if (usersFound.length === 0) {
+            console.log(`✅ Safe: Is address (${TARGET_ADDRESS}) wala koi user database mein nahi hai.`);
             process.exit(0);
         }
 
         // 🔥 CHALLENGE SCREEN 🔥
-        console.log("\n==================================================");
-        console.log(`🚨 FAKE TRANSACTIONS DETECTED 🚨`);
         console.log("==================================================");
-        console.log(`⚠️ WARNING: Mujhe ${orphanCount} aisi transactions (Withdrawals, Topups, Deposits) mili hain jinke Users database mein ab NAHI hain!`);
-        console.log("Agar aap inko delete karenge, toh Admin Panel ka total hisaab wapas theek ho jayega.\n");
+        console.log(`🚨 SCAMMER DETECTION CHALLENGE 🚨`);
+        console.log("==================================================");
+        console.log(`⚠️ WARNING: Total ${usersFound.length} user(s) mile hain jinka yeh wallet address hai: ${TARGET_ADDRESS}\n`);
+        
+        console.log("👉 Users ki details jo delete hone wale hain:");
+        usersFound.forEach((u, index) => {
+            console.log(`   ${index + 1}. User ID: ${u.userId || u._id} | Name: ${u.name || 'N/A'} | Email: ${u.email || 'N/A'}`);
+        });
+        console.log("==================================================\n");
 
-        rl.question(`❓ Kya aap in ${orphanCount} FAKE transactions ko hamesha ke liye DELETE karna chahte hain? \n(Type exactly 'YES' to delete, or press Enter to cancel): `, async (answer) => {
+        rl.question(`❓ KYA AAP IN ${usersFound.length} USERS KO HAMESHA KE LIYE DELETE KARNA CHAHTE HAIN? \n(Type exactly 'YES' to delete, or press Enter to cancel): `, async (answer) => {
             
             if (answer === 'YES') {
-                console.log(`\n⏳ ${orphanCount} kachra transactions delete ho rahi hain...`);
-                const result = await txCollection.deleteMany(orphanQuery);
-                console.log(`✅ SUCCESS: ${result.deletedCount} fake transactions hamesha ke liye delete ho gayi hain! Aapka ledger ab 100% accurate hai.`);
+                console.log(`\n⏳ Deleting ${usersFound.length} users...`);
+                const result = await usersCollection.deleteMany(query);
+                console.log(`✅ SUCCESS: ${result.deletedCount} users hamesha ke liye delete ho gaye hain!`);
             } else {
-                console.log("\n❌ Cancelled. Kisi bhi transaction ko delete nahi kiya gaya.");
+                console.log("\n❌ Cancelled. Kisi bhi user ko delete nahi kiya gaya. SAFE.");
             }
             
             mongoose.connection.close();
