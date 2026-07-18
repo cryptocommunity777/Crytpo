@@ -2251,11 +2251,235 @@ router.get('/monthly-reward-progress', async (req, res) => {
 // });
 
 
+// router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
+//     try {
+//         const { fromDate, toDate } = req.query;
+
+//         // 🔥 DATE FILTER LOGIC
+//         let dateFilter = {};
+//         if (fromDate || toDate) {
+//             dateFilter.date = {}; 
+//             if (fromDate) {
+//                 dateFilter.date.$gte = new Date(`${fromDate}T00:00:00+05:30`);
+//             }
+//             if (toDate) {
+//                 dateFilter.date.$lte = new Date(`${toDate}T23:59:59+05:30`);
+//             }
+//         }
+
+//         const amountToNumber = { 
+//             $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } 
+//         };
+
+//         const stats = await User.aggregate([
+//             {
+//                 $project: {
+//                     userId: 1,
+//                     name: 1,
+//                     role: 1, 
+//                     walletBalance: { $ifNull: ["$walletBalance", 0] },
+//                     usdtBep20Balance: { $ifNull: ["$usdtBep20Balance", 0] }, // 🔥 NAYA: USDT BEP20 Balance
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "users", 
+//                     localField: "userId",
+//                     foreignField: "sponsorId",
+//                     pipeline: [
+//                         { $match: { isToppedUp: true } }, 
+//                         { $count: "paidDirects" }
+//                     ],
+//                     as: "directsData"
+//                 }
+//             },
+//             {
+//                 // 🔥 TRANSACTIONS BREAKDOWN CALCULATION 🔥
+//                 $lookup: {
+//                     from: "transactions", 
+//                     let: { uid: "$userId" },
+//                     pipeline: [
+//                         {
+//                             $match: {
+//                                 $expr: {
+//                                     $or: [
+//                                         { $eq: ["$userId", "$$uid"] },
+//                                         { $eq: ["$toUserId", "$$uid"] }
+//                                     ]
+//                                 },
+//                                 ...(dateFilter.date ? { date: dateFilter.date } : {})
+//                             }
+//                         },
+//                         {
+//                             $group: {
+//                                 _id: null,
+                                
+//                                 p2pReceived: {
+//                                     $sum: {
+//                                         $cond: [
+//                                             { $or: [
+//                                                 { $and: [
+//                                                     { $eq: ["$userId", "$$uid"] },
+//                                                     { $in: ["$type", ["p2p_receive", "p2p_transfer_receive", "transfer_receive"]] }
+//                                                 ]},
+//                                                 { $and: [
+//                                                     { $eq: ["$toUserId", "$$uid"] },
+//                                                     { $in: ["$type", ["transfer", "p2p_transfer", "fund_transfer"]] }
+//                                                 ]}
+//                                             ]},
+//                                             amountToNumber,
+//                                             0
+//                                         ]
+//                                     }
+//                                 },
+                                
+//                                 totalDeposit: {
+//                                     $sum: {
+//                                         $cond: [
+//                                             { $and: [
+//                                                 { $eq: ["$userId", "$$uid"] }, 
+//                                                 { $in: ["$status", ["success", "approved", "completed"]] },
+//                                                 { $in: ["$type", ["deposit", "add_fund", "fund_added"]] }
+//                                             ]},
+//                                             amountToNumber,
+//                                             0
+//                                         ]
+//                                     }
+//                                 },
+                                
+//                                 fastTrackIncome: {
+//                                     $sum: {
+//                                         $cond: [
+//                                             { $and: [
+//                                                 { $eq: ["$userId", "$$uid"] }, 
+//                                                 { $in: ["$status", ["success", "approved", "completed"]] },
+//                                                 { $in: ["$type", ["fast_track", "fast_track_income"]] }
+//                                             ]},
+//                                             amountToNumber,
+//                                             0
+//                                         ]
+//                                     }
+//                                 },
+                                
+//                                 leaderBonus: {
+//                                     $sum: {
+//                                         $cond: [
+//                                             { $and: [
+//                                                 { $eq: ["$userId", "$$uid"] }, 
+//                                                 { $in: ["$status", ["success", "approved", "completed"]] },
+//                                                 { $eq: ["$type", "credit_to_wallet"] },
+//                                                 { $eq: ["$source", "instant_leader_bonus"] } 
+//                                             ]},
+//                                             amountToNumber,
+//                                             0
+//                                         ]
+//                                     }
+//                                 },
+
+//                                 creditToWallet: {
+//                                     $sum: {
+//                                         $cond: [
+//                                             { $and: [
+//                                                 { $eq: ["$userId", "$$uid"] }, 
+//                                                 { $in: ["$status", ["success", "approved", "completed"]] },
+//                                                 { $or: [
+//                                                     { $and: [
+//                                                         { $eq: ["$type", "credit_to_wallet"] },
+//                                                         { $ne: ["$source", "instant_leader_bonus"] }, 
+//                                                         { $not: { $regexMatch: { input: { $ifNull: ["$source", ""] }, regex: /p2p/i } } }
+//                                                     ]},
+//                                                     { $and: [
+//                                                         { $eq: ["$type", "credit"] },
+//                                                         { $eq: ["$source", "system"] }
+//                                                     ]}
+//                                                 ]}
+//                                             ]},
+//                                             amountToNumber,
+//                                             0
+//                                         ]
+//                                     }
+//                                 },
+                                
+//                                 totalWithdrawal: {
+//                                     $sum: {
+//                                         $cond: [
+//                                             { $and: [
+//                                                 { $eq: ["$userId", "$$uid"] }, 
+//                                                 { $in: ["$type", ["withdrawal", "withdraw", "payout"]] }
+//                                             ]}, 
+//                                             amountToNumber, 
+//                                             0
+//                                         ]
+//                                     }
+//                                 }
+//                             }
+//                         }
+//                     ],
+//                     as: "txStats"
+//                 }
+//             },
+//             {
+//                 // 🔥 MAIN ADD FIELDS 
+//                 $addFields: {
+//                     paidDirectCount: { $ifNull: [{ $arrayElemAt: ["$directsData.paidDirects", 0] }, 0] },
+//                     p2pReceived: { $ifNull: [{ $arrayElemAt: ["$txStats.p2pReceived", 0] }, 0] },
+//                     totalDeposit: { $ifNull: [{ $arrayElemAt: ["$txStats.totalDeposit", 0] }, 0] },
+//                     fastTrackIncome: { $ifNull: [{ $arrayElemAt: ["$txStats.fastTrackIncome", 0] }, 0] },
+                    
+//                     leaderBonus: { $ifNull: [{ $arrayElemAt: ["$txStats.leaderBonus", 0] }, 0] },
+                    
+//                     // 🛑 LEADER RULE FOR CREDIT TO WALLET
+//                     creditToWallet: { 
+//                         $cond: [
+//                             { $eq: ["$role", "leader"] }, 
+//                             0, 
+//                             { $ifNull: [{ $arrayElemAt: ["$txStats.creditToWallet", 0] }, 0] } 
+//                         ] 
+//                     }, 
+                    
+//                     // 🛑 LEADER RULE FOR TOTAL WITHDRAWAL
+//                     totalWithdrawal: { 
+//                         $cond: [
+//                             { $eq: ["$role", "leader"] }, 
+//                             0, 
+//                             { $ifNull: [{ $arrayElemAt: ["$txStats.totalWithdrawal", 0] }, 0] } 
+//                         ] 
+//                     }
+//                 }
+//             },
+//             {
+//                 $project: { directsData: 0, txStats: 0 } 
+//             },
+//             {
+//                 $match: {
+//                     $or: [
+//                         { walletBalance: { $gt: 0 } },
+//                         { usdtBep20Balance: { $gt: 0 } }, // 🔥 NAYA MATCH CONDITION
+//                         { paidDirectCount: { $gt: 0 } },
+//                         { p2pReceived: { $gt: 0 } },
+//                         { totalDeposit: { $gt: 0 } },
+//                         { fastTrackIncome: { $gt: 0 } },
+//                         { leaderBonus: { $gt: 0 } },
+//                         { creditToWallet: { $gt: 0 } },
+//                         { totalWithdrawal: { $gt: 0 } }
+//                     ]
+//                 }
+//             },
+//             { $sort: { walletBalance: -1 } } 
+//         ]);
+
+//         res.json({ success: true, data: stats });
+//     } catch (error) {
+//         console.error("Wallet Direct Stats Error:", error);
+//         res.status(500).json({ success: false, message: "Server error" });
+//     }
+// });
+
 router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
     try {
         const { fromDate, toDate } = req.query;
 
-        // 🔥 DATE FILTER LOGIC
+        // 🔥 DATE FILTER LOGIC (IST Timezone Support)
         let dateFilter = {};
         if (fromDate || toDate) {
             dateFilter.date = {}; 
@@ -2278,7 +2502,7 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                     name: 1,
                     role: 1, 
                     walletBalance: { $ifNull: ["$walletBalance", 0] },
-                    usdtBep20Balance: { $ifNull: ["$usdtBep20Balance", 0] }, // 🔥 NAYA: USDT BEP20 Balance
+                    usdtBep20Balance: { $ifNull: ["$usdtBep20Balance", 0] }, // 🔥 13 July ke baad ka naya wallet
                 }
             },
             {
@@ -2320,7 +2544,9 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                                             { $or: [
                                                 { $and: [
                                                     { $eq: ["$userId", "$$uid"] },
-                                                    { $in: ["$type", ["p2p_receive", "p2p_transfer_receive", "transfer_receive"]] }
+                                                    // 🔥 ADDED: usdt_bep20_transfer ko bhi P2P mein count karega
+                                                    { $in: ["$type", ["p2p_receive", "p2p_transfer_receive", "transfer_receive", "credit"]] },
+                                                    { $in: ["$source", ["p2p", "p2p_transfer", "usdt_bep20_transfer"]] }
                                                 ]},
                                                 { $and: [
                                                     { $eq: ["$toUserId", "$$uid"] },
@@ -2425,7 +2651,6 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                     p2pReceived: { $ifNull: [{ $arrayElemAt: ["$txStats.p2pReceived", 0] }, 0] },
                     totalDeposit: { $ifNull: [{ $arrayElemAt: ["$txStats.totalDeposit", 0] }, 0] },
                     fastTrackIncome: { $ifNull: [{ $arrayElemAt: ["$txStats.fastTrackIncome", 0] }, 0] },
-                    
                     leaderBonus: { $ifNull: [{ $arrayElemAt: ["$txStats.leaderBonus", 0] }, 0] },
                     
                     // 🛑 LEADER RULE FOR CREDIT TO WALLET
@@ -2451,10 +2676,11 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                 $project: { directsData: 0, txStats: 0 } 
             },
             {
+                // 🔥 FILTER KAREGA SIRF UNKO JINKA KOI BHI BALANCE YA RECORD HAI
                 $match: {
                     $or: [
                         { walletBalance: { $gt: 0 } },
-                        { usdtBep20Balance: { $gt: 0 } }, // 🔥 NAYA MATCH CONDITION
+                        { usdtBep20Balance: { $gt: 0 } }, // NAYA WALLET BHI MATCH HOGA
                         { paidDirectCount: { $gt: 0 } },
                         { p2pReceived: { $gt: 0 } },
                         { totalDeposit: { $gt: 0 } },
@@ -2465,7 +2691,7 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
                     ]
                 }
             },
-            { $sort: { walletBalance: -1 } } 
+            { $sort: { walletBalance: -1, usdtBep20Balance: -1 } } 
         ]);
 
         res.json({ success: true, data: stats });
@@ -2474,7 +2700,6 @@ router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
         res.status(500).json({ success: false, message: "Server error" });
     }
 });
-
 
 // router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
 //     try {
@@ -4073,11 +4298,70 @@ router.get('/wallet-update-history', verifyAdmin, async (req, res) => {
 
 // ✅ Corrected Route for Admin User Search (Added here)
 // Isse admin kisi bhi ek user ko search karega toh usko plain text password dikhega
+// router.get('/user/:userId', verifyAdmin, async (req, res) => {
+//   try {
+//     const user = await User.findOne({ userId: Number(req.params.userId) }).lean();
+    
+//     if (!user) return res.status(404).json({ message: 'User not found' });
+
+//     // Yahan hum password aur transactionPassword hide NAHI kar rahe hain
+//     res.json({ user: user });
+
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// });
+
+
+//  // routes/admin.js ke andar
+
+// router.get('/search-user/:userId', verifyAdmin, async (req, res) => {
+//   try {
+//     // 1. Pehle user ko dhundo
+//     const user = await User.findOne({ userId: Number(req.params.userId) }).lean();
+//     if (!user) return res.status(404).json({ message: 'User not found' });
+
+//     // 2. ✅ NAYA LOGIC: Agar iska koi sponsorId hai, toh database se uska naam nikalo
+//     if (user.sponsorId) {
+//       const sponsor = await User.findOne({ userId: Number(user.sponsorId) }).select('name').lean();
+//       // Agar sponsor mila toh uska naam daalo, warna "Unknown" likh do
+//       user.sponsorName = sponsor ? sponsor.name : "Unknown"; 
+//     } else {
+//       user.sponsorName = "N/A"; // Agar kisi ne refer nahi kiya
+//     }
+
+//     // 🔥 3. FIX FOR OLD HISTORY DATA: Purani history entries me jahan addedAt nahi hai, wahan fallback time daal do
+//     if (user.walletAddressHistory && user.walletAddressHistory.length > 0) {
+//       user.walletAddressHistory = user.walletAddressHistory.map(entry => {
+//         if (!entry.addedAt) {
+//           // Agar entry purani hai aur time nahi hai, toh user kab bana tha uska time de do
+//           entry.addedAt = user.createdAt || user.updatedAt || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Agar kuch nahi mila toh 1 mahina purani date fallback me dikhayega
+//         }
+//         return entry;
+//       });
+//     }
+
+//     // Ensure we are sending EVERYTHING, including passwords and the new sponsorName
+//     res.json({ user: user });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// });
+
+
+// 1. Get Single User Route
 router.get('/user/:userId', verifyAdmin, async (req, res) => {
   try {
     const user = await User.findOne({ userId: Number(req.params.userId) }).lean();
     
     if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Fallback for missing balances in old accounts
+    user.walletBalance = user.walletBalance || 0;
+    user.usdtBep20Balance = user.usdtBep20Balance || 0;
+    user.cctBalance = user.cctBalance || 0;
 
     // Yahan hum password aur transactionPassword hide NAHI kar rahe hain
     res.json({ user: user });
@@ -4089,8 +4373,7 @@ router.get('/user/:userId', verifyAdmin, async (req, res) => {
 });
 
 
- // routes/admin.js ke andar
-
+// 2. Search User Route
 router.get('/search-user/:userId', verifyAdmin, async (req, res) => {
   try {
     // 1. Pehle user ko dhundo
@@ -4106,12 +4389,17 @@ router.get('/search-user/:userId', verifyAdmin, async (req, res) => {
       user.sponsorName = "N/A"; // Agar kisi ne refer nahi kiya
     }
 
-    // 🔥 3. FIX FOR OLD HISTORY DATA: Purani history entries me jahan addedAt nahi hai, wahan fallback time daal do
+    // 3. Fallback for balances (Taaki frontend pe blank na aaye)
+    user.walletBalance = user.walletBalance || 0;
+    user.usdtBep20Balance = user.usdtBep20Balance || 0;
+    user.cctBalance = user.cctBalance || 0;
+
+    // 🔥 4. FIX FOR OLD HISTORY DATA: Purani history entries me jahan addedAt nahi hai
     if (user.walletAddressHistory && user.walletAddressHistory.length > 0) {
       user.walletAddressHistory = user.walletAddressHistory.map(entry => {
         if (!entry.addedAt) {
           // Agar entry purani hai aur time nahi hai, toh user kab bana tha uska time de do
-          entry.addedAt = user.createdAt || user.updatedAt || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Agar kuch nahi mila toh 1 mahina purani date fallback me dikhayega
+          entry.addedAt = user.createdAt || user.updatedAt || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); 
         }
         return entry;
       });

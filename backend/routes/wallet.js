@@ -2015,67 +2015,67 @@ let randomName = "";
 
 // ✅ Frontend calls: /api/wallet/history/${uid}
 // Isliye route ka naam strictly '/history/:userId' hona chahiye
-router.get('/history/:userId', async (req, res) => {
-  try {
-    const userId = Number(req.params.userId);
+// router.get('/history/:userId', async (req, res) => {
+//   try {
+//     const userId = Number(req.params.userId);
     
-    if (isNaN(userId)) {
-      return res.status(400).json({ message: 'Invalid user ID' });
-    }
+//     if (isNaN(userId)) {
+//       return res.status(400).json({ message: 'Invalid user ID' });
+//     }
 
-    // 1. 🔥 YAHAN UPDATE KIYA: "cct_transfer" add kar diya!
-    const allowedTypes = [
-      "deposit",
-      "credit_to_wallet",
-      "credit",        
-      "transfer",
-      "topup",         
-      "debit_topup",
-      "withdrawal",
-      "manual_credit",
-      "manual_debit",
-      "fast_track",
-      "convert_to_cct", 
-      "cct_stake_send",  
-      "cct_transfer"    // ✅ Ab CCT transfers bhi wallet history me dikhenge
-    ];
+//     // 1. 🔥 YAHAN UPDATE KIYA: "cct_transfer" add kar diya!
+//     const allowedTypes = [
+//       "deposit",
+//       "credit_to_wallet",
+//       "credit",        
+//       "transfer",
+//       "topup",         
+//       "debit_topup",
+//       "withdrawal",
+//       "manual_credit",
+//       "manual_debit",
+//       "fast_track",
+//       "convert_to_cct", 
+//       "cct_stake_send",  
+//       "cct_transfer"    // ✅ Ab CCT transfers bhi wallet history me dikhenge
+//     ];
 
-    // 2. ✨ MEGA QUERY
-    let txs = await Transaction.find({
-      $and: [
-        {
-          $or: [
-            { userId: userId },       
-            { fromUserId: userId },   
-            { toUserId: userId }      
-          ]
-        },
-        { 
-          type: { $in: allowedTypes } 
-        },
-        { 
-          // PROMOTION wale fake transactions ko hide rakhega
-          description: { $not: /PROMOTION/i } 
-        }
-      ]
-    }).sort({ date: -1 }).lean();
+//     // 2. ✨ MEGA QUERY
+//     let txs = await Transaction.find({
+//       $and: [
+//         {
+//           $or: [
+//             { userId: userId },       
+//             { fromUserId: userId },   
+//             { toUserId: userId }      
+//           ]
+//         },
+//         { 
+//           type: { $in: allowedTypes } 
+//         },
+//         { 
+//           // PROMOTION wale fake transactions ko hide rakhega
+//           description: { $not: /PROMOTION/i } 
+//         }
+//       ]
+//     }).sort({ date: -1 }).lean();
 
-    // 3. 🛡️ SAFETY FILTER: Fast track sirf Sponsor (paisa jisko mila) ko dikhe, downline ko nahi
-    const cleanHistory = txs.filter(t => {
-      if (t.type === 'fast_track') {
-          return String(t.userId) === String(userId);
-      }
-      return true;
-    });
+//     // 3. 🛡️ SAFETY FILTER: Fast track sirf Sponsor (paisa jisko mila) ko dikhe, downline ko nahi
+//     const cleanHistory = txs.filter(t => {
+//       if (t.type === 'fast_track') {
+//           return String(t.userId) === String(userId);
+//       }
+//       return true;
+//     });
 
-    // Response ko 'history' key me bhejna hai
-    res.json({ success: true, history: cleanHistory });
+//     // Response ko 'history' key me bhejna hai
+//     res.json({ success: true, history: cleanHistory });
 
-  } catch (err) {
-    console.error("Wallet history error:", err);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
+//   } catch (err) {
+//     console.error("Wallet history error:", err);
+//     res.status(500).json({ success: false, message: 'Server error' });
+//   }
+// });
 
 
 // 🔥 GLOBAL POOL CONFIGURATION (Ye add karna zaroori tha)
@@ -2305,66 +2305,165 @@ router.get('/withdrawals/:userId', async (req, res) => {
 
 // C:\Users\HP\Desktop\Cryptocommunity\backend\routes\wallet.js
 
+// router.get('/history/:userId', async (req, res) => {
+//   try {
+//     const rawUserId = req.params.userId;
+//     const userIdNum = Number(rawUserId);
+
+//     // Agar ID galat hai, toh safe format mein khali array bhejo
+//     if (isNaN(userIdNum)) {
+//       return res.status(400).json({ success: false, history: [] });
+//     }
+
+//     console.log(`\n🔎 LEDGER REQUEST: User ${userIdNum}`);
+
+//     // 1. Database Query (.lean() ke sath fast data fetch karne ke liye)
+//     const allTxs = await Transaction.find({
+//       $or: [
+//         { userId: userIdNum },
+//         { toUserId: userIdNum },
+//         { fromUserId: userIdNum }
+//       ]
+//     }).sort({ date: -1, createdAt: -1 }).lean(); 
+
+//     // ✅ Allowed list (Isme fast_track shamil hai)
+//     const allowedTypes = [
+//       "deposit", "credit_to_wallet", "credit", "transfer", 
+//       "topup", "debit_topup", "withdrawal", "manual_credit", 
+//       "manual_debit", "fast_track"
+//     ];
+
+//     // 2. Filter & Clean Data (Sab kuch yahin saaf ho jayega)
+//     const cleanHistory = allTxs
+//       .filter(t => {
+//         if (!t || !t.type) return false;
+        
+//         // Unwanted types hatao
+//         if (!allowedTypes.includes(t.type)) return false;
+
+//         // Auto-pool / Promotion ka kachra saaf karo
+//         const desc = (t.description || "").toLowerCase();
+//         if (desc.includes("auto-pool") || desc.includes("promotion")) return false;
+
+//         // 🔥 Fast Track sirf asli owner (Sponsor) ko dikhe
+//         if (t.type === 'fast_track') {
+//            return String(t.userId) === String(rawUserId);
+//         }
+
+//         return true;
+//       })
+//       .map(t => {
+//         // 💰 DECIMAL 128 FIX: Backend se hi amount ko Number bana kar bhejo
+//         // Isse frontend par kabhi Object wala ya .toFixed() error nahi aayega!
+//         let safeAmount = 0;
+//         let safeGross = 0;
+
+//         // Extract Amount
+//         if (t.amount && t.amount.$numberDecimal) safeAmount = parseFloat(t.amount.$numberDecimal);
+//         else safeAmount = parseFloat(t.amount) || 0;
+
+//         // Extract Gross Amount
+//         if (t.grossAmount && t.grossAmount.$numberDecimal) safeGross = parseFloat(t.grossAmount.$numberDecimal);
+//         else safeGross = parseFloat(t.grossAmount) || 0;
+
+//         return {
+//           ...t,
+//           amount: safeAmount,
+//           grossAmount: safeGross
+//         };
+//       });
+
+//     console.log(`✨ SENDING: ${cleanHistory.length} clean items to frontend\n`);
+    
+//     // Hamesha { success: true, history: [...] } format me bhejein
+//     res.json({ success: true, history: cleanHistory });
+
+//   } catch (err) {
+//     console.error("Route Error:", err);
+//     // Crash hone par bhi array bhejo taaki frontend white screen na de
+//     res.status(500).json({ success: false, history: [] });
+//   }
+// });
+
+  
+
+
+ 
 router.get('/history/:userId', async (req, res) => {
   try {
     const rawUserId = req.params.userId;
     const userIdNum = Number(rawUserId);
 
-    // Agar ID galat hai, toh safe format mein khali array bhejo
+    // Agar ID galat hai, toh safe format mein khali array bhejo taaki frontend crash na ho
     if (isNaN(userIdNum)) {
-      return res.status(400).json({ success: false, history: [] });
+      return res.status(400).json({ success: false, history: [], balances: null });
     }
 
-    console.log(`\n🔎 LEDGER REQUEST: User ${userIdNum}`);
+    // 🌟 NAYA LOGIC: User ka Live Balance seedha DB se nikal lo (Taaki frontend pe $0 na dikhe)
+    const userData = await User.findOne({ userId: userIdNum }).select('walletBalance usdtBep20Balance').lean();
 
-    // 1. Database Query (.lean() ke sath fast data fetch karne ke liye)
-    const allTxs = await Transaction.find({
-      $or: [
-        { userId: userIdNum },
-        { toUserId: userIdNum },
-        { fromUserId: userIdNum }
-      ]
-    }).sort({ date: -1, createdAt: -1 }).lean(); 
-
-    // ✅ Allowed list (Isme fast_track shamil hai)
+    // 🔥 1. YAHAN SABKUCH ADD KAR DIYA (CCT aur USDT transfers dono)
     const allowedTypes = [
-      "deposit", "credit_to_wallet", "credit", "transfer", 
-      "topup", "debit_topup", "withdrawal", "manual_credit", 
-      "manual_debit", "fast_track"
+      "deposit",
+      "credit_to_wallet",
+      "credit",        
+      "transfer",
+      "usdt_bep20_transfer", // ✅ Naya USDT Transfer yahan hai
+      "topup",         
+      "debit_topup",
+      "withdrawal",
+      "manual_credit",
+      "manual_debit",
+      "fast_track",
+      "convert_to_cct", 
+      "cct_stake_send",  
+      "cct_transfer"         // ✅ CCT transfers yahan hai
     ];
 
-    // 2. Filter & Clean Data (Sab kuch yahin saaf ho jayega)
-    const cleanHistory = allTxs
+    // ✨ 2. FAST DATABASE QUERY 
+    let txs = await Transaction.find({
+      $and: [
+        {
+          $or: [
+            { userId: userIdNum },       
+            { fromUserId: userIdNum },   
+            { toUserId: userIdNum }      
+          ]
+        },
+        { type: { $in: allowedTypes } },
+        { description: { $not: /PROMOTION/i } },
+        { description: { $not: /auto-pool/i } } // Auto-pool ka kachra bhi saaf
+      ]
+    }).sort({ date: -1, createdAt: -1 }).lean();
+
+    // 🛡️ 3. CLEANUP & DECIMAL128 FIX (SABSE ZAROORI)
+    const cleanHistory = txs
       .filter(t => {
-        if (!t || !t.type) return false;
-        
-        // Unwanted types hatao
-        if (!allowedTypes.includes(t.type)) return false;
-
-        // Auto-pool / Promotion ka kachra saaf karo
-        const desc = (t.description || "").toLowerCase();
-        if (desc.includes("auto-pool") || desc.includes("promotion")) return false;
-
-        // 🔥 Fast Track sirf asli owner (Sponsor) ko dikhe
+        // Fast track sirf asli owner (jisko mila hai) ko dikhe
         if (t.type === 'fast_track') {
-           return String(t.userId) === String(rawUserId);
+            return String(t.userId) === String(rawUserId);
         }
-
         return true;
       })
       .map(t => {
-        // 💰 DECIMAL 128 FIX: Backend se hi amount ko Number bana kar bhejo
-        // Isse frontend par kabhi Object wala ya .toFixed() error nahi aayega!
+        // 💰 DECIMAL 128 FIX: Backend se hi amount ko pure Number bana kar bhejo
+        // Isse frontend par kabhi Object wala error nahi aayega!
         let safeAmount = 0;
         let safeGross = 0;
 
-        // Extract Amount
-        if (t.amount && t.amount.$numberDecimal) safeAmount = parseFloat(t.amount.$numberDecimal);
-        else safeAmount = parseFloat(t.amount) || 0;
+        // Extract Amount Safely
+        if (t.amount && t.amount.$numberDecimal) {
+            safeAmount = parseFloat(t.amount.$numberDecimal);
+        } else {
+            safeAmount = parseFloat(t.amount) || 0;
+        }
 
-        // Extract Gross Amount
-        if (t.grossAmount && t.grossAmount.$numberDecimal) safeGross = parseFloat(t.grossAmount.$numberDecimal);
-        else safeGross = parseFloat(t.grossAmount) || 0;
+        // Extract Gross Amount Safely
+        if (t.grossAmount && t.grossAmount.$numberDecimal) {
+            safeGross = parseFloat(t.grossAmount.$numberDecimal);
+        } else {
+            safeGross = parseFloat(t.grossAmount) || 0;
+        }
 
         return {
           ...t,
@@ -2373,20 +2472,22 @@ router.get('/history/:userId', async (req, res) => {
         };
       });
 
-    console.log(`✨ SENDING: ${cleanHistory.length} clean items to frontend\n`);
-    
-    // Hamesha { success: true, history: [...] } format me bhejein
-    res.json({ success: true, history: cleanHistory });
+    // 🌟 4. FINAL RESPONSE: History ke sath Live Balances bhi bhejein
+    res.json({ 
+        success: true, 
+        history: cleanHistory,
+        balances: {
+            walletBalance: userData?.walletBalance || 0,
+            usdtBep20Balance: userData?.usdtBep20Balance || 0
+        }
+    });
 
   } catch (err) {
-    console.error("Route Error:", err);
-    // Crash hone par bhi array bhejo taaki frontend white screen na de
-    res.status(500).json({ success: false, history: [] });
+    console.error("Wallet history error:", err);
+    // Crash hone par bhi khali array bhejo taaki frontend white screen na ho
+    res.status(500).json({ success: false, history: [], balances: null });
   }
 });
-
-  
-
 
 
 // GET /api/wallet/topup-history/:userId
