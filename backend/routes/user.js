@@ -1707,6 +1707,17 @@ router.put(
       const targetUserId = Number(req.params.userId);
       const { amount, transactionPassword, isPromoFree } = req.body;
 
+
+      const safeAmount = Number(amount);
+      if (!safeAmount || isNaN(safeAmount) || safeAmount <= 0) {
+          return res.status(400).json({ message: 'Security Alert: Invalid Top-up Amount.' });
+      }
+
+      const validPackages = [30]; // Apne actual packages list yahan daalein
+      if (!validPackages.includes(safeAmount)) {
+          return res.status(400).json({ message: 'Security Alert: This package amount is not allowed.' });
+      }
+
       // 🔹 1. User & Password Check 
       const currentUser = await User.findOne({ userId: req.user.userId }).lean();
       if (!currentUser) return res.status(404).json({ message: "Current user not found" });
@@ -1989,6 +2000,18 @@ router.put(
       const targetUserId = req.params.userId;
       const { amount, transactionPassword } = req.body;
 
+      const safeAmount = Number(amount);
+      if (!safeAmount || isNaN(safeAmount) || safeAmount <= 0) {
+          return res.status(400).json({ message: 'Security Alert: Invalid Top-up Amount.' });
+      }
+
+      const validPackages = [30]; // Apne actual packages
+      if (!validPackages.includes(safeAmount)) {
+          return res.status(400).json({ message: 'Security Alert: This package amount is not allowed.' });
+      }
+      // ==========================================
+
+ 
       const currentUser = await User.findOne({ userId: req.user.userId });
       if (!currentUser) return res.status(404).json({ message: "Current user not found" });
       
@@ -2060,12 +2083,26 @@ router.put(
           }
       }
       
-      if (isDummyTopup) {
+    //   if (isDummyTopup) {
+    //     console.log(`[DUMMY TOPUP] Leader ${currentUser.userId} activated ${targetUser.userId}. Leader balance NOT deducted.`);
+    //   } else {
+    //     currentUser.walletBalance -= actualWalletDeduction;
+    //     currentUser.usdtBep20Balance -= actualUsdtDeduction;
+    //   }
+
+    if (isDummyTopup) {
         console.log(`[DUMMY TOPUP] Leader ${currentUser.userId} activated ${targetUser.userId}. Leader balance NOT deducted.`);
       } else {
-        currentUser.walletBalance -= actualWalletDeduction;
-        currentUser.usdtBep20Balance -= actualUsdtDeduction;
+        // 🔥 SAFE DEDUCTION (PREVENTS RACE CONDITION BOTS)
+        await User.updateOne(
+            { userId: currentUser.userId },
+            { $inc: { 
+                walletBalance: -actualWalletDeduction,
+                usdtBep20Balance: -actualUsdtDeduction
+            }}
+        );
       }
+      // Note: Purana 'await currentUser.save();' hata diya gaya hai kyunki updateOne directly database me safe save kar deta hai.
       await currentUser.save();
 
       const createTransaction = async (data) => {

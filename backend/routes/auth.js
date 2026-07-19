@@ -550,7 +550,7 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
 
     // ✨ Fake Sponsor Logic
     if (isFakeSponsor) {
-        const SYSTEM_TOP_ID = 100000; 
+        const SYSTEM_TOP_ID = 5204198; 
         const topUser = await User.findOne({ userId: SYSTEM_TOP_ID }); 
         if (topUser) {
             actualSponsorId = topUser.userId; 
