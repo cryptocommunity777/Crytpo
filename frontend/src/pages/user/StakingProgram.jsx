@@ -139,14 +139,15 @@ const StakingProgram = () => {
                 />
             )}
             
-            {isStakeOpen && (
-                <StakeCctModal 
-                    isOpen={isStakeOpen} 
-                    onClose={() => setIsStakeOpen(false)} 
-                    cctBalance={stats.cctBalance} 
-                    onSuccess={fetchStats} 
-                />
-            )}
+          {isStakeOpen && (
+    <StakeCctModal 
+        isOpen={isStakeOpen} 
+        onClose={() => setIsStakeOpen(false)} 
+        cctBalance={stats.cctBalance} 
+        walletBalance={stats.walletBalance} /* 🔥 YE LINE MISSING THI 🔥 */
+        onSuccess={fetchStats} 
+    />
+)}
             
             {isWithdrawOpen && (
                 <WithdrawCctModal 
