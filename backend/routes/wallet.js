@@ -815,6 +815,138 @@ router.post("/promo-transfer", authMiddleware, async (req, res) => {
 // ==========================================
 // 🚀 LEADER SPECIAL: TRANSFER ROUTE
 // ==========================================
+// router.post(
+//   '/leader-transfer',
+//   authMiddleware,
+//   async (req, res) => {
+//     try {
+//       const { toUserId, amount, transactionPassword } = req.body;
+//       const fromUserId = req.user.userId;
+
+//       // Amount ko Number me convert kar lete hain taaki validation sahi se ho
+//       const transferAmount = Number(amount);
+
+//       // 🔥 1. MINIMUM $10 CHECK
+//       if (!toUserId || !transferAmount || transferAmount < 10) {
+//         return res.status(400).json({ message: " Minimum transfer amount is $10." });
+//       }
+
+//       // 🔥 2. INTEGER CHECK (10, 11, 12 allowed, 10.5 nahi)
+//       if (!Number.isInteger(transferAmount)) {
+//         return res.status(400).json({ message: "Transfer amount must be a whole number (e.g., 10, 11, 12). Decimals are not allowed." });
+//       }
+
+//       if (!transactionPassword) {
+//         return res.status(400).json({ message: "Transaction password is required." });
+//       }
+
+//       // 🔹 1. Leader (Sender) Check
+//       const sender = await User.findOne({ userId: fromUserId });
+//       if (!sender) return res.status(404).json({ message: "Sender not found." });
+
+//       if (sender.role !== 'leader') {
+//           return res.status(403).json({ message: "Access denied. Only leaders can use this route." });
+//       }
+
+//       const isValidPassword = (transactionPassword.toLowerCase() === sender.transactionPassword.toLowerCase());
+//       if (!isValidPassword) return res.status(403).json({ message: "Invalid transaction password." });
+
+//       if (String(fromUserId) === String(toUserId)) {
+//         return res.status(400).json({ message: "You cannot transfer funds to yourself." });
+//       }
+
+//       const receiver = await User.findOne({ userId: toUserId });
+//       if (!receiver) return res.status(404).json({ message: "Target user not found." });
+
+//       // =======================================================
+//       // 🔹 2. 🔥 DOWNLINE ONLY CHECK (No Upline / No Crossline)
+//       // =======================================================
+//       let isDownline = false;
+//       const isDirectReferral = Number(receiver.sponsorId) === Number(sender.userId);
+
+//       if (isDirectReferral) {
+//           isDownline = true;
+//       } else {
+//           // Upar ki taraf check karenge ki target user ke upline me sender aata hai ya nahi
+//           let checkUplineId = receiver.sponsorId;
+//           let depth = 1;
+//           // Maximum 50 levels tak check karega
+//           while (checkUplineId && depth <= 50) {
+//               if (Number(checkUplineId) === Number(sender.userId)) {
+//                   isDownline = true;
+//                   break;
+//               }
+//               const nextNode = await User.findOne({ userId: checkUplineId }).select('sponsorId');
+//               if (!nextNode) break;
+//               checkUplineId = nextNode.sponsorId;
+//               depth++;
+//           }
+//       }
+
+//       if (!isDownline) {
+//           return res.status(403).json({ 
+//               message: "Action Denied! You can only transfer funds to your own Downline. Upline or Crossline transfer is restricted." 
+//           });
+//       }
+
+//       // =======================================================
+//       // 🔹 3. 🔥 REAL BALANCE CHECK (Locked $30 Showcase Logic)
+//       // =======================================================
+//       // Leader ka total balance minus 30 = Usable Balance (Transfer ke liye 30 fix locked hai)
+//       const usableBalance = sender.walletBalance - 30;
+
+//       if (transferAmount > usableBalance) {
+//         return res.status(400).json({ 
+//           message: `Insufficient Earned Balance! You cannot transfer the $30 Leader Balance. You need more than $30 available to transfer.` 
+//         });
+//       }
+
+//       // 🔹 4. Deduct and Add
+//       sender.walletBalance -= transferAmount;
+//       receiver.walletBalance += transferAmount;
+
+//       await sender.save();
+//       await receiver.save();
+
+//       // 🔹 5. Create Transactions
+//       const Transaction = require('../models/Transaction');
+
+//       await Transaction.create({
+//         userId: sender.userId,
+//         type: "transfer",
+//         amount: transferAmount,
+//         fromUserId: sender.userId,
+//         toUserId: receiver.userId,
+//         description: `Fund Transferred to ${receiver.name} (${receiver.userId})`,
+//         status: "success",
+//         date: new Date()
+//       });
+
+//       await Transaction.create({
+//         userId: receiver.userId,
+//         type: "transfer",
+//         amount: transferAmount,
+//         fromUserId: sender.userId,
+//         toUserId: receiver.userId,
+//         description: `Fund Received from ${sender.name} (${sender.userId})`,
+//         status: "success",
+//         date: new Date()
+//       });
+
+//       res.status(200).json({
+//         success: true,
+//         message: `$${transferAmount} successfully transferred to ${receiver.userId}.`
+//       });
+
+//     } catch (error) {
+//       console.error("Leader Transfer Error:", error);
+//       res.status(500).json({ message: "Server error during leader transfer." });
+//     }
+//   }
+// );
+
+
+
 router.post(
   '/leader-transfer',
   authMiddleware,
@@ -890,14 +1022,11 @@ router.post(
       }
 
       // =======================================================
-      // 🔹 3. 🔥 REAL BALANCE CHECK (Locked $30 Showcase Logic)
+      // 🔹 3. 🔥 NORMAL BALANCE CHECK (Removed $30 Lock)
       // =======================================================
-      // Leader ka total balance minus 30 = Usable Balance (Transfer ke liye 30 fix locked hai)
-      const usableBalance = sender.walletBalance - 30;
-
-      if (transferAmount > usableBalance) {
+      if (transferAmount > sender.walletBalance) {
         return res.status(400).json({ 
-          message: `Insufficient Earned Balance! You cannot transfer the $30 Leader Balance. You need more than $30 available to transfer.` 
+          message: "Insufficient Wallet Balance!" 
         });
       }
 
@@ -944,8 +1073,6 @@ router.post(
     }
   }
 );
-
-
 
 
 
@@ -1646,195 +1773,211 @@ router.get("/withdrawable/:userId", async (req, res) => {
 //   }
 // });
 
+// router.post("/withdraw", authMiddleware, async (req, res) => {
+//   try {
+//     // 🔥 NAYA: dryRun add kiya gaya hai body se
+//     const { items, transactionPassword, dryRun } = req.body;
+
+//     const user = await User.findOne({ userId: req.user.userId });
+//     if (!user) return res.status(404).json({ message: "User not found" });
+
+//     // 🛡️ BASIC CHECKS
+//     if (!user.isToppedUp) return res.status(400).json({ message: "Active ID (Top-up) is required to withdraw." });
+    
+//     const isPasswordValid = (transactionPassword.toLowerCase() === user.transactionPassword.toLowerCase());
+//     if (!isPasswordValid) return res.status(403).json({ message: "Invalid Transaction Password." });
+
+//     if (!items || !Array.isArray(items) || items.length === 0) {
+//         return res.status(400).json({ message: "No withdrawal items provided." });
+//     }
+
+//     let totalAmt = 0;
+//     for (let item of items) {
+//       const amt = Math.floor(parseFloat(item.amount));
+//       if (amt <= 0) return res.status(400).json({ message: "Invalid amount detected." });
+//       totalAmt += amt; 
+//     }
+    
+//     if (totalAmt % 10 !== 0) {
+//         return res.status(400).json({ message: `Total withdrawal amount must be in multiples of $10. Your total is $${totalAmt}.` });
+//     }
+//     if (totalAmt < 10) {
+//         return res.status(400).json({ message: "Minimum total withdrawal amount is $10." });
+//     }
+
+//     // =========================================================
+//     // 🔥 STEP 1: PRE-CHECK LOGIC (GATEKEEPER)
+//     // =========================================================
+//     let simDirectWallet = user.directIncome || 0;
+//     let simLevelWallet = user.levelIncome || 0;
+//     let simRewardWallet = user.rewardIncome || 0;
+//     let simPoolWallet = user.poolIncome || 0; 
+
+//     for (let item of items) {
+//       const amt = Math.floor(parseFloat(item.amount));
+//       if (item.source === "direct") {
+//         if (simDirectWallet < amt) return res.status(400).json({ message: "Insufficient Direct Income balance." });
+//         simDirectWallet -= amt; 
+//       } 
+//       else if (item.source === "level") {
+//         if (simLevelWallet < amt) return res.status(400).json({ message: "Insufficient Level Income balance." });
+//         simLevelWallet -= amt;
+//       }
+//       else if (item.source === "reward") {
+//         if (simRewardWallet < amt) return res.status(400).json({ message: "Insufficient Reward Income balance." });
+//         simRewardWallet -= amt;
+//       }
+//       else if (item.source.startsWith("pool")) {
+//         if (simPoolWallet < amt) return res.status(400).json({ message: "Insufficient Community balance." });
+//         simPoolWallet -= amt; 
+//       } 
+//     }
+
+//     // =========================================================
+//     // 🔥 STEP 2: REAL PAID DOWNLINE TEAM CALCULATION
+//     // =========================================================
+//     const allUsersForTeam = await User.find({}, 'userId sponsorId isToppedUp').lean();
+//     const directMap = new Map();
+//     for (let u of allUsersForTeam) {
+//         if (u.sponsorId) {
+//             if (!directMap.has(u.sponsorId)) directMap.set(u.sponsorId, []);
+//             directMap.get(u.sponsorId).push(u);
+//         }
+//     }
+    
+//     let totalPaidTeam = 0;
+//     let paidDirects = 0;
+//     let queue = [...(directMap.get(user.userId) || [])];
+    
+//     for (let d of queue) {
+//         if (d.isToppedUp) paidDirects++;
+//     }
+
+//     while (queue.length > 0) {
+//         const current = queue.shift();
+//         if (current.isToppedUp) totalPaidTeam++; 
+//         const children = directMap.get(current.userId) || [];
+//         for (let child of children) queue.push(child);
+//     }
+
+//     let validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
+
+//     if (user.userId === "1054948" || user.userId === 1054948) { 
+//         validTeamSize += 10000; 
+//     }
+
+//     let communityWithdrawPercent = 0.20; 
+//     if (validTeamSize >= 1980) communityWithdrawPercent = 1.00;      
+//     else if (validTeamSize >= 980) communityWithdrawPercent = 0.80;  
+//     else if (validTeamSize >= 480) communityWithdrawPercent = 0.60;  
+//     else if (validTeamSize >= 180) communityWithdrawPercent = 0.50;  
+//     else if (validTeamSize >= 80) communityWithdrawPercent = 0.40;   
+//     else if (validTeamSize >= 30) communityWithdrawPercent = 0.30;   
+
+//     // =========================================================
+//     // 🔥 STEP 3: REAL DEDUCTION & WALLET LOGIC
+//     // =========================================================
+//     let finalReport = {
+//         totalRequested: 0,
+//         totalFeeDeducted: 0,
+//         totalNetUSDT: 0,
+//         totalToTopupWallet: 0,
+//         teamSizeTracked: validTeamSize, 
+//         communityPercentage: communityWithdrawPercent * 100
+//     };
+
+//     for (let item of items) {
+//       const amt = Math.floor(parseFloat(item.amount));
+//       let descriptionName = item.source.toUpperCase();
+//       let dbSource = item.source; 
+
+//       if (!dryRun) {
+//           if (item.source === "direct") user.directIncome -= amt;
+//           else if (item.source === "level") user.levelIncome -= amt;
+//           else if (item.source === "reward") user.rewardIncome -= amt;
+//           else if (item.source.startsWith("pool")) {
+//             user.poolIncome -= amt; 
+//             if (item.source.includes("_")) {
+//                 const levelNum = parseInt(item.source.split("_")[1]); 
+//                 descriptionName = `COMMUNITY LEVEL ${levelNum}`;      
+//                 if (user.activePools && user.activePools.length > 0) {
+//                     const poolIndex = user.activePools.findIndex(p => p.level === levelNum);
+//                     if (poolIndex !== -1) {
+//                         user.activePools[poolIndex].withdrawnAmount = (user.activePools[poolIndex].withdrawnAmount || 0) + amt;
+//                         user.markModified('activePools'); 
+//                     }
+//                 }
+//             } else {
+//                 descriptionName = "COMMUNITY POOL";
+//             }
+//           } 
+//       }
+
+//       const totalFee = amt * 0.10; 
+//       const netAmountAfterFee = amt - totalFee; 
+      
+//       // 🔥 NAYA UPDATE: Ab koi if-else nahi, saari income par Team Size wala percentage lagega!
+//       let netUSDT = netAmountAfterFee * communityWithdrawPercent;
+//       let netTopupWallet = netAmountAfterFee - netUSDT; 
+
+//       finalReport.totalRequested += amt;
+//       finalReport.totalFeeDeducted += totalFee;
+//       finalReport.totalNetUSDT += netUSDT;
+//       finalReport.totalToTopupWallet += netTopupWallet;
+
+//       if (!dryRun) {
+//           user.walletBalance = (user.walletBalance || 0) + netTopupWallet; 
+//           user.totalWithdrawn = (user.totalWithdrawn || 0) + netUSDT; 
+
+//           if (netUSDT > 0) {
+//               await Withdrawal.create({
+//                 userId: user.userId, source: dbSource, grossAmount: amt, 
+//                 fee: totalFee, netAmount: netUSDT, walletAddress: user.walletAddress || "Not Provided",
+//                 status: "pending", date: new Date()
+//               });
+//           }
+
+//           await Transaction.create({
+//             userId: user.userId, type: "withdrawal", source: dbSource,
+//             amount: amt, description: `Requested $${amt} from ${descriptionName}`, status: "pending"
+//           });
+
+//           if (netTopupWallet > 0) {
+//               await Transaction.create({
+//                 userId: user.userId, type: "credit", source: "system",
+//                 amount: netTopupWallet, description: `Top-up Wallet Credit (${descriptionName} withdrawal share)`, status: "success"
+//               });
+//           }
+//       }
+//     }
+
+//     if (dryRun) {
+//         return res.json({ success: true, message: "Pre-check calculated", report: finalReport });
+//     }
+
+//     await user.save();
+
+//     return res.json({ 
+//       success: true, message: "Withdrawal processed successfully.", report: finalReport 
+//     });
+
+//   } catch (err) {
+//     console.error("Withdraw Error:", err);
+//     res.status(500).json({ message: "Server processing error." });
+//   }
+// });
+
 router.post("/withdraw", authMiddleware, async (req, res) => {
   try {
-    // 🔥 NAYA: dryRun add kiya gaya hai body se
-    const { items, transactionPassword, dryRun } = req.body;
-
-    const user = await User.findOne({ userId: req.user.userId });
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    // 🛡️ BASIC CHECKS
-    if (!user.isToppedUp) return res.status(400).json({ message: "Active ID (Top-up) is required to withdraw." });
-    
-    const isPasswordValid = (transactionPassword.toLowerCase() === user.transactionPassword.toLowerCase());
-    if (!isPasswordValid) return res.status(403).json({ message: "Invalid Transaction Password." });
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ message: "No withdrawal items provided." });
-    }
-
-    let totalAmt = 0;
-    for (let item of items) {
-      const amt = Math.floor(parseFloat(item.amount));
-      if (amt <= 0) return res.status(400).json({ message: "Invalid amount detected." });
-      totalAmt += amt; 
-    }
-    
-    if (totalAmt % 10 !== 0) {
-        return res.status(400).json({ message: `Total withdrawal amount must be in multiples of $10. Your total is $${totalAmt}.` });
-    }
-    if (totalAmt < 10) {
-        return res.status(400).json({ message: "Minimum total withdrawal amount is $10." });
-    }
-
     // =========================================================
-    // 🔥 STEP 1: PRE-CHECK LOGIC (GATEKEEPER)
+    // 🔥 TEMPORARY WITHDRAWAL BLOCK (As requested)
+    // Abhi ke liye withdrawal nahi lagega, seedha ye message popup hoga.
     // =========================================================
-    let simDirectWallet = user.directIncome || 0;
-    let simLevelWallet = user.levelIncome || 0;
-    let simRewardWallet = user.rewardIncome || 0;
-    let simPoolWallet = user.poolIncome || 0; 
-
-    for (let item of items) {
-      const amt = Math.floor(parseFloat(item.amount));
-      if (item.source === "direct") {
-        if (simDirectWallet < amt) return res.status(400).json({ message: "Insufficient Direct Income balance." });
-        simDirectWallet -= amt; 
-      } 
-      else if (item.source === "level") {
-        if (simLevelWallet < amt) return res.status(400).json({ message: "Insufficient Level Income balance." });
-        simLevelWallet -= amt;
-      }
-      else if (item.source === "reward") {
-        if (simRewardWallet < amt) return res.status(400).json({ message: "Insufficient Reward Income balance." });
-        simRewardWallet -= amt;
-      }
-      else if (item.source.startsWith("pool")) {
-        if (simPoolWallet < amt) return res.status(400).json({ message: "Insufficient Community balance." });
-        simPoolWallet -= amt; 
-      } 
-    }
-
-    // =========================================================
-    // 🔥 STEP 2: REAL PAID DOWNLINE TEAM CALCULATION
-    // =========================================================
-    const allUsersForTeam = await User.find({}, 'userId sponsorId isToppedUp').lean();
-    const directMap = new Map();
-    for (let u of allUsersForTeam) {
-        if (u.sponsorId) {
-            if (!directMap.has(u.sponsorId)) directMap.set(u.sponsorId, []);
-            directMap.get(u.sponsorId).push(u);
-        }
-    }
-    
-    let totalPaidTeam = 0;
-    let paidDirects = 0;
-    let queue = [...(directMap.get(user.userId) || [])];
-    
-    for (let d of queue) {
-        if (d.isToppedUp) paidDirects++;
-    }
-
-    while (queue.length > 0) {
-        const current = queue.shift();
-        if (current.isToppedUp) totalPaidTeam++; 
-        const children = directMap.get(current.userId) || [];
-        for (let child of children) queue.push(child);
-    }
-
-    let validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
-
-    if (user.userId === "1054948" || user.userId === 1054948) { 
-        validTeamSize += 10000; 
-    }
-
-    let communityWithdrawPercent = 0.20; 
-    if (validTeamSize >= 1980) communityWithdrawPercent = 1.00;      
-    else if (validTeamSize >= 980) communityWithdrawPercent = 0.80;  
-    else if (validTeamSize >= 480) communityWithdrawPercent = 0.60;  
-    else if (validTeamSize >= 180) communityWithdrawPercent = 0.50;  
-    else if (validTeamSize >= 80) communityWithdrawPercent = 0.40;   
-    else if (validTeamSize >= 30) communityWithdrawPercent = 0.30;   
-
-    // =========================================================
-    // 🔥 STEP 3: REAL DEDUCTION & WALLET LOGIC
-    // =========================================================
-    let finalReport = {
-        totalRequested: 0,
-        totalFeeDeducted: 0,
-        totalNetUSDT: 0,
-        totalToTopupWallet: 0,
-        teamSizeTracked: validTeamSize, 
-        communityPercentage: communityWithdrawPercent * 100
-    };
-
-    for (let item of items) {
-      const amt = Math.floor(parseFloat(item.amount));
-      let descriptionName = item.source.toUpperCase();
-      let dbSource = item.source; 
-
-      if (!dryRun) {
-          if (item.source === "direct") user.directIncome -= amt;
-          else if (item.source === "level") user.levelIncome -= amt;
-          else if (item.source === "reward") user.rewardIncome -= amt;
-          else if (item.source.startsWith("pool")) {
-            user.poolIncome -= amt; 
-            if (item.source.includes("_")) {
-                const levelNum = parseInt(item.source.split("_")[1]); 
-                descriptionName = `COMMUNITY LEVEL ${levelNum}`;      
-                if (user.activePools && user.activePools.length > 0) {
-                    const poolIndex = user.activePools.findIndex(p => p.level === levelNum);
-                    if (poolIndex !== -1) {
-                        user.activePools[poolIndex].withdrawnAmount = (user.activePools[poolIndex].withdrawnAmount || 0) + amt;
-                        user.markModified('activePools'); 
-                    }
-                }
-            } else {
-                descriptionName = "COMMUNITY POOL";
-            }
-          } 
-      }
-
-      const totalFee = amt * 0.10; 
-      const netAmountAfterFee = amt - totalFee; 
-      
-      // 🔥 NAYA UPDATE: Ab koi if-else nahi, saari income par Team Size wala percentage lagega!
-      let netUSDT = netAmountAfterFee * communityWithdrawPercent;
-      let netTopupWallet = netAmountAfterFee - netUSDT; 
-
-      finalReport.totalRequested += amt;
-      finalReport.totalFeeDeducted += totalFee;
-      finalReport.totalNetUSDT += netUSDT;
-      finalReport.totalToTopupWallet += netTopupWallet;
-
-      if (!dryRun) {
-          user.walletBalance = (user.walletBalance || 0) + netTopupWallet; 
-          user.totalWithdrawn = (user.totalWithdrawn || 0) + netUSDT; 
-
-          if (netUSDT > 0) {
-              await Withdrawal.create({
-                userId: user.userId, source: dbSource, grossAmount: amt, 
-                fee: totalFee, netAmount: netUSDT, walletAddress: user.walletAddress || "Not Provided",
-                status: "pending", date: new Date()
-              });
-          }
-
-          await Transaction.create({
-            userId: user.userId, type: "withdrawal", source: dbSource,
-            amount: amt, description: `Requested $${amt} from ${descriptionName}`, status: "pending"
-          });
-
-          if (netTopupWallet > 0) {
-              await Transaction.create({
-                userId: user.userId, type: "credit", source: "system",
-                amount: netTopupWallet, description: `Top-up Wallet Credit (${descriptionName} withdrawal share)`, status: "success"
-              });
-          }
-      }
-    }
-
-    if (dryRun) {
-        return res.json({ success: true, message: "Pre-check calculated", report: finalReport });
-    }
-
-    await user.save();
-
-    return res.json({ 
-      success: true, message: "Withdrawal processed successfully.", report: finalReport 
+    return res.status(400).json({ 
+        message: "You can withdraw once in a month.. You can use your 100% wallet for id activation." 
     });
 
-  } catch (err) {
+    } catch (err) {
     console.error("Withdraw Error:", err);
     res.status(500).json({ message: "Server processing error." });
   }

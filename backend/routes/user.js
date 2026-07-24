@@ -1781,17 +1781,35 @@ router.put(
       const isPromo = currentUser.role === 'promo';
 
       // 🔹 2. 50/50 WALLET CHECK & DEDUCTION 🔥 (NEW LOGIC)
-      if (!(isPromoFree && amount === 10) && !isPromo) {
+     if (!(isPromoFree && amount === 10) && !isPromo) {
         
-        let maxWalletDeduction = amount * 0.50; // Max 50% from Top-up wallet
-        let actualWalletDeduction = Math.min(currentUser.walletBalance || 0, maxWalletDeduction);
-        let actualUsdtDeduction = amount - actualWalletDeduction;
+    //     let maxWalletDeduction = amount * 0.50; // Max 50% from Top-up wallet
+    //     let actualWalletDeduction = Math.min(currentUser.walletBalance || 0, maxWalletDeduction);
+    //     let actualUsdtDeduction = amount - actualWalletDeduction;
 
-        if ((currentUser.usdtBep20Balance || 0) < actualUsdtDeduction) {
+    //     if ((currentUser.usdtBep20Balance || 0) < actualUsdtDeduction) {
+    //         return res.status(400).json({ 
+    //             message: `Insufficient balance! You need at least $${actualUsdtDeduction} in USDT BEP20 Wallet to activate this ID. (Max 50% can be used from Top-up Wallet).` 
+    //         });
+    //     }
+
+    // 🔹 2. SMART WALLET DEDUCTION 🔥 (Prioritize USDT, fallback to Top-up Wallet)
+         
+        let availableUsdt = currentUser.usdtBep20Balance || 0;
+        let availableWallet = currentUser.walletBalance || 0;
+
+        // Check karo ki dono wallet milakar required amount ban raha hai ya nahi
+        if ((availableUsdt + availableWallet) < amount) {
             return res.status(400).json({ 
-                message: `Insufficient balance! You need at least $${actualUsdtDeduction} in USDT BEP20 Wallet to activate this ID. (Max 50% can be used from Top-up Wallet).` 
+                message: `Insufficient total balance! You need $${amount} combined across both wallets to activate this ID.` 
             });
         }
+
+        // 1. Pehle pura USDT use karne ki koshish karo
+        let actualUsdtDeduction = Math.min(availableUsdt, amount);
+        
+        // 2. Jo bach gaya (agar USDT kam pad gaya), wo Top-up Wallet se le lo
+        let actualWalletDeduction = amount - actualUsdtDeduction;
 
         // Deduct from both wallets
         await User.updateOne(
@@ -1802,6 +1820,8 @@ router.put(
             }}
         );
       }
+
+       
 
       const createTransaction = async (data) => {
          const Transaction = require('../models/Transaction'); 
@@ -1949,21 +1969,21 @@ router.put(
 
                       // 2. INSTANT LEADER 10% LOGIC & BREAKAWAY 🔥 (NEW: goes to usdtBep20Balance)
                       if (currentLevel >= 2 && isCurrentUplineLeader && !isBreakawayHit) {
-                          const instantBonusAmount = (amount * 10) / 100;
+                        const instantBonusAmount = (amount * 5) / 100;
                           
-                          await User.updateOne(
-                              { _id: upline._id }, 
-                              { $inc: { usdtBep20Balance: instantBonusAmount } } // 🔥 CREDIT TO USDT BEP20 WALLET
-                          );
-                          
-                          await createTransaction({
-                              userId: upline.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
-                              fromUserId: targetUser.userId, 
-                              description: `10% Instant Leader Bonus from Downline Activation (Level ${currentLevel}) credited to USDT BEP20`,
-                              status: "success"
-                          });
+await User.updateOne(
+    { _id: upline._id }, 
+    { $inc: { walletBalance: instantBonusAmount } } // 🔥 CREDIT TO FUND WALLET (walletBalance)
+);
 
-                          console.log(`✅ [NORMAL ROUTE -> LEADER BONUS] Paid $${instantBonusAmount} to USDT BEP20 of Leader ${upline.userId}`);
+await createTransaction({
+    userId: upline.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
+    fromUserId: targetUser.userId, 
+    description: `5% Instant Leader Bonus from Downline Activation (Level ${currentLevel}) credited to Fund Wallet`,
+    status: "success"
+});
+
+                          console.log(`✅ [NORMAL ROUTE -> LEADER BONUS] Paid $${instantBonusAmount} to wallet of Leader ${upline.userId}`);
 
                           // 🔥 THE ULTIMATE LEADER BREAKAWAY WALL 🔥
                           console.log(`[MLM ENGINE] Breakaway hit at Leader ${upline.userId} (Level ${currentLevel}). Normal users above are blocked, but Superleaders will bypass.`);
@@ -2063,32 +2083,61 @@ router.put(
 
       const isDummyTopup = isDirectReferral || isSelfTopup;
 
-      // 🔹 2. 50/50 WALLET CHECK & DEDUCTION FOR LEADER 🔥 (NEW LOGIC)
-      let maxWalletDeduction = amount * 0.50; 
-      let usableWallet = currentUser.walletBalance || 0; // Normal wallet se limit hata di
+    //   // 🔹 2. 50/50 WALLET CHECK & DEDUCTION FOR LEADER 🔥 (NEW LOGIC)
+    //   let maxWalletDeduction = amount * 0.50; 
+    //   let usableWallet = currentUser.walletBalance || 0; // Normal wallet se limit hata di
       
-      let actualWalletDeduction = Math.min(usableWallet, maxWalletDeduction);
-      let actualUsdtDeduction = amount - actualWalletDeduction;
+    //   let actualWalletDeduction = Math.min(usableWallet, maxWalletDeduction);
+    //   let actualUsdtDeduction = amount - actualWalletDeduction;
 
-      if (isDummyTopup) {
-          // 🔥 Direct/Self Activation: USDT deduct NAHI hoga, bas basic check
-          if ((currentUser.usdtBep20Balance || 0) < actualUsdtDeduction) {
-              return res.status(400).json({ message: `Insufficient balance! You need at least $${actualUsdtDeduction} in USDT BEP20 Wallet to activate this ID.` });
-          }
-      } else {
-          // 🔥 Downline Activation: USDT deduct hoga, $30 reserve maintain karna zaroori hai
-          let requiredUsdtBalance = actualUsdtDeduction + 30;
-          if ((currentUser.usdtBep20Balance || 0) < requiredUsdtBalance) {
-              return res.status(400).json({ message: `Action Denied! You must maintain a mandatory $30 reserve in your USDT BEP20 Wallet. You need at least $${requiredUsdtBalance} total USDT to activate this downline.` });
-          }
-      }
+    //   if (isDummyTopup) {
+    //       // 🔥 Direct/Self Activation: USDT deduct NAHI hoga, bas basic check
+    //       if ((currentUser.usdtBep20Balance || 0) < actualUsdtDeduction) {
+    //           return res.status(400).json({ message: `Insufficient balance! You need at least $${actualUsdtDeduction} in USDT BEP20 Wallet to activate this ID.` });
+    //       }
+    //   } else {
+    //       // 🔥 Downline Activation: USDT deduct hoga, $30 reserve maintain karna zaroori hai
+    //       let requiredUsdtBalance = actualUsdtDeduction + 30;
+    //       if ((currentUser.usdtBep20Balance || 0) < requiredUsdtBalance) {
+    //           return res.status(400).json({ message: `Action Denied! You must maintain a mandatory $30 reserve in your USDT BEP20 Wallet. You need at least $${requiredUsdtBalance} total USDT to activate this downline.` });
+    //       }
+    //   }
       
+
     //   if (isDummyTopup) {
     //     console.log(`[DUMMY TOPUP] Leader ${currentUser.userId} activated ${targetUser.userId}. Leader balance NOT deducted.`);
     //   } else {
     //     currentUser.walletBalance -= actualWalletDeduction;
     //     currentUser.usdtBep20Balance -= actualUsdtDeduction;
     //   }
+    // 🔹 2. SMART WALLET DEDUCTION FOR LEADER 🔥 (Prioritize USDT, fallback to Wallet)
+      let availableUsdt = currentUser.usdtBep20Balance || 0;
+      let availableWallet = currentUser.walletBalance || 0;
+      
+      let actualUsdtDeduction = 0;
+      let actualWalletDeduction = 0;
+
+      if (isDummyTopup) {
+          // 🔥 Direct/Self Activation: USDT deduct nahi hoga practically, but validation ke liye check
+          if ((availableUsdt + availableWallet) < amount) {
+              return res.status(400).json({ message: `Insufficient total balance! You need $${amount} combined to activate this ID.` });
+          }
+          actualUsdtDeduction = Math.min(availableUsdt, amount);
+          actualWalletDeduction = amount - actualUsdtDeduction;
+      } else {
+          // 🔥 Downline Activation: Maintain mandatory $30 reserve in USDT BEP20
+          let usableUsdtForDownline = Math.max(0, availableUsdt - 30); // 30 dollar reserve ke baad bacha hua USDT
+          
+          if ((usableUsdtForDownline + availableWallet) < amount) {
+              return res.status(400).json({ 
+                  message: `Action Denied! You must maintain a mandatory $30 reserve in your USDT Wallet. Besides that, you don't have enough combined balance to activate this downline.` 
+              });
+          }
+          
+          // Pehle reserve chhod kar baaki USDT use karo, phir bacha hua Top-up Wallet se lo
+          actualUsdtDeduction = Math.min(usableUsdtForDownline, amount);
+          actualWalletDeduction = amount - actualUsdtDeduction;
+      }
 
     if (isDummyTopup) {
         console.log(`[DUMMY TOPUP] Leader ${currentUser.userId} activated ${targetUser.userId}. Leader balance NOT deducted.`);
@@ -2211,19 +2260,25 @@ router.put(
                       if (currentLevel >= 2 && isCurrentUplineLeader && !isBreakawayHit) {
 
                           if (!isDummyTopup) {
-                              const instantBonusAmount = (amount * 10) / 100;
+                             const instantBonusAmount = (amount * 5) / 100;
 
-                              await User.updateOne(
-                                  { _id: upline._id }, 
-                                  { $inc: { usdtBep20Balance: instantBonusAmount } } // 🔥 CREDIT TO USDT BEP20 WALLET
-                              );
-                              
-                              await createTransaction({
-                                  userId: upline.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
-                                  fromUserId: targetUser.userId, 
-                                  description: `10% Instant Bonus from Downline Activation (Level ${currentLevel}) credited to USDT BEP20`,
-                                  status: "success"
-                              });
+      await User.updateOne(
+          { _id: upline._id }, 
+          // 🔥 usdtBep20Balance ki jagah walletBalance kar diya
+          { $inc: { walletBalance: instantBonusAmount } } 
+      );
+
+      // Niche createTransaction mein description bhi update kar dena
+      await createTransaction({
+          userId: upline.userId, 
+          type: "credit_to_wallet", 
+          source: "instant_leader_bonus", 
+          amount: instantBonusAmount,
+          fromUserId: targetUser.userId, 
+          // 🔥 Message mein bhi "Fund Wallet" likh diya
+          description: `5% Instant Leader Bonus from Downline Activation (Level ${currentLevel}) credited to Fund Wallet`,
+          status: "success"
+      });
                           }
 
                           // 🔥 BREAKAWAY WALL HIT (dummy ya real, dono me lagegi) 🔥
@@ -2233,7 +2288,7 @@ router.put(
 
                       // 2. INSTANT LEADER 10% LOGIC & BREAKAWAY 🔥 (NEW: goes to usdtBep20Balance)
                       if (!isDummyTopup && currentLevel >= 2 && isCurrentUplineLeader && !isBreakawayHit) {
-                          const instantBonusAmount = (amount * 10) / 100;
+                          const instantBonusAmount = (amount * 5) / 100;
                           
                           await User.updateOne(
                               { _id: upline._id }, 
@@ -2243,7 +2298,7 @@ router.put(
                           await createTransaction({
                               userId: upline.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
                               fromUserId: targetUser.userId, 
-                              description: `10% Instant Bonus from Downline Activation (Level ${currentLevel}) credited to USDT BEP20`,
+                              description: `5% Instant Bonus from Downline Activation (Level ${currentLevel}) credited to wallet balance`,
                               status: "success"
                           });
 

@@ -337,6 +337,11 @@ const sweepFunds = async (user_id) => {
 // 🚀 3. NAYA FUNCTION: User-Triggered Manual Check (Saves 99% API Credits)
 const verifyAndProcessDeposit = async (req, res) => {
     try {
+
+        console.log("🔥 [DEBUG] Request Body:", req.body);
+        console.log("🔥 [DEBUG] Req User:", req.user);
+
+
         const userId = req.user.userId || req.user.id || req.user._id;
         const user = await User.findOne({ userId: Number(userId) }) || await User.findById(userId);
         
@@ -351,6 +356,7 @@ const verifyAndProcessDeposit = async (req, res) => {
         const usdtWei = await userUsdtContract.balanceOf(user.depositAddress);
         const amountInUSDT = parseFloat(ethers.formatUnits(usdtWei, 18));
 
+        console.log(`💰 [DEBUG] Blockchain se kitna USDT mila: ${amountInUSDT}`);
         // Agar fund abhi tak blockchain par nahi aaya
         if (amountInUSDT < 0.1) {
             return res.status(400).json({ 
