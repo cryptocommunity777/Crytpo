@@ -87,6 +87,7 @@ import LeaderAutoWithdraw from './pages/admin/LeaderAutoWithdraw';
 import DepositAddressMonitor from './pages/admin/DepositAddressMonitor';
 import IndiaBoostControl from './pages/admin/IndiaBoostControl';
 import FastTrackProgress from './pages/admin/FastTrackProgress.jsx';
+import UserLevelReport from './pages/admin/UserLevelReport';
 import ChangeSponsor from './pages/admin/ChangeSponsor';
 import WalletUpdateHistory from './pages/admin/WalletUpdateHistory'; // Path apne hisaab se adjust kar lena
 // 📜 Scroll Restoration
@@ -183,6 +184,7 @@ function AppContent() {
               <Route path="credit-to-wallet" element={<CreditToWalletPage />} />
               <Route path="blocked-users" element={<BlockedUsers />} />
               <Route path="transactions" element={<AdminTransactions />} />
+              <Route path="user-level-report" element={<UserLevelReport />} />
               <Route path="wallet-direct-stats" element={<WalletDirectStats />} />
               <Route path="staking-stats" element={<StakingStats /> } />
               <Route path="user-directs" element={<UserDirectsReport />} />

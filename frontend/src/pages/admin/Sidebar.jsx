@@ -190,6 +190,10 @@ const Sidebar = () => {
               <FaTrophy className="inline-block mr-2 text-yellow-500" /> Reward Progress
             </NavLink>
 
+            <NavLink to={`${BASE_PATH}/user-level-report`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/user-level-report`)}>
+  <FaSitemap className="inline-block mr-2 text-indigo-600" /> Level Eligibility Check
+</NavLink>
+
             <NavLink to={`${BASE_PATH}/leader-auto-withdraw`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/leader-auto-withdraw`)}>
               <FaBolt className="inline-block mr-2 text-yellow-500" /> Leader Auto-Withdraw
             </NavLink>
@@ -214,6 +218,7 @@ const Sidebar = () => {
             <NavLink to={`${BASE_PATH}/transactions`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/transactions`)}>
               <FaListAlt className="inline-block mr-2" /> Transactions
             </NavLink>
+            
             <NavLink to={`${BASE_PATH}/transactions/reverse`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/transactions/reverse`)}>
               <FaExchangeAlt className="inline-block mr-2" /> Reverse Txn
             </NavLink>

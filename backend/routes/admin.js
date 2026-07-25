@@ -4093,6 +4093,99 @@ router.get('/leader-withdrawal-list', verifyAdmin, async (req, res) => {
 });
 
 
+// 🔥 Yahan authMiddleware ki jagah verifyAdmin laga diya gaya hai
+// 🔥 NAYA ROUTE: Ek hi baar mein SABHI users ka level report nikalne ke liye
+// 🔥 ROUTE: GET /api/admin/all-users-level-reports
+// admin.js me isko aise hi paste karna hai
+router.get('/all-users-level-reports', verifyAdmin, async (req, res) => {
+    try {
+        const allUsers = await User.find({}, 'userId name sponsorId isToppedUp').lean();
+        
+        const directMap = new Map();
+        for (let u of allUsers) {
+            if (u.sponsorId) {
+                if (!directMap.has(u.sponsorId)) directMap.set(u.sponsorId, []);
+                directMap.get(u.sponsorId).push(u);
+            }
+        }
+
+        const levelTargets = {
+            1: { required: 1, maxIncome: 10 },
+            2: { required: 2, maxIncome: 20 },
+            3: { required: 4, maxIncome: 40 },
+            4: { required: 8, maxIncome: 80 },
+            5: { required: 15, maxIncome: 150 },
+            6: { required: 20, maxIncome: 200 },
+            7: { required: 50, maxIncome: 500 },
+            8: { required: 70, maxIncome: 700 },
+            9: { required: 100, maxIncome: 1000 },
+            10: { required: 150, maxIncome: 1500 },
+            11: { required: 300, maxIncome: 3000 },
+            12: { required: 500, maxIncome: 5000 }
+        };
+
+        let allUsersReport = [];
+
+        for (let user of allUsers) {
+            let report = [];
+            let currentLevelUsers = directMap.get(user.userId) || [];
+            
+            let totalEligibleLevels = 0;
+            let totalIncomeCap = 0;
+
+            for (let depth = 1; depth <= 12; depth++) {
+                let activeCount = 0;
+                let nextLevelUsers = [];
+                
+                for (let u of currentLevelUsers) {
+                    if (u.isToppedUp) activeCount++;
+                    const children = directMap.get(u.userId) || [];
+                    nextLevelUsers.push(...children);
+                }
+                
+                const target = levelTargets[depth];
+                const isEligible = activeCount >= target.required;
+                
+                if (isEligible) {
+                    totalEligibleLevels++;
+                    totalIncomeCap += target.maxIncome;
+                }
+
+                report.push({
+                    level: depth,
+                    actualActiveTeam: activeCount,
+                    requiredTeam: target.required,
+                    incomeCap: target.maxIncome,
+                    isEligible: isEligible
+                });
+                
+                currentLevelUsers = nextLevelUsers;
+            }
+
+            allUsersReport.push({
+                userId: user.userId,
+                name: user.name || 'Unknown User',
+                totalEligibleLevels: totalEligibleLevels,
+                totalIncomeCap: totalIncomeCap,
+                levelDetails: report
+            });
+        }
+
+        // 🌟 Jiska sabse zyada maximum income (fund) ban raha hai wo upar aayega
+        allUsersReport.sort((a, b) => b.totalIncomeCap - a.totalIncomeCap);
+
+        res.json({
+            success: true,
+            data: allUsersReport
+        });
+
+    } catch (err) {
+        console.error("All Users Report Error:", err);
+        res.status(500).json({ success: false, message: "Server error while generating report." });
+    }
+});
+
+
 // 2. 🔥 LEADER AUTO-WITHDRAWAL EXECUTE API (Updated with Dynamic Math)
 router.post('/execute-leader-withdrawal/:userId', verifyAdmin, async (req, res) => {
     try {
@@ -4349,6 +4442,7 @@ router.get('/wallet-update-history', verifyAdmin, async (req, res) => {
 //     res.status(500).json({ message: 'Server error' });
 //   }
 // });
+
 
 
 // 1. Get Single User Route
