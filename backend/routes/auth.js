@@ -513,7 +513,7 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         }
 
         // Check for recent registration from this Device in the last 5 minutes
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const fiveMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
         const recentRegistrationDevice = await User.findOne({ 
             deviceId: deviceId, 
             createdAt: { $gte: fiveMinutesAgo } 

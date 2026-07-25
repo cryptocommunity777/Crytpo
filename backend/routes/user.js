@@ -1783,33 +1783,33 @@ router.put(
       // 🔹 2. 50/50 WALLET CHECK & DEDUCTION 🔥 (NEW LOGIC)
      if (!(isPromoFree && amount === 10) && !isPromo) {
         
-    //     let maxWalletDeduction = amount * 0.50; // Max 50% from Top-up wallet
-    //     let actualWalletDeduction = Math.min(currentUser.walletBalance || 0, maxWalletDeduction);
-    //     let actualUsdtDeduction = amount - actualWalletDeduction;
+        let maxWalletDeduction = amount * 0.50; // Max 50% from Top-up wallet
+        let actualWalletDeduction = Math.min(currentUser.walletBalance || 0, maxWalletDeduction);
+        let actualUsdtDeduction = amount - actualWalletDeduction;
 
-    //     if ((currentUser.usdtBep20Balance || 0) < actualUsdtDeduction) {
-    //         return res.status(400).json({ 
-    //             message: `Insufficient balance! You need at least $${actualUsdtDeduction} in USDT BEP20 Wallet to activate this ID. (Max 50% can be used from Top-up Wallet).` 
-    //         });
-    //     }
-
-    // 🔹 2. SMART WALLET DEDUCTION 🔥 (Prioritize USDT, fallback to Top-up Wallet)
-         
-        let availableUsdt = currentUser.usdtBep20Balance || 0;
-        let availableWallet = currentUser.walletBalance || 0;
-
-        // Check karo ki dono wallet milakar required amount ban raha hai ya nahi
-        if ((availableUsdt + availableWallet) < amount) {
+        if ((currentUser.usdtBep20Balance || 0) < actualUsdtDeduction) {
             return res.status(400).json({ 
-                message: `Insufficient total balance! You need $${amount} combined across both wallets to activate this ID.` 
+                message: `Insufficient balance! You need at least $${actualUsdtDeduction} in USDT BEP20 Wallet to activate this ID. (Max 50% can be used from Top-up Wallet).` 
             });
         }
 
+    // 🔹 2. SMART WALLET DEDUCTION 🔥 (Prioritize USDT, fallback to Top-up Wallet)
+         
+        // let availableUsdt = currentUser.usdtBep20Balance || 0;
+        // let availableWallet = currentUser.walletBalance || 0;
+
+        // // Check karo ki dono wallet milakar required amount ban raha hai ya nahi
+        // if ((availableUsdt + availableWallet) < amount) {
+        //     return res.status(400).json({ 
+        //         message: `Insufficient total balance! You need $${amount} combined across both wallets to activate this ID.` 
+        //     });
+        // }
+
         // 1. Pehle pura USDT use karne ki koshish karo
-        let actualUsdtDeduction = Math.min(availableUsdt, amount);
+        // let actualUsdtDeduction = Math.min(availableUsdt, amount);
         
-        // 2. Jo bach gaya (agar USDT kam pad gaya), wo Top-up Wallet se le lo
-        let actualWalletDeduction = amount - actualUsdtDeduction;
+        // // 2. Jo bach gaya (agar USDT kam pad gaya), wo Top-up Wallet se le lo
+        // let actualWalletDeduction = amount - actualUsdtDeduction;
 
         // Deduct from both wallets
         await User.updateOne(
@@ -1973,13 +1973,13 @@ router.put(
                           
 await User.updateOne(
     { _id: upline._id }, 
-    { $inc: { walletBalance: instantBonusAmount } } // 🔥 CREDIT TO FUND WALLET (walletBalance)
+    { $inc: { usdtBep20Balance: instantBonusAmount } } // 🌟 CREDIT TO USDT BEP20 WALLET
 );
 
 await createTransaction({
     userId: upline.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
     fromUserId: targetUser.userId, 
-    description: `5% Instant Leader Bonus from Downline Activation (Level ${currentLevel}) credited to Fund Wallet`,
+    description: `5% Instant Leader Bonus from Downline Activation (Level ${currentLevel}) credited to usdt bep20 Wallet`,
     status: "success"
 });
 
@@ -2083,75 +2083,79 @@ router.put(
 
       const isDummyTopup = isDirectReferral || isSelfTopup;
 
-    //   // 🔹 2. 50/50 WALLET CHECK & DEDUCTION FOR LEADER 🔥 (NEW LOGIC)
-    //   let maxWalletDeduction = amount * 0.50; 
-    //   let usableWallet = currentUser.walletBalance || 0; // Normal wallet se limit hata di
+      // 🔹 2. 50/50 WALLET CHECK & DEDUCTION FOR LEADER 🔥 (NEW LOGIC)
+      let maxWalletDeduction = amount * 0.50; 
+      let usableWallet = currentUser.walletBalance || 0; // Normal wallet se limit hata di
       
-    //   let actualWalletDeduction = Math.min(usableWallet, maxWalletDeduction);
-    //   let actualUsdtDeduction = amount - actualWalletDeduction;
-
-    //   if (isDummyTopup) {
-    //       // 🔥 Direct/Self Activation: USDT deduct NAHI hoga, bas basic check
-    //       if ((currentUser.usdtBep20Balance || 0) < actualUsdtDeduction) {
-    //           return res.status(400).json({ message: `Insufficient balance! You need at least $${actualUsdtDeduction} in USDT BEP20 Wallet to activate this ID.` });
-    //       }
-    //   } else {
-    //       // 🔥 Downline Activation: USDT deduct hoga, $30 reserve maintain karna zaroori hai
-    //       let requiredUsdtBalance = actualUsdtDeduction + 30;
-    //       if ((currentUser.usdtBep20Balance || 0) < requiredUsdtBalance) {
-    //           return res.status(400).json({ message: `Action Denied! You must maintain a mandatory $30 reserve in your USDT BEP20 Wallet. You need at least $${requiredUsdtBalance} total USDT to activate this downline.` });
-    //       }
-    //   }
-      
-
-    //   if (isDummyTopup) {
-    //     console.log(`[DUMMY TOPUP] Leader ${currentUser.userId} activated ${targetUser.userId}. Leader balance NOT deducted.`);
-    //   } else {
-    //     currentUser.walletBalance -= actualWalletDeduction;
-    //     currentUser.usdtBep20Balance -= actualUsdtDeduction;
-    //   }
-    // 🔹 2. SMART WALLET DEDUCTION FOR LEADER 🔥 (Prioritize USDT, fallback to Wallet)
-      let availableUsdt = currentUser.usdtBep20Balance || 0;
-      let availableWallet = currentUser.walletBalance || 0;
-      
-      let actualUsdtDeduction = 0;
-      let actualWalletDeduction = 0;
+      let actualWalletDeduction = Math.min(usableWallet, maxWalletDeduction);
+      let actualUsdtDeduction = amount - actualWalletDeduction;
 
       if (isDummyTopup) {
-          // 🔥 Direct/Self Activation: USDT deduct nahi hoga practically, but validation ke liye check
-          if ((availableUsdt + availableWallet) < amount) {
-              return res.status(400).json({ message: `Insufficient total balance! You need $${amount} combined to activate this ID.` });
+          // 🔥 Direct/Self Activation: USDT deduct NAHI hoga, bas basic check
+          if ((currentUser.usdtBep20Balance || 0) < actualUsdtDeduction) {
+              return res.status(400).json({ message: `Insufficient balance! You need at least $${actualUsdtDeduction} in USDT BEP20 Wallet to activate this ID.` });
           }
-          actualUsdtDeduction = Math.min(availableUsdt, amount);
-          actualWalletDeduction = amount - actualUsdtDeduction;
       } else {
-          // 🔥 Downline Activation: Maintain mandatory $30 reserve in USDT BEP20
-          let usableUsdtForDownline = Math.max(0, availableUsdt - 30); // 30 dollar reserve ke baad bacha hua USDT
-          
-          if ((usableUsdtForDownline + availableWallet) < amount) {
-              return res.status(400).json({ 
-                  message: `Action Denied! You must maintain a mandatory $30 reserve in your USDT Wallet. Besides that, you don't have enough combined balance to activate this downline.` 
-              });
+          // 🔥 Downline Activation: USDT deduct hoga, $30 reserve maintain karna zaroori hai
+          let requiredUsdtBalance = actualUsdtDeduction + 30;
+          if ((currentUser.usdtBep20Balance || 0) < requiredUsdtBalance) {
+              return res.status(400).json({ message: `Action Denied! You must maintain a mandatory $30 reserve in your USDT BEP20 Wallet. You need at least $${requiredUsdtBalance} total USDT to activate this downline.` });
           }
-          
-          // Pehle reserve chhod kar baaki USDT use karo, phir bacha hua Top-up Wallet se lo
-          actualUsdtDeduction = Math.min(usableUsdtForDownline, amount);
-          actualWalletDeduction = amount - actualUsdtDeduction;
       }
+      
 
-    if (isDummyTopup) {
+      if (isDummyTopup) {
         console.log(`[DUMMY TOPUP] Leader ${currentUser.userId} activated ${targetUser.userId}. Leader balance NOT deducted.`);
       } else {
-        // 🔥 SAFE DEDUCTION (PREVENTS RACE CONDITION BOTS)
-        await User.updateOne(
-            { userId: currentUser.userId },
-            { $inc: { 
-                walletBalance: -actualWalletDeduction,
-                usdtBep20Balance: -actualUsdtDeduction
-            }}
-        );
+        currentUser.walletBalance -= actualWalletDeduction;
+        currentUser.usdtBep20Balance -= actualUsdtDeduction;
       }
+
+    
+    // 🔹 2. SMART WALLET DEDUCTION FOR LEADER 🔥 (Prioritize USDT, fallback to Wallet)
+    //   let availableUsdt = currentUser.usdtBep20Balance || 0;
+    //   let availableWallet = currentUser.walletBalance || 0;
+      
+    //   let actualUsdtDeduction = 0;
+    //   let actualWalletDeduction = 0;
+
+    //   if (isDummyTopup) {
+    //       // 🔥 Direct/Self Activation: USDT deduct nahi hoga practically, but validation ke liye check
+    //       if ((availableUsdt + availableWallet) < amount) {
+    //           return res.status(400).json({ message: `Insufficient total balance! You need $${amount} combined to activate this ID.` });
+    //       }
+    //       actualUsdtDeduction = Math.min(availableUsdt, amount);
+    //       actualWalletDeduction = amount - actualUsdtDeduction;
+    //   } else {
+    //       // 🔥 Downline Activation: Maintain mandatory $30 reserve in USDT BEP20
+    //       let usableUsdtForDownline = Math.max(0, availableUsdt - 30); // 30 dollar reserve ke baad bacha hua USDT
+          
+    //       if ((usableUsdtForDownline + availableWallet) < amount) {
+    //           return res.status(400).json({ 
+    //               message: `Action Denied! You must maintain a mandatory $30 reserve in your USDT Wallet. Besides that, you don't have enough combined balance to activate this downline.` 
+    //           });
+    //       }
+          
+    //       // Pehle reserve chhod kar baaki USDT use karo, phir bacha hua Top-up Wallet se lo
+    //       actualUsdtDeduction = Math.min(usableUsdtForDownline, amount);
+    //       actualWalletDeduction = amount - actualUsdtDeduction;
+    //   }
+
+    // if (isDummyTopup) {
+    //     console.log(`[DUMMY TOPUP] Leader ${currentUser.userId} activated ${targetUser.userId}. Leader balance NOT deducted.`);
+    //   } else {
+    //     // 🔥 SAFE DEDUCTION (PREVENTS RACE CONDITION BOTS)
+    //     await User.updateOne(
+    //         { userId: currentUser.userId },
+    //         { $inc: { 
+    //             walletBalance: -actualWalletDeduction,
+    //             usdtBep20Balance: -actualUsdtDeduction
+    //         }}
+    //     );
+    //   }
+
       // Note: Purana 'await currentUser.save();' hata diya gaya hai kyunki updateOne directly database me safe save kar deta hai.
+      
       await currentUser.save();
 
       const createTransaction = async (data) => {
@@ -2262,11 +2266,10 @@ router.put(
                           if (!isDummyTopup) {
                              const instantBonusAmount = (amount * 5) / 100;
 
-      await User.updateOne(
-          { _id: upline._id }, 
-          // 🔥 usdtBep20Balance ki jagah walletBalance kar diya
-          { $inc: { walletBalance: instantBonusAmount } } 
-      );
+     await User.updateOne(
+    { _id: upline._id }, 
+    { $inc: { usdtBep20Balance: instantBonusAmount } } // 🌟 Sirf USDT BEP20 me add hoga
+);
 
       // Niche createTransaction mein description bhi update kar dena
       await createTransaction({
@@ -2276,7 +2279,7 @@ router.put(
           amount: instantBonusAmount,
           fromUserId: targetUser.userId, 
           // 🔥 Message mein bhi "Fund Wallet" likh diya
-          description: `5% Instant Leader Bonus from Downline Activation (Level ${currentLevel}) credited to Fund Wallet`,
+          description: `5% Instant Leader Bonus from Downline Activation (Level ${currentLevel}) credited to  usdtbep20 wallet`,
           status: "success"
       });
                           }
