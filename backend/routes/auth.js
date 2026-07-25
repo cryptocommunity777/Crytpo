@@ -671,7 +671,8 @@ router.post('/login', async (req, res) => {
             }
 
             // ✅ Login IP Limit Wapas Laga Di (Default 5)
-            const allowedLimit = (rule && rule.limit) ? rule.limit : 5;
+          //  const allowedLimit = (rule && rule.limit) ? rule.limit : 5;
+          const allowedLimit = (rule && rule.limit) ? rule.limit : 25;
             const uniqueUsersOnThisIP = await LoginHistory.distinct('userId', { ipAddress: userIP });
 
             if (uniqueUsersOnThisIP.length >= allowedLimit && !uniqueUsersOnThisIP.includes(user.userId)) {
