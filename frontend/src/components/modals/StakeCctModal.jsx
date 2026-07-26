@@ -206,7 +206,7 @@ const StakeCctModal = ({ onClose, onSuccess, cctBalance }) => {
                     </button>
                  </div>
                  <button onClick={handleStake} disabled={loading || (!isPromo && !userInfo)} className={`w-full py-2.5 rounded-lg font-black text-xs md:text-sm flex items-center justify-center gap-2 transition-all shadow-sm ${loading || (!isPromo && !userInfo) ? 'bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300' : 'bg-green-600 hover:bg-green-700 text-white shadow-[0_4px_15px_rgba(34,197,94,0.4)] hover:shadow-[0_6px_20px_rgba(34,197,94,0.6)] hover:-translate-y-0.5'}`}>
-                   {loading ? "PROCESSING..." : "STAKE NOW"}
+                   {loading ? "PROCESSING...." : "STAKE NOW"}
                  </button>
                  <button onClick={onClose} className="w-full py-2 rounded-lg font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shadow-sm">Cancel</button>
               </div>
