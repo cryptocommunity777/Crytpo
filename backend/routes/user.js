@@ -2676,7 +2676,7 @@ router.get('/global-team-count/:userId', async (req, res) => {
     res.json({ count });
   } catch (err) {
     console.error('Error fetching global team count:', err);
-    res.status(500).json({ message: 'Failed to fetch global team count' });
+    res.status(500).json({ message: 'Failed to a fetch global team count' });
   }
 });
 
