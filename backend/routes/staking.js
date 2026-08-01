@@ -6,6 +6,40 @@ const Transaction = require('../models/Transaction');
 const authMiddleware = require('../middleware/authMiddleware');
 const Withdrawal = require('../models/Withdrawal'); // Ye top par add kar lena
 // 1. Get Staking Stats
+// router.get('/stats', authMiddleware, async (req, res) => {
+//     try {
+//         const user = await User.findOne({ userId: req.user.userId });
+//         if (!user) return res.status(404).json({ message: "User not found" });
+
+//         res.json({
+//             success: true,
+//             data: {
+//                 walletBalance: user.walletBalance || 0,
+//                 usdtBep20Balance: user.usdtBep20Balance || 0, // 🔥 YAHAN ADD KIYA HAI 🔥
+//                 cctBalance: user.cctBalance || 0,
+//                 cctStakingIncome: user.cctStakingIncome || 0,
+                
+//                 // 🔥 FRONTEND KE NAYE 6 BOXES KE LIYE TOTAL INCOMES 🔥
+//                 cctStakingDirectIncome: user.cctStakingDirectIncome || 0,
+//                 cctStakingLevelIncome: user.cctStakingLevelIncome || 0,  
+                
+//                 totalCctStaked: user.totalCctStaked || 0,
+//                 stakedMaxCap: user.stakedMaxCap || 0,
+//                 stakedEarned: user.stakedEarned || 0,
+//                 isStaked: user.isStaked || false,
+                
+//                 // 🔥 TIMER KE LIYE FIELDS 🔥
+//                 isToppedUp: user.isToppedUp || false,
+//                 topUpDate: user.topUpDate || null,
+//                 createdAt: user.createdAt || null
+//             }
+//         });
+//     } catch (err) {
+//         console.error("Stats Fetch Error:", err);
+//         res.status(500).json({ message: 'Server error' });
+//     }
+// });
+
 router.get('/stats', authMiddleware, async (req, res) => {
     try {
         const user = await User.findOne({ userId: req.user.userId });
@@ -15,20 +49,26 @@ router.get('/stats', authMiddleware, async (req, res) => {
             success: true,
             data: {
                 walletBalance: user.walletBalance || 0,
-                usdtBep20Balance: user.usdtBep20Balance || 0, // 🔥 YAHAN ADD KIYA HAI 🔥
+                usdtBep20Balance: user.usdtBep20Balance || 0, 
                 cctBalance: user.cctBalance || 0,
                 cctStakingIncome: user.cctStakingIncome || 0,
                 
-                // 🔥 FRONTEND KE NAYE 6 BOXES KE LIYE TOTAL INCOMES 🔥
+                // Staking Incomes
                 cctStakingDirectIncome: user.cctStakingDirectIncome || 0,
                 cctStakingLevelIncome: user.cctStakingLevelIncome || 0,  
+                
+                // 🔥 NAYE COMPOUNDING INCOMES & BALANCES (Yahan add kar diya hai)
+                cctCompoundIncome: user.cctCompoundIncome || 0,
+                cctCompoundDirectIncome: user.cctCompoundDirectIncome || 0,
+                cctCompoundLevelIncome: user.cctCompoundLevelIncome || 0,
+                totalCompoundStaked: user.totalCompoundStaked || 0,
                 
                 totalCctStaked: user.totalCctStaked || 0,
                 stakedMaxCap: user.stakedMaxCap || 0,
                 stakedEarned: user.stakedEarned || 0,
                 isStaked: user.isStaked || false,
                 
-                // 🔥 TIMER KE LIYE FIELDS 🔥
+                // Timer Fields
                 isToppedUp: user.isToppedUp || false,
                 topUpDate: user.topUpDate || null,
                 createdAt: user.createdAt || null
@@ -710,227 +750,6 @@ router.post('/cct-transfer', authMiddleware, async (req, res) => {
 //     }
 // });
 
-router.post('/stake', authMiddleware, async (req, res) => {
-    try {
-        const { targetUserId, amount, transactionPassword } = req.body;
-        const user = await User.findOne({ userId: req.user.userId });
-        const targetUser = await User.findOne({ userId: targetUserId });
-
-        if (!user) return res.status(404).json({ message: "Sender not found" });
-        if (!targetUser) return res.status(404).json({ message: "Target User ID not found" });
-        
-        if (user.transactionPassword.toLowerCase() !== transactionPassword.toLowerCase()) {
-            return res.status(400).json({ message: "Invalid Transaction Password" });
-        }
-        
-        const stakeAmt = Number(amount);
-        
-        // 🔥 NAYA FIX: Staking ki limit 50 se 5000 kar di gayi hai
-        if (stakeAmt < 50 || stakeAmt > 5000) {
-            return res.status(400).json({ message: "Staking amount must be between 50 and 5000 CCT." });
-        }
-        if (user.cctBalance < stakeAmt) {
-            return res.status(400).json({ message: "Insufficient CCT Balance" });
-        }
-
-        // 🔥 RULE: NORMAL USER MUST STAKE THEIR OWN ID FIRST BEFORE STAKING FOR DOWNLINE (SAME)
-        if (user.role !== 'leader' && user.role !== 'superleader' && !user.isStaked && String(user.userId) !== String(targetUser.userId)) {
-            return res.status(403).json({ 
-                message: "Self-Stake Required: You must activate Staking on your own ID first before staking for your downline." 
-            });
-        }
-
-        // 🛑 RULE 1: MUST BE TOPPED UP ($30 ACTIVE ID) (SAME)
-        if (!targetUser.isToppedUp) {
-            return res.status(400).json({ message: "Target ID must be Active (Topped Up) to participate in Staking." });
-        }
-
-        // 🛑 RULE 4: LEADER CANNOT STAKE ON THEIR OWN ID (Super Leader IS allowed) (SAME)
-        if (targetUser.role === 'leader' && String(targetUser.userId) === String(user.userId)) {
-            return res.status(403).json({ 
-                message: "You are not allowed to stake on your own ID." 
-            });
-        }
-
-        // =======================================================
-        // 🔥 NAYA LOGIC: Amount ke hisaab se Rate tay hoga (15-day time limit hata diya gaya hai)
-        // =======================================================
-        let dailyRate = 1.0; 
-        if (stakeAmt >= 50 && stakeAmt <= 499) {
-            dailyRate = 1.0;
-        } else if (stakeAmt >= 500 && stakeAmt <= 999) {
-            dailyRate = 1.5;
-        } else if (stakeAmt >= 1000 && stakeAmt <= 1999) {
-            dailyRate = 2.0;
-        } else if (stakeAmt >= 2000 && stakeAmt <= 5000) {
-            dailyRate = 2.5;
-        }
-
-        // 🔹 MAX CAP CALCULATION (Ab sabke liye fix 3x hai)
-        let maxCap = stakeAmt * 3;
-
-        // 🔥 NAYA LOGIC: Har stake ko alag pehchan dene ke liye Object banaya
-        const newStakeRecord = {
-            amount: stakeAmt,
-            maxCap: maxCap,
-            earned: 0,
-            dailyRate: dailyRate,
-            createdAt: new Date(),
-            status: 'active'
-        };
-
-        // =======================================================
-        // 🔥 FIX: PURANE USERS KO NAYE ARRAY SYSTEM MEIN SHIFT KARNA (AUTO-MIGRATION)
-        // =======================================================
-        if (!targetUser.activeStakes) {
-            targetUser.activeStakes = [];
-        }
-
-        // Agar user ne pehle stake kiya tha, aur uski array khali hai, toh usko array me daal do
-        if (targetUser.isStaked && targetUser.activeStakes.length === 0 && targetUser.totalCctStaked > 0) {
-            targetUser.activeStakes.push({
-                amount: targetUser.totalCctStaked,
-                maxCap: targetUser.stakedMaxCap,
-                earned: targetUser.stakedEarned || 0,
-                dailyRate: targetUser.stakingDailyRate || 1.0,
-                createdAt: targetUser.createdAt || new Date(),
-                status: 'active'
-            });
-        }
-
-        // Ab naya stake push kar do
-        targetUser.activeStakes.push(newStakeRecord);
-
-        // Balance Katna
-        if (String(user.userId) === String(targetUser.userId)) {
-            targetUser.cctBalance -= stakeAmt;
-        } else {
-            user.cctBalance -= stakeAmt;
-            await user.save(); 
-        }
-
-        // UI me Total dikhane ke liye sum update hoga
-        targetUser.isStaked = true;
-        targetUser.totalCctStaked = (targetUser.totalCctStaked || 0) + stakeAmt;
-
-        if (!targetUser.firstStakeDate) {
-            targetUser.firstStakeDate = new Date();
-        }
-
-        targetUser.stakedMaxCap = (targetUser.stakedMaxCap || 0) + maxCap;
-        targetUser.stakingDailyRate = dailyRate; // Fallback field
-        
-        await targetUser.save();
-
-        await Transaction.create({
-            userId: user.userId, type: 'cct_stake_send', amount: stakeAmt, status: 'success',
-            description: `Staked ${stakeAmt} CCT for ID #${targetUser.userId} (Rate: ${dailyRate}%)`, date: new Date()
-        });
-
-        // =======================================================
-        // 🔥 BACKGROUND MLM ENGINE FOR STAKING (SEPARATE WALLETS) (SAME)
-        // =======================================================
-        (async () => {
-            try {
-                // ✅ 1. DIRECT INCOME LOGIC
-                if (targetUser.sponsorId) {
-                    const sponsor = await User.findOne({ userId: targetUser.sponsorId });
-                    
-                    if (sponsor && sponsor.isToppedUp && sponsor.isStaked) {
-                        const STAKING_DIRECT_PERCENT = 10; 
-                        const directBonus = (stakeAmt * STAKING_DIRECT_PERCENT) / 100; 
-
-                        if (directBonus > 0) {
-                            sponsor.cctStakingDirectIncome = (sponsor.cctStakingDirectIncome || 0) + directBonus;
-                            await sponsor.save();
-
-                            await Transaction.create({
-                                userId: sponsor.userId, type: "staking_direct_income", source: "cct_direct", amount: directBonus, 
-                                fromUserId: targetUser.userId,
-                                description: `Direct Bonus (10%) from ${targetUser.name}'s New Stake of ${stakeAmt} CCT`, 
-                                status: 'success', date: new Date()
-                            });
-                        }
-                    } else if (sponsor) {
-                        console.log(`[FLUSHED] Staking Direct Income flushed.`);
-                    }
-                }
-
-                // ✅ 2. UNIFIED 100-LEVEL ENGINE
-                const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
-                let currentUplineId = targetUser.sponsorId; 
-                let currentLevel = 1;
-                let leaderBonusGiven = false;
-
-                while (currentUplineId && currentLevel <= 100) {
-                    const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp isStaked sponsorId role totalCctStaked');
-                    if (!upline) break;
-
-                    const isCurrentUplineLeader = (upline.role === 'leader');
-
-                    // ============================================
-                    // A. NORMAL LEVEL INCOME LOGIC (Level 2 to 20)
-                    // ============================================
-                    if (currentLevel >= 2 && currentLevel <= 20) {
-                        if (upline.isToppedUp && upline.isStaked) {
-                            const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
-                            const levelBonus = (stakeAmt * percentage) / 100;
-
-                            if (levelBonus > 0) {
-                                await User.updateOne(
-                                    { _id: upline._id }, 
-                                    { $inc: { cctStakingLevelIncome: levelBonus } }
-                                );
-
-                                await Transaction.create({
-                                    userId: upline.userId, type: "staking_level_income", source: "cct_level", amount: levelBonus,
-                                    fromUserId: targetUser.userId, 
-                                    description: `Level ${currentLevel} Staking Income (${percentage}%) from ${targetUser.name}'s New Stake`, 
-                                    status: 'success', date: new Date()
-                                });
-                            }
-                        }
-                    }
-
-                    // ============================================
-                    // B. LEADER BREAKAWAY BONUS 10% LOGIC
-                    // ============================================
-                    if (currentLevel >= 1 && isCurrentUplineLeader && !leaderBonusGiven) {
-                        if (upline.isToppedUp) {
-                            const leaderBonusAmount = (stakeAmt * 10) / 100; 
-                            
-                            if (leaderBonusAmount > 0) {
-                                await User.updateOne(
-                                    { _id: upline._id }, 
-                                    { $inc: { cctBalance: leaderBonusAmount } }
-                                );
-                                
-                                await Transaction.create({
-                                    userId: upline.userId, type: "credit", source: "system", amount: leaderBonusAmount,
-                                    fromUserId: targetUser.userId, 
-                                    description: `10% Instant Leader Staking Bonus (No Stake Req.) added to CCT Wallet (Level ${currentLevel})`,
-                                    status: "success", date: new Date()
-                                });
-                            }
-                        }
-                        leaderBonusGiven = true; 
-                    }
-
-                    currentUplineId = upline.sponsorId;
-                    currentLevel++;
-                }
-            } catch (bgError) {
-                console.error("Background Staking MLM Engine Error:", bgError);
-            }
-        })();
-
-        res.json({ success: true, message: `Successfully staked ${stakeAmt} CCT for ID #${targetUser.userId}` });
-    } catch (err) {
-        console.error("Staking Error:", err);
-        res.status(500).json({ message: 'Server error during staking' });
-    }
-});
-
 // router.post('/stake', authMiddleware, async (req, res) => {
 //     try {
 //         const { targetUserId, amount, transactionPassword } = req.body;
@@ -950,50 +769,23 @@ router.post('/stake', authMiddleware, async (req, res) => {
 //         if (stakeAmt < 50 || stakeAmt > 5000) {
 //             return res.status(400).json({ message: "Staking amount must be between 50 and 5000 CCT." });
 //         }
-
-//         // =======================================================
-//         // 🔥 SMART DEDUCTION LOGIC: Min 50% CCT, rest from Wallet or extra CCT
-//         // =======================================================
-//         const minRequiredCct = stakeAmt / 2; // 50% is mandatory from CCT
-
-//         // 1. Mandatory 50% CCT Check
-//         if (user.cctBalance < minRequiredCct) {
-//             return res.status(400).json({ 
-//                 message: `Mandatory CCT Requirement Failed: You need at least ${minRequiredCct} CCT (50% of stake) to proceed.` 
-//             });
+//         if (user.cctBalance < stakeAmt) {
+//             return res.status(400).json({ message: "Insufficient CCT Balance" });
 //         }
 
-//         // 2. Calculate Wallet Deduction (Max 50% of stake, or whatever is available if less)
-//         let walletDeduction = 0;
-//         if (user.walletBalance >= (stakeAmt / 2)) {
-//             walletDeduction = stakeAmt / 2; // Wallet me balance hai, toh exact 50% wallet se lenge
-//         } else {
-//             walletDeduction = user.walletBalance > 0 ? user.walletBalance : 0; // Jitna wallet me hai utna le lo, ya 0 kar do
-//         }
-
-//         // 3. Calculate CCT Deduction (Jo amount wallet se nahi mila, wo CCT se katega)
-//         const cctDeduction = stakeAmt - walletDeduction;
-
-//         // 4. Final Total Check (Agar wallet kam hone ke baad, bacha hua amount CCT me nahi hai)
-//         if (user.cctBalance < cctDeduction) {
-//             return res.status(400).json({ 
-//                 message: `Insufficient Funds: Your combined balance is not enough. You need ${cctDeduction} CCT and $${walletDeduction} Wallet Balance to stake ${stakeAmt}.` 
-//             });
-//         }
-
-//         // 🔥 RULE: NORMAL USER MUST STAKE THEIR OWN ID FIRST BEFORE STAKING FOR DOWNLINE
+//         // 🔥 RULE: NORMAL USER MUST STAKE THEIR OWN ID FIRST BEFORE STAKING FOR DOWNLINE (SAME)
 //         if (user.role !== 'leader' && user.role !== 'superleader' && !user.isStaked && String(user.userId) !== String(targetUser.userId)) {
 //             return res.status(403).json({ 
 //                 message: "Self-Stake Required: You must activate Staking on your own ID first before staking for your downline." 
 //             });
 //         }
 
-//         // 🛑 RULE 1: MUST BE TOPPED UP ($30 ACTIVE ID)
+//         // 🛑 RULE 1: MUST BE TOPPED UP ($30 ACTIVE ID) (SAME)
 //         if (!targetUser.isToppedUp) {
 //             return res.status(400).json({ message: "Target ID must be Active (Topped Up) to participate in Staking." });
 //         }
 
-//         // 🛑 RULE 4: LEADER CANNOT STAKE ON THEIR OWN ID (Super Leader IS allowed)
+//         // 🛑 RULE 4: LEADER CANNOT STAKE ON THEIR OWN ID (Super Leader IS allowed) (SAME)
 //         if (targetUser.role === 'leader' && String(targetUser.userId) === String(user.userId)) {
 //             return res.status(403).json({ 
 //                 message: "You are not allowed to stake on your own ID." 
@@ -1001,7 +793,7 @@ router.post('/stake', authMiddleware, async (req, res) => {
 //         }
 
 //         // =======================================================
-//         // 🔥 NAYA LOGIC: Amount ke hisaab se Rate tay hoga
+//         // 🔥 NAYA LOGIC: Amount ke hisaab se Rate tay hoga (15-day time limit hata diya gaya hai)
 //         // =======================================================
 //         let dailyRate = 1.0; 
 //         if (stakeAmt >= 50 && stakeAmt <= 499) {
@@ -1014,9 +806,10 @@ router.post('/stake', authMiddleware, async (req, res) => {
 //             dailyRate = 2.5;
 //         }
 
-//         // 🔹 MAX CAP CALCULATION (Fix 3x hai)
+//         // 🔹 MAX CAP CALCULATION (Ab sabke liye fix 3x hai)
 //         let maxCap = stakeAmt * 3;
 
+//         // 🔥 NAYA LOGIC: Har stake ko alag pehchan dene ke liye Object banaya
 //         const newStakeRecord = {
 //             amount: stakeAmt,
 //             maxCap: maxCap,
@@ -1027,12 +820,13 @@ router.post('/stake', authMiddleware, async (req, res) => {
 //         };
 
 //         // =======================================================
-//         // 🔥 FIX: PURANE USERS KO NAYE ARRAY SYSTEM MEIN SHIFT KARNA
+//         // 🔥 FIX: PURANE USERS KO NAYE ARRAY SYSTEM MEIN SHIFT KARNA (AUTO-MIGRATION)
 //         // =======================================================
 //         if (!targetUser.activeStakes) {
 //             targetUser.activeStakes = [];
 //         }
 
+//         // Agar user ne pehle stake kiya tha, aur uski array khali hai, toh usko array me daal do
 //         if (targetUser.isStaked && targetUser.activeStakes.length === 0 && targetUser.totalCctStaked > 0) {
 //             targetUser.activeStakes.push({
 //                 amount: targetUser.totalCctStaked,
@@ -1044,17 +838,14 @@ router.post('/stake', authMiddleware, async (req, res) => {
 //             });
 //         }
 
+//         // Ab naya stake push kar do
 //         targetUser.activeStakes.push(newStakeRecord);
 
-//         // =======================================================
-//         // 🔥 SMART DEDUCTION APPLY KARNA
-//         // =======================================================
+//         // Balance Katna
 //         if (String(user.userId) === String(targetUser.userId)) {
-//             targetUser.cctBalance -= cctDeduction;
-//             targetUser.walletBalance -= walletDeduction;
+//             targetUser.cctBalance -= stakeAmt;
 //         } else {
-//             user.cctBalance -= cctDeduction;
-//             user.walletBalance -= walletDeduction;
+//             user.cctBalance -= stakeAmt;
 //             await user.save(); 
 //         }
 
@@ -1067,18 +858,17 @@ router.post('/stake', authMiddleware, async (req, res) => {
 //         }
 
 //         targetUser.stakedMaxCap = (targetUser.stakedMaxCap || 0) + maxCap;
-//         targetUser.stakingDailyRate = dailyRate; 
+//         targetUser.stakingDailyRate = dailyRate; // Fallback field
         
 //         await targetUser.save();
 
 //         await Transaction.create({
 //             userId: user.userId, type: 'cct_stake_send', amount: stakeAmt, status: 'success',
-//             // 🔥 HISTORY ME BHI CLEAR DIKHEGA KI KITNA KAHAN SE KATA
-//             description: `Staked ${stakeAmt} CCT for ID #${targetUser.userId} (Used ${cctDeduction} CCT & $${walletDeduction} Wallet Balance)`, date: new Date()
+//             description: `Staked ${stakeAmt} CCT for ID #${targetUser.userId} (Rate: ${dailyRate}%)`, date: new Date()
 //         });
 
 //         // =======================================================
-//         // 🔥 BACKGROUND MLM ENGINE FOR STAKING
+//         // 🔥 BACKGROUND MLM ENGINE FOR STAKING (SEPARATE WALLETS) (SAME)
 //         // =======================================================
 //         (async () => {
 //             try {
@@ -1143,11 +933,11 @@ router.post('/stake', authMiddleware, async (req, res) => {
 //                     }
 
 //                     // ============================================
-//                     // B. LEADER BREAKAWAY BONUS 5% LOGIC (SAME)
+//                     // B. LEADER BREAKAWAY BONUS 10% LOGIC
 //                     // ============================================
 //                     if (currentLevel >= 1 && isCurrentUplineLeader && !leaderBonusGiven) {
 //                         if (upline.isToppedUp) {
-//                             const leaderBonusAmount = (stakeAmt * 5) / 100; 
+//                             const leaderBonusAmount = (stakeAmt * 10) / 100; 
                             
 //                             if (leaderBonusAmount > 0) {
 //                                 await User.updateOne(
@@ -1158,7 +948,7 @@ router.post('/stake', authMiddleware, async (req, res) => {
 //                                 await Transaction.create({
 //                                     userId: upline.userId, type: "credit", source: "system", amount: leaderBonusAmount,
 //                                     fromUserId: targetUser.userId, 
-//                                     description: `5% Instant Leader Staking Bonus (No Stake Req.) added to CCT Wallet (Level ${currentLevel})`, 
+//                                     description: `10% Instant Leader Staking Bonus (No Stake Req.) added to CCT Wallet (Level ${currentLevel})`,
 //                                     status: "success", date: new Date()
 //                                 });
 //                             }
@@ -1180,6 +970,498 @@ router.post('/stake', authMiddleware, async (req, res) => {
 //         res.status(500).json({ message: 'Server error during staking' });
 //     }
 // });
+
+router.post('/stake', authMiddleware, async (req, res) => {
+    try {
+        // 🔥 Frontend se ab cctAmountToUse ki zaroorat nahi hai
+        const { targetUserId, amount, transactionPassword } = req.body;
+        const user = await User.findOne({ userId: req.user.userId });
+        const targetUser = await User.findOne({ userId: targetUserId });
+
+        if (!user) return res.status(404).json({ message: "Sender not found" });
+        if (!targetUser) return res.status(404).json({ message: "Target User ID not found" });
+        
+        if (user.transactionPassword.toLowerCase() !== transactionPassword.toLowerCase()) {
+            return res.status(400).json({ message: "Invalid Transaction Password" });
+        }
+        
+        const stakeAmt = Number(amount);
+        
+        // 🔥 RULE 1: Package ki limit ab 10 se 5000 CCT
+        if (stakeAmt < 10 || stakeAmt > 5000) {
+            return res.status(400).json({ message: "Staking amount must be between 10 and 5000." });
+        }
+
+        // =======================================================
+        // 🔥 SMART AUTO-CALCULATION LOGIC (Frontend Independent)
+        // =======================================================
+        let walletDeduction = stakeAmt * 0.5; // By default 50% Wallet se try karega
+
+        // Agar wallet me 50% se kam balance hai, toh jitna hai utna use karenge
+        if ((user.walletBalance || 0) < walletDeduction) {
+            walletDeduction = user.walletBalance || 0;
+        }
+
+        // Baaki bacha hua poora amount CCT se katega (Minimum 50% automatic ho jayega)
+        let cctDeduction = stakeAmt - walletDeduction;
+
+        // Balance Checks
+        if (user.cctBalance < cctDeduction) {
+            return res.status(400).json({ message: `Insufficient CCT Balance. You need at least ${cctDeduction} CCT.` });
+        }
+        if (walletDeduction > 0 && (user.walletBalance || 0) < walletDeduction) {
+            return res.status(400).json({ message: "Insufficient Wallet Balance." });
+        }
+
+        // 🔥 RULE: NORMAL USER MUST STAKE THEIR OWN ID FIRST BEFORE STAKING FOR DOWNLINE
+        if (user.role !== 'leader' && user.role !== 'superleader' && !user.isStaked && String(user.userId) !== String(targetUser.userId)) {
+            return res.status(403).json({ 
+                message: "Self-Stake Required: You must activate Staking on your own ID first before staking for your downline." 
+            });
+        }
+
+        // 🛑 RULE: LEADER CANNOT STAKE ON THEIR OWN ID (Super Leader IS allowed)
+        if (targetUser.role === 'leader' && String(targetUser.userId) === String(user.userId)) {
+            return res.status(403).json({ 
+                message: "You are not allowed to stake on your own ID." 
+            });
+        }
+
+        // =======================================================
+        // 🔥 RULE 5: Sabhi ke liye flat 1% return rate (Tiers hata diye)
+        // =======================================================
+        const dailyRate = 1.0; 
+
+        // 🔥 RULE 6: MAX CAP CALCULATION (Ab 2x / 200% kar diya gaya hai)
+        let maxCap = stakeAmt * 2; 
+
+        const newStakeRecord = {
+            amount: stakeAmt,
+            maxCap: maxCap,
+            earned: 0,
+            dailyRate: dailyRate,
+            createdAt: new Date(),
+            status: 'active'
+        };
+
+        // =======================================================
+        // AUTO-MIGRATION LOGIC (SAME)
+        // =======================================================
+        if (!targetUser.activeStakes) {
+            targetUser.activeStakes = [];
+        }
+
+        if (targetUser.isStaked && targetUser.activeStakes.length === 0 && targetUser.totalCctStaked > 0) {
+            targetUser.activeStakes.push({
+                amount: targetUser.totalCctStaked,
+                maxCap: targetUser.stakedMaxCap,
+                earned: targetUser.stakedEarned || 0,
+                dailyRate: targetUser.stakingDailyRate || 1.0,
+                createdAt: targetUser.createdAt || new Date(),
+                status: 'active'
+            });
+        }
+
+        targetUser.activeStakes.push(newStakeRecord);
+
+        // 🔥 DONO WALLETS SE BALANCE KATNA
+        if (String(user.userId) === String(targetUser.userId)) {
+            targetUser.cctBalance -= cctDeduction;
+            if (walletDeduction > 0) targetUser.walletBalance -= walletDeduction;
+        } else {
+            user.cctBalance -= cctDeduction;
+            if (walletDeduction > 0) user.walletBalance -= walletDeduction;
+            await user.save(); 
+        }
+
+        targetUser.isStaked = true;
+        targetUser.totalCctStaked = (targetUser.totalCctStaked || 0) + stakeAmt;
+
+        if (!targetUser.firstStakeDate) {
+            targetUser.firstStakeDate = new Date();
+        }
+
+        targetUser.stakedMaxCap = (targetUser.stakedMaxCap || 0) + maxCap;
+        targetUser.stakingDailyRate = dailyRate; 
+        
+        await targetUser.save();
+
+        await Transaction.create({
+            userId: user.userId, type: 'cct_stake_send', amount: stakeAmt, status: 'success',
+            description: `Staked ${stakeAmt} CCT for ID #${targetUser.userId} (CCT: ${cctDeduction}, Wallet: ${walletDeduction})`, 
+            date: new Date()
+        });
+
+        // =======================================================
+        // 🔥 BACKGROUND MLM ENGINE FOR STAKING
+        // =======================================================
+        (async () => {
+            try {
+                // ✅ 1. DIRECT INCOME LOGIC
+                if (targetUser.sponsorId) {
+                    const sponsor = await User.findOne({ userId: targetUser.sponsorId });
+                    
+                    if (sponsor && sponsor.isToppedUp && sponsor.isStaked) {
+                        const STAKING_DIRECT_PERCENT = 10; 
+                        const directBonus = (stakeAmt * STAKING_DIRECT_PERCENT) / 100; 
+
+                        if (directBonus > 0) {
+                            sponsor.cctStakingDirectIncome = (sponsor.cctStakingDirectIncome || 0) + directBonus;
+                            await sponsor.save();
+
+                            await Transaction.create({
+                                userId: sponsor.userId, type: "staking_direct_income", source: "cct_direct", amount: directBonus, 
+                                fromUserId: targetUser.userId,
+                                description: `Direct Bonus (10%) from ${targetUser.name}'s New Stake of ${stakeAmt}`, 
+                                status: 'success', date: new Date()
+                            });
+                        }
+                    }
+                }
+
+                // ✅ 2. UNIFIED 100-LEVEL ENGINE
+                const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
+                let currentUplineId = targetUser.sponsorId; 
+                let currentLevel = 1;
+                let leaderBonusGiven = false;
+
+                while (currentUplineId && currentLevel <= 100) {
+                    const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp isStaked sponsorId role totalCctStaked');
+                    if (!upline) break;
+
+                    const isCurrentUplineLeader = (upline.role === 'leader');
+
+                    // NORMAL LEVEL INCOME (Level 2 to 20)
+                    if (currentLevel >= 2 && currentLevel <= 20) {
+                        if (upline.isToppedUp && upline.isStaked) {
+                            const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
+                            const levelBonus = (stakeAmt * percentage) / 100;
+
+                            if (levelBonus > 0) {
+                                await User.updateOne(
+                                    { _id: upline._id }, 
+                                    { $inc: { cctStakingLevelIncome: levelBonus } }
+                                );
+
+                                await Transaction.create({
+                                    userId: upline.userId, type: "staking_level_income", source: "cct_level", amount: levelBonus,
+                                    fromUserId: targetUser.userId, 
+                                    description: `Level ${currentLevel} Staking Income (${percentage}%) from ${targetUser.name}'s New Stake`, 
+                                    status: 'success', date: new Date()
+                                });
+                            }
+                        }
+                    }
+
+                    // ============================================
+                    // 🔥 RULE 7: LEADER BREAKAWAY BONUS 5% LOGIC
+                    // ============================================
+                    if (currentLevel >= 1 && isCurrentUplineLeader && !leaderBonusGiven) {
+                        if (upline.isToppedUp) {
+                            const leaderBonusAmount = (stakeAmt * 5) / 100; 
+                            
+                            if (leaderBonusAmount > 0) {
+                                await User.updateOne(
+                                    { _id: upline._id }, 
+                                    { $inc: { cctBalance: leaderBonusAmount } }
+                                );
+                                
+                                await Transaction.create({
+                                    userId: upline.userId, type: "credit", source: "system", amount: leaderBonusAmount,
+                                    fromUserId: targetUser.userId, 
+                                    description: `5% Instant Leader Staking Bonus added to CCT Wallet (Level ${currentLevel})`,
+                                    status: "success", date: new Date()
+                                });
+                            }
+                        }
+                        leaderBonusGiven = true; 
+                    }
+
+                    currentUplineId = upline.sponsorId;
+                    currentLevel++;
+                }
+            } catch (bgError) {
+                console.error("Background Staking MLM Engine Error:", bgError);
+            }
+        })();
+
+        res.json({ success: true, message: `Successfully staked ${stakeAmt} for ID #${targetUser.userId}` });
+    } catch (err) {
+        console.error("Staking Error:", err);
+        res.status(500).json({ message: 'Server error during staking' });
+    }
+});
+ 
+
+// ============================================================================
+// 🔥 NEW CCT COMPOUNDING SYSTEM (40 Days, 3% Daily, Min 50 for MLM)
+// ============================================================================
+// router.post('/cct-compound', authMiddleware, async (req, res) => {
+//     try {
+//         const { targetUserId, amount, transactionPassword } = req.body;
+//         const user = await User.findOne({ userId: req.user.userId });
+//         const targetUser = await User.findOne({ userId: targetUserId });
+
+//         if (!user) return res.status(404).json({ message: "Sender not found" });
+//         if (!targetUser) return res.status(404).json({ message: "Target User ID not found" });
+        
+//         if (user.transactionPassword.toLowerCase() !== transactionPassword.toLowerCase()) {
+//             return res.status(400).json({ message: "Invalid Transaction Password" });
+//         }
+        
+//         const stakeAmt = Number(amount);
+        
+//         // 🛑 NAYA RULE: 10 se 2000 CCT ki limit
+//         if (stakeAmt < 10 || stakeAmt > 2001) {
+//             return res.status(400).json({ message: "Compounding amount must be between 10 and 2000 CCT." });
+//         }
+//         if (user.cctBalance < stakeAmt) {
+//             return res.status(400).json({ message: "Insufficient CCT Balance" });
+//         }
+
+//         // if (!targetUser.isToppedUp) {
+//         //     return res.status(400).json({ message: "Target ID must be Active (Topped Up) to participate." });
+//         // }
+
+//         // 🔥 40 Days, 3% Daily = Total 120%
+//         let dailyRate = 3.0; 
+//         let maxCap = stakeAmt * 1.20; // 120% limit
+
+//         const newCompoundRecord = {
+//             amount: stakeAmt,
+//             maxCap: maxCap,
+//             earned: 0,
+//             dailyRate: dailyRate,
+//             durationDays: 40,
+//             createdAt: new Date(),
+//             status: 'active'
+//         };
+
+//         if (!targetUser.compoundStakes) {
+//             targetUser.compoundStakes = [];
+//         }
+
+//         // Push new compounding stake
+//         targetUser.compoundStakes.push(newCompoundRecord);
+
+//         // Deduct Balance
+//         if (String(user.userId) === String(targetUser.userId)) {
+//             targetUser.cctBalance -= stakeAmt;
+//         } else {
+//             user.cctBalance -= stakeAmt;
+//             await user.save(); 
+//         }
+
+//         targetUser.totalCompoundStaked = (targetUser.totalCompoundStaked || 0) + stakeAmt;
+//         await targetUser.save();
+
+//         await Transaction.create({
+//             userId: user.userId, type: 'cct_compound_send', amount: stakeAmt, status: 'success',
+//             description: `Compounded ${stakeAmt} CCT for ID #${targetUser.userId} (40 Days Cycle)`, date: new Date()
+//         });
+
+//         // =======================================================
+//         // 🔥 MLM ENGINE (DIRECT & LEVEL) - ONLY IF STAKE >= 50
+//         // =======================================================
+//         if (stakeAmt >= 50) {
+//             (async () => {
+//                 try {
+//                     // ✅ 1. DIRECT INCOME (5%)
+//                     if (targetUser.sponsorId) {
+//                         const sponsor = await User.findOne({ userId: targetUser.sponsorId });
+//                         // RULE: Sponsor ka khud ka minimum 50 CCT ka compound staked hona chahiye
+//                         if (sponsor && sponsor.isToppedUp && sponsor.totalCompoundStaked >= 50) {
+//                             const directBonus = (stakeAmt * 5) / 100; // 5% Direct
+
+//                             if (directBonus > 0) {
+//                                 sponsor.cctCompoundDirectIncome = (sponsor.cctCompoundDirectIncome || 0) + directBonus;
+//                                 await sponsor.save();
+
+//                                 await Transaction.create({
+//                                     userId: sponsor.userId, type: "compound_direct_income", source: "cct_compound", amount: directBonus, 
+//                                     fromUserId: targetUser.userId,
+//                                     description: `Direct Bonus (5%) from ${targetUser.name}'s Compounding of ${stakeAmt} CCT`, 
+//                                     status: 'success', date: new Date()
+//                                 });
+//                             }
+//                         }
+//                     }
+
+//                     // ✅ 2. 10-LEVEL INCOME ENGINE
+//                     const LEVEL_PERCENTAGES = [0, 2, 1, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25]; // Level 2 to 10 (Aap ise change kar sakte ho)
+//                     let currentUplineId = targetUser.sponsorId; 
+//                     let currentLevel = 1;
+
+//                     while (currentUplineId && currentLevel <= 10) {
+//                         const upline = await User.findOne({ userId: currentUplineId }).select('_id userId isToppedUp sponsorId name totalCompoundStaked');
+//                         if (!upline) break;
+
+//                         if (currentLevel >= 2 && currentLevel <= 10) {
+//                             // RULE: Upline ka bhi min 50 CCT ka compound stake hona chahiye
+//                             if (upline.isToppedUp && upline.totalCompoundStaked >= 50) {
+//                                 const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
+//                                 const levelBonus = (stakeAmt * percentage) / 100;
+
+//                                 if (levelBonus > 0) {
+//                                     await User.updateOne(
+//                                         { _id: upline._id }, 
+//                                         { $inc: { cctCompoundLevelIncome: levelBonus } }
+//                                     );
+
+//                                     await Transaction.create({
+//                                         userId: upline.userId, type: "compound_level_income", source: "cct_compound", amount: levelBonus,
+//                                         fromUserId: targetUser.userId, 
+//                                         description: `Level ${currentLevel} Compounding Income (${percentage}%) from ${targetUser.name}`, 
+//                                         status: 'success', date: new Date()
+//                                     });
+//                                 }
+//                             }
+//                         }
+//                         currentUplineId = upline.sponsorId;
+//                         currentLevel++;
+//                     }
+//                 } catch (bgError) {
+//                     console.error("Background Compounding MLM Error:", bgError);
+//                 }
+//             })();
+//         }
+
+//         res.json({ success: true, message: `Successfully started 40-Days CCT Compounding of ${stakeAmt} CCT for ID #${targetUser.userId}` });
+//     } catch (err) {
+//         console.error("Compounding Error:", err);
+//         res.status(500).json({ message: 'Server error during compounding' });
+//     }
+// });
+
+
+// 🔥 NAYA ROUTE: Reinvest Compound Income
+router.post('/reinvest-compound', authMiddleware, async (req, res) => {
+    try {
+        const { amount, transactionPassword } = req.body; // Isme Target ID nahi hai
+        const user = await User.findOne({ userId: req.user.userId });
+
+        if (!user) return res.status(404).json({ message: "User not found" });
+        
+        if (user.transactionPassword.toLowerCase() !== transactionPassword.toLowerCase()) {
+            return res.status(400).json({ message: "Invalid Transaction Password" });
+        }
+        
+        const stakeAmt = Number(amount);
+        
+        // 🛑 NAYA RULE: 10 se 2000 CCT ki limit
+        if (stakeAmt < 10 || stakeAmt > 2001) {
+            return res.status(400).json({ message: "Reinvest amount must be between 10 and 2000 CCT." });
+        }
+        
+        // 🔥 MAIN CHANGE: cctBalance ki jagah cctCompoundIncome check kar rahe hain
+        if ((user.cctCompoundIncome || 0) < stakeAmt) {
+            return res.status(400).json({ message: "Insufficient Compound Income Balance to Reinvest!" });
+        }
+ 
+
+        // 🔥 40 Days, 3% Daily = Total 120%
+        let dailyRate = 3.0; 
+        let maxCap = stakeAmt * 1.20; // 120% limit
+
+        const newCompoundRecord = {
+            amount: stakeAmt,
+            maxCap: maxCap,
+            earned: 0,
+            dailyRate: dailyRate,
+            durationDays: 40,
+            createdAt: new Date(),
+            status: 'active'
+        };
+
+        if (!user.compoundStakes) {
+            user.compoundStakes = [];
+        }
+
+        // Push new compounding stake
+        user.compoundStakes.push(newCompoundRecord);
+
+        // 🔥 MAIN CHANGE: Balance deduction from cctCompoundIncome
+        user.cctCompoundIncome -= stakeAmt;
+        user.totalCompoundStaked = (user.totalCompoundStaked || 0) + stakeAmt;
+        
+        await user.save();
+
+        await Transaction.create({
+            userId: user.userId, type: 'cct_compound_reinvest', amount: stakeAmt, status: 'success',
+            description: `Reinvested ${stakeAmt} CCT into 40 Days Cycle from ROI Income`, date: new Date()
+        });
+
+        // =======================================================
+        // 🔥 MLM ENGINE (DIRECT & LEVEL) - ONLY IF STAKE >= 50
+        // =======================================================
+        if (stakeAmt >= 50) {
+            (async () => {
+                try {
+                    // ✅ 1. DIRECT INCOME (5%)
+                    if (user.sponsorId) {
+                        const sponsor = await User.findOne({ userId: user.sponsorId });
+                        if (sponsor && sponsor.isToppedUp && sponsor.totalCompoundStaked >= 50) {
+                            const directBonus = (stakeAmt * 5) / 100; // 5% Direct
+
+                            if (directBonus > 0) {
+                                sponsor.cctCompoundDirectIncome = (sponsor.cctCompoundDirectIncome || 0) + directBonus;
+                                await sponsor.save();
+
+                                await Transaction.create({
+                                    userId: sponsor.userId, type: "compound_direct_income", source: "cct_compound", amount: directBonus, 
+                                    fromUserId: user.userId,
+                                    description: `Direct Bonus (5%) from ${user.name}'s Reinvestment of ${stakeAmt} CCT`, 
+                                    status: 'success', date: new Date()
+                                });
+                            }
+                        }
+                    }
+
+                    // ✅ 2. 10-LEVEL INCOME ENGINE
+                    const LEVEL_PERCENTAGES = [0, 2, 1, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25];
+                    let currentUplineId = user.sponsorId; 
+                    let currentLevel = 1;
+
+                    while (currentUplineId && currentLevel <= 10) {
+                        const upline = await User.findOne({ userId: currentUplineId }).select('_id userId isToppedUp sponsorId name totalCompoundStaked');
+                        if (!upline) break;
+
+                        if (currentLevel >= 2 && currentLevel <= 10) {
+                            if (upline.isToppedUp && upline.totalCompoundStaked >= 50) {
+                                const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
+                                const levelBonus = (stakeAmt * percentage) / 100;
+
+                                if (levelBonus > 0) {
+                                    await User.updateOne(
+                                        { _id: upline._id }, 
+                                        { $inc: { cctCompoundLevelIncome: levelBonus } }
+                                    );
+
+                                    await Transaction.create({
+                                        userId: upline.userId, type: "compound_level_income", source: "cct_compound", amount: levelBonus,
+                                        fromUserId: user.userId, 
+                                        description: `Level ${currentLevel} Compounding Income (${percentage}%) from ${user.name}'s Reinvestment`, 
+                                        status: 'success', date: new Date()
+                                    });
+                                }
+                            }
+                        }
+                        currentUplineId = upline.sponsorId;
+                        currentLevel++;
+                    }
+                } catch (bgError) {
+                    console.error("Background Compounding MLM Error:", bgError);
+                }
+            })();
+        }
+
+        // Return the updated user object so frontend can immediately reflect balance
+        res.json({ success: true, message: `Successfully Reinvested ${stakeAmt} CCT into 40-Days Cycle!`, user: user });
+    } catch (err) {
+        console.error("Reinvest Error:", err);
+        res.status(500).json({ message: 'Server error during reinvestment' });
+    }
+});
 
 router.post("/promo-stake", authMiddleware, async (req, res) => {
   try {
@@ -1392,6 +1674,157 @@ router.post("/promo-stake", authMiddleware, async (req, res) => {
   }
 });
 // 4. Withdraw CCT Income (50-50 Split Rule)
+// router.post('/withdraw', authMiddleware, async (req, res) => {
+//     try {
+//         const { items, transactionPassword } = req.body;
+//         const user = await User.findOne({ userId: req.user.userId });
+
+//         // 🛑 Role Check
+//         if (user.role === 'leader') {
+//             return res.status(403).json({ message: "Withdrawal is restricted for your account status." });
+//         }
+
+//         // 🛑 Wallet Address Check (Profile BEP20)
+//         if (!user.walletAddress || user.walletAddress.trim() === "") {
+//             return res.status(400).json({ message: "Please update your wallet address from your profile first." });
+//         }
+
+//         // 🛡️ SECURITY CHECKS
+//         if (user.transactionPassword.toLowerCase() !== transactionPassword.toLowerCase()) {
+//             return res.status(400).json({ message: "Invalid Transaction Password" });
+//         }
+
+//         if (!items || !Array.isArray(items) || items.length === 0) {
+//             return res.status(400).json({ message: "No withdrawal items provided." });
+//         }
+
+//         // 💰 CALCULATE TOTAL AMOUNT
+//         let totalAmt = 0;
+//         for (let item of items) {
+//             const amt = Math.floor(parseFloat(item.amount));
+//             if (amt <= 0) return res.status(400).json({ message: "Invalid amount detected." });
+//             totalAmt += amt;
+//         }
+
+//         // ✨ MULTIPLE OF 10 & MINIMUM $10 CHECK (Sab mila kar)
+//         if (totalAmt < 10) {
+//             return res.status(400).json({ message: "Minimum total withdrawal amount is $10." });
+//         }
+//         if (totalAmt % 10 !== 0) {
+//             return res.status(400).json({ message: `Total withdrawal amount must be in multiples of $10. Your total is $${totalAmt}.` });
+//         }
+
+//         // =========================================================
+//         // 🔥 STEP 1: PRE-CHECK BALANCES
+//         // =========================================================
+//         let simStakingWallet = user.cctStakingIncome || 0;
+//         let simStakingDirectWallet = user.cctStakingDirectIncome || 0;
+//         let simStakingLevelWallet = user.cctStakingLevelIncome || 0;
+//         let simSalaryWallet = user.monthlySalaryWallet || 0; // 🔥 NAYA SALARY WALLET ADD KIYA
+
+//         for (let item of items) {
+//             const amt = Math.floor(parseFloat(item.amount));
+
+//             if (item.source === "cct_staking") {
+//                 if (simStakingWallet < amt) return res.status(400).json({ message: "Insufficient Staking ROI Balance." });
+//                 simStakingWallet -= amt;
+//             } else if (item.source === "cct_direct") {
+//                 if (simStakingDirectWallet < amt) return res.status(400).json({ message: "Insufficient Staking Direct Balance." });
+//                 simStakingDirectWallet -= amt;
+//             } else if (item.source === "cct_level") {
+//                 if (simStakingLevelWallet < amt) return res.status(400).json({ message: "Insufficient Staking Level Balance." });
+//                 simStakingLevelWallet -= amt;
+//             } else if (item.source === "monthly_salary") { // 🔥 NAYA SOURCE CHECK
+//                 if (simSalaryWallet < amt) return res.status(400).json({ message: "Insufficient Monthly Salary Balance." });
+//                 simSalaryWallet -= amt;
+//             } else {
+//                 return res.status(400).json({ message: `Unknown source: ${item.source}` });
+//             }
+//         }
+
+//         // =========================================================
+//         // 🔥 STEP 2: ACTUAL DEDUCTION & SPLIT RULE (50-50)
+//         // =========================================================
+//         let finalCryptoPending = 0;
+//         let finalCctAdded = 0;
+
+//         for (let item of items) {
+//             const amt = Math.floor(parseFloat(item.amount));
+//             let descriptionName = "";
+
+//             // Wallet Minus
+//             if (item.source === "cct_staking") {
+//                 user.cctStakingIncome -= amt;
+//                 descriptionName = "Staking ROI Income";
+//             } else if (item.source === "cct_direct") {
+//                 user.cctStakingDirectIncome -= amt;
+//                 descriptionName = "Staking Direct Income";
+//             } else if (item.source === "cct_level") {
+//                 user.cctStakingLevelIncome -= amt;
+//                 descriptionName = "Staking Level Income";
+//             } else if (item.source === "monthly_salary") { // 🔥 SALARY WALLET DEDUCTION
+//                 user.monthlySalaryWallet -= amt;
+//                 descriptionName = "Monthly Salary Income";
+//             }
+
+//             // 💎 50-50 SPLIT RULE (Same for all)
+//             const cryptoWithdrawShare = amt * 0.50; // Admin panel jayega
+//             const cctWalletShare = amt * 0.50;      // Instant CCT wallet me jayega
+
+//             // 🛑 10% FEE
+//             const cryptoWithdrawFee = cryptoWithdrawShare * 0.10;
+//             const cctWalletFee = cctWalletShare * 0.10;
+
+//             const netCryptoWithdraw = cryptoWithdrawShare - cryptoWithdrawFee; 
+//             const netCctWallet = cctWalletShare - cctWalletFee;                
+
+//             // Overall Tracker
+//             finalCryptoPending += netCryptoWithdraw;
+//             finalCctAdded += netCctWallet;
+
+//             // Instant Add to Main Wallet
+//             user.cctBalance = (user.cctBalance || 0) + netCctWallet;
+//             user.totalWithdrawn = (user.totalWithdrawn || 0) + amt;
+
+//             // Database Entry - Withdrawal List
+//             await Withdrawal.create({
+//                 userId: user.userId,
+//                 source: item.source, 
+//                 grossAmount: cryptoWithdrawShare,
+//                 fee: cryptoWithdrawFee, 
+//                 netAmount: netCryptoWithdraw,
+//                 walletAddress: user.walletAddress, 
+//                 status: "pending",
+//                 date: new Date()
+//             });
+
+//             // Database Entry - History (Pending Crypto)
+//             await Transaction.create({
+//                 userId: user.userId, type: 'withdrawal', source: item.source, amount: cryptoWithdrawShare, 
+//                 status: 'pending', description: `Pending Withdrawal from ${descriptionName}`
+//             });
+
+//             // Database Entry - History (Instant CCT Add)
+//             await Transaction.create({
+//                 userId: user.userId, type: 'credit', source: "system", amount: netCctWallet, 
+//                 status: 'success', description: `CCT Wallet Credit from ${descriptionName} (after 10% fee)`
+//             });
+//         }
+
+//         await user.save();
+
+//         res.json({ 
+//             success: true, 
+//             message: `Withdrawal request submitted! $${finalCryptoPending.toFixed(2)} is pending for payout, and ${finalCctAdded.toFixed(2)} CCT added to your Wallet.` 
+//         });
+
+//     } catch (err) {
+//         console.error("CCT Withdraw Error:", err);
+//         res.status(500).json({ message: 'Server processing error.' });
+//     }
+// });
+
+
 router.post('/withdraw', authMiddleware, async (req, res) => {
     try {
         const { items, transactionPassword } = req.body;
@@ -1426,19 +1859,24 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
 
         // ✨ MULTIPLE OF 10 & MINIMUM $10 CHECK (Sab mila kar)
         if (totalAmt < 10) {
-            return res.status(400).json({ message: "Minimum total withdrawal amount is $10." });
+            return res.status(400).json({ message: "Minimum total withdrawal amount is 10 CCT." });
         }
         if (totalAmt % 10 !== 0) {
-            return res.status(400).json({ message: `Total withdrawal amount must be in multiples of $10. Your total is $${totalAmt}.` });
+            return res.status(400).json({ message: `Total withdrawal amount must be in multiples of 10. Your total is ${totalAmt} CCT.` });
         }
 
         // =========================================================
-        // 🔥 STEP 1: PRE-CHECK BALANCES
+        // 🔥 STEP 1: PRE-CHECK BALANCES (Old & New Wallets)
         // =========================================================
         let simStakingWallet = user.cctStakingIncome || 0;
         let simStakingDirectWallet = user.cctStakingDirectIncome || 0;
         let simStakingLevelWallet = user.cctStakingLevelIncome || 0;
-        let simSalaryWallet = user.monthlySalaryWallet || 0; // 🔥 NAYA SALARY WALLET ADD KIYA
+        let simSalaryWallet = user.monthlySalaryWallet || 0; 
+        
+        // 🔥 NAYA: Compounding Wallets
+        let simCompoundWallet = user.cctCompoundIncome || 0;
+        let simCompoundDirectWallet = user.cctCompoundDirectIncome || 0;
+        let simCompoundLevelWallet = user.cctCompoundLevelIncome || 0;
 
         for (let item of items) {
             const amt = Math.floor(parseFloat(item.amount));
@@ -1452,16 +1890,25 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
             } else if (item.source === "cct_level") {
                 if (simStakingLevelWallet < amt) return res.status(400).json({ message: "Insufficient Staking Level Balance." });
                 simStakingLevelWallet -= amt;
-            } else if (item.source === "monthly_salary") { // 🔥 NAYA SOURCE CHECK
+            } else if (item.source === "monthly_salary") { 
                 if (simSalaryWallet < amt) return res.status(400).json({ message: "Insufficient Monthly Salary Balance." });
                 simSalaryWallet -= amt;
+            } else if (item.source === "cct_compound") { // 🔥 NAYA CHECK
+                if (simCompoundWallet < amt) return res.status(400).json({ message: "Insufficient Compounding ROI Balance." });
+                simCompoundWallet -= amt;
+            } else if (item.source === "cct_compound_direct") { // 🔥 NAYA CHECK
+                if (simCompoundDirectWallet < amt) return res.status(400).json({ message: "Insufficient Compounding Direct Balance." });
+                simCompoundDirectWallet -= amt;
+            } else if (item.source === "cct_compound_level") { // 🔥 NAYA CHECK
+                if (simCompoundLevelWallet < amt) return res.status(400).json({ message: "Insufficient Compounding Level Balance." });
+                simCompoundLevelWallet -= amt;
             } else {
                 return res.status(400).json({ message: `Unknown source: ${item.source}` });
             }
         }
 
         // =========================================================
-        // 🔥 STEP 2: ACTUAL DEDUCTION & SPLIT RULE (50-50)
+        // 🔥 STEP 2: ACTUAL DEDUCTION & RULES
         // =========================================================
         let finalCryptoPending = 0;
         let finalCctAdded = 0;
@@ -1480,18 +1927,39 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
             } else if (item.source === "cct_level") {
                 user.cctStakingLevelIncome -= amt;
                 descriptionName = "Staking Level Income";
-            } else if (item.source === "monthly_salary") { // 🔥 SALARY WALLET DEDUCTION
+            } else if (item.source === "monthly_salary") { 
                 user.monthlySalaryWallet -= amt;
                 descriptionName = "Monthly Salary Income";
+            } else if (item.source === "cct_compound") { 
+                user.cctCompoundIncome -= amt;
+                descriptionName = "Compounding ROI Income";
+            } else if (item.source === "cct_compound_direct") { 
+                user.cctCompoundDirectIncome -= amt;
+                descriptionName = "Compounding Direct Income";
+            } else if (item.source === "cct_compound_level") { 
+                user.cctCompoundLevelIncome -= amt;
+                descriptionName = "Compounding Level Income";
             }
 
-            // 💎 50-50 SPLIT RULE (Same for all)
-            const cryptoWithdrawShare = amt * 0.50; // Admin panel jayega
-            const cctWalletShare = amt * 0.50;      // Instant CCT wallet me jayega
+            let cryptoWithdrawShare = 0;
+            let cctWalletShare = 0;
+            let cryptoWithdrawFee = 0;
+            let cctWalletFee = 0;
 
-            // 🛑 10% FEE
-            const cryptoWithdrawFee = cryptoWithdrawShare * 0.10;
-            const cctWalletFee = cctWalletShare * 0.10;
+            // 💎 RULE LOGIC
+            if (["cct_staking", "cct_direct", "cct_level", "monthly_salary"].includes(item.source)) {
+                // OLD WALLETS: 50-50 SPLIT & 10% FEE
+                cryptoWithdrawShare = amt * 0.50; 
+                cctWalletShare = amt * 0.50;      
+                cryptoWithdrawFee = cryptoWithdrawShare * 0.10;
+                cctWalletFee = cctWalletShare * 0.10;
+            } else if (["cct_compound", "cct_compound_direct", "cct_compound_level"].includes(item.source)) {
+                // 🔥 NAYA WALLETS: 100% WITHDRAWAL, NO 50-50, NO FEE
+                cryptoWithdrawShare = amt; // Pura withdraw admin pending me jayega
+                cctWalletShare = 0;
+                cryptoWithdrawFee = 0;
+                cctWalletFee = 0;
+            }
 
             const netCryptoWithdraw = cryptoWithdrawShare - cryptoWithdrawFee; 
             const netCctWallet = cctWalletShare - cctWalletFee;                
@@ -1500,8 +1968,10 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
             finalCryptoPending += netCryptoWithdraw;
             finalCctAdded += netCctWallet;
 
-            // Instant Add to Main Wallet
-            user.cctBalance = (user.cctBalance || 0) + netCctWallet;
+            // Instant Add to Main Wallet (Agar 50-50 wala hissa hai)
+            if (netCctWallet > 0) {
+                user.cctBalance = (user.cctBalance || 0) + netCctWallet;
+            }
             user.totalWithdrawn = (user.totalWithdrawn || 0) + amt;
 
             // Database Entry - Withdrawal List
@@ -1523,22 +1993,27 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
             });
 
             // Database Entry - History (Instant CCT Add)
-            await Transaction.create({
-                userId: user.userId, type: 'credit', source: "system", amount: netCctWallet, 
-                status: 'success', description: `CCT Wallet Credit from ${descriptionName} (after 10% fee)`
-            });
+            if (netCctWallet > 0) {
+                await Transaction.create({
+                    userId: user.userId, type: 'credit', source: "system", amount: netCctWallet, 
+                    status: 'success', description: `CCT Wallet Credit from ${descriptionName} (after 10% fee)`
+                });
+            }
         }
 
         await user.save();
 
-        res.json({ 
-            success: true, 
-            message: `Withdrawal request submitted! $${finalCryptoPending.toFixed(2)} is pending for payout, and ${finalCctAdded.toFixed(2)} CCT added to your Wallet.` 
-        });
+        let successMsg = `Withdrawal request submitted! ${finalCryptoPending.toFixed(2)} CCT is pending for payout.`;
+        if (finalCctAdded > 0) {
+            successMsg += ` and ${finalCctAdded.toFixed(2)} CCT added to your Wallet (50-50 split part).`;
+        }
+
+        res.json({ success: true, message: successMsg });
 
     } catch (err) {
         console.error("CCT Withdraw Error:", err);
         res.status(500).json({ message: 'Server processing error.' });
     }
 });
+
 module.exports = router;

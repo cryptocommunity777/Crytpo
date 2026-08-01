@@ -8,7 +8,6 @@ const SystemStat = require('../models/SystemStat'); // 👈 SystemStat import ki
 exports.getUserById = async (req, res) => {
   try {
     // 🔥 BUG 1 & 2 FIX: Route se ID nikal kar usko thik se NUMBER mein convert karna
-    // req.params.userId aur req.params.id dono check kar lete hain taaki koi error na aaye
     const rawId = req.params.userId || req.params.id; 
     const targetUserId = Number(rawId);
 
@@ -18,7 +17,6 @@ exports.getUserById = async (req, res) => {
     }
 
     const user = await User.findOne({ userId: targetUserId }).select("+usdtBep20Balance");
-    //const user = await User.findOne({ userId: targetUserId });
     
     if (!user) {
         return res.status(404).json({ message: 'User not found' });
@@ -29,14 +27,48 @@ exports.getUserById = async (req, res) => {
 
     // 🔥 Total Fake Users (Cron wala) ka count nikalna
     const stat = await SystemStat.findOne();
-    const globalFakeCount = stat ? stat.globalFakeCount : 0; // Agar abhi tak cron nahi chala, toh 0 bhejo
+    const globalFakeCount = stat ? stat.globalFakeCount : 0; 
+
+    // =========================================================
+    // 🔥 NAYA ADD KIYA: 12-LEVEL ACTIVE TEAM CALCULATION 🔥
+    // =========================================================
+    const allUsersForTeam = await User.find({}, 'userId sponsorId isToppedUp').lean();
+    const directMap = new Map();
+    
+    for (let u of allUsersForTeam) {
+        if (u.sponsorId) {
+            if (!directMap.has(u.sponsorId)) directMap.set(u.sponsorId, []);
+            directMap.get(u.sponsorId).push(u);
+        }
+    }
+
+    let currentLevelUsers = directMap.get(targetUserId) || [];
+    let levelActiveCounts = {};
+
+    for (let depth = 1; depth <= 12; depth++) {
+        let activeCount = 0;
+        let nextLevelUsers = [];
+        
+        for (let u of currentLevelUsers) {
+            if (u.isToppedUp) activeCount++; // Sirf active (topped up) user count hoga
+            const children = directMap.get(u.userId) || [];
+            nextLevelUsers.push(...children);
+        }
+        
+        levelActiveCounts[depth] = activeCount; 
+        currentLevelUsers = nextLevelUsers;
+    }
+    // =========================================================
 
     // Frontend ko user data, real count, aur fake count ek sath bhejo
     res.json({
       success: true,
-      user: sanitizeUser(user),
-      totalRealUsers: totalRealUsers, // 👈 Asli log
-      globalFakeCount: globalFakeCount // 👈 Cron wale fake log
+      user: {
+          ...sanitizeUser(user), // User ka purana data
+          levelActiveCounts: levelActiveCounts // Naya 12 level ka data!
+      },
+      totalRealUsers: totalRealUsers, 
+      globalFakeCount: globalFakeCount 
     });
   } catch (err) {
     console.error("Dashboard Fetch Error:", err);

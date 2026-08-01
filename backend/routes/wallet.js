@@ -3071,6 +3071,59 @@ router.get('/history/:userId', async (req, res) => {
 });
 
 
+// C:\Users\HP\Desktop\Cryptocommunity\backend\routes\wallet.js
+
+// ... (Aapka pehle ka code) ...
+
+// 🟢 NAYA ROUTE YAHAN PASTE KARO 👇
+router.get('/my-level-team/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        // Saare users nikal lo sirf zaroori fields ke sath
+        const allUsers = await User.find({}, 'userId sponsorId isToppedUp').lean();
+        
+        // Direct Map (Tree structure) banao
+        const directMap = new Map();
+        for (let u of allUsers) {
+            if (u.sponsorId) {
+                if (!directMap.has(u.sponsorId)) directMap.set(u.sponsorId, []);
+                directMap.get(u.sponsorId).push(u);
+            }
+        }
+
+        let levelActiveCounts = {}; 
+        let currentLevelUsers = directMap.get(userId) || []; 
+
+        // 12 Levels tak loop chalao
+        for (let depth = 1; depth <= 12; depth++) {
+            let activeCount = 0;
+            let nextLevelUsers = [];
+            
+            for (let u of currentLevelUsers) {
+                if (u.isToppedUp) activeCount++;
+                
+                const children = directMap.get(u.userId) || [];
+                nextLevelUsers.push(...children);
+            }
+            
+            levelActiveCounts[depth] = activeCount; 
+            currentLevelUsers = nextLevelUsers; 
+        }
+
+        res.json({ 
+            success: true, 
+            levelActiveCounts: levelActiveCounts 
+        });
+
+    } catch (err) {
+        console.error("Level Team Error:", err);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+// Ye file ke end me pehle se hoga, iske upar daalna hai
+ 
 // GET /api/wallet/topup-history/:userId
 // GET /api/wallet/topup-history/:userId
 router.get("/topup-history/:userId", async (req, res) => {
@@ -3194,6 +3247,123 @@ router.get("/topup-history/:userId", async (req, res) => {
 //   }
 // });
 
+// router.get("/:userId", authMiddleware, async (req, res) => {
+//   try {
+//     const userId = Number(req.params.userId);
+//     const loggedInUserId = Number(req.user.userId); 
+
+//     // 🔥 SECURITY LOCK
+//     if (req.user.role !== 'admin' && userId !== loggedInUserId) {
+//       return res.status(403).json({ success: false, message: "Unauthorized access: You can only view your own profile." });
+//     }
+    
+//     // 1. User validation 
+//     const user = await User.findOne({ userId }).select('-password -txnPassword -__v');
+//     if (!user) {
+//       return res.status(404).json({ success: false, message: "User not found" });
+//     }
+
+//     // 🔥 FIX FOR OLD DATA: Reward Income update
+//     if (!user.totalRewardIncome && user.rewardIncome > 0) {
+//         user.totalRewardIncome = user.rewardIncome;
+//         await user.save(); 
+//     }
+
+//     // 2. Lifetime incomes nikalna 
+//     const life = await getLifetimeIncomes(userId);
+
+//     // 3. Current Plan Income calculation
+//     const planKeys = ["plan1", "plan2", "plan3", "plan4", "plan5", "plan6"];
+//     let currentTotalPlanIncome = 0;
+
+//     planKeys.forEach(key => {
+//       currentTotalPlanIncome += calculatePackageEarnings(user.packages, key);
+//     });
+
+//     // =========================================================
+//     // 🔥 NAYA: ACTIVE DOWNLINE TEAM CALCULATION (For Dashboard)
+//     // =========================================================
+//     const allUsersForTeam = await User.find({}, 'userId sponsorId isToppedUp').lean();
+//     const directMap = new Map();
+//     for (let u of allUsersForTeam) {
+//         if (u.sponsorId) {
+//             if (!directMap.has(u.sponsorId)) directMap.set(u.sponsorId, []);
+//             directMap.get(u.sponsorId).push(u);
+//         }
+//     }
+    
+//     let totalPaidTeam = 0;
+//     let paidDirects = 0;
+//     let queue = [...(directMap.get(user.userId) || [])];
+    
+//     for (let d of queue) {
+//         if (d.isToppedUp) paidDirects++;
+//     }
+
+//     while (queue.length > 0) {
+//         const current = queue.shift();
+//         if (current.isToppedUp) totalPaidTeam++; 
+//         const children = directMap.get(current.userId) || [];
+//         for (let child of children) queue.push(child);
+//     }
+
+//     // Withdrawal ke logic ke hisaab se directs ko minus kar rahe hain
+//     let validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
+
+//     // 🔥 VIP ID Ke Liye Custom Boost
+//     if (user.userId === "1054948" || user.userId === 1054948) { 
+//         validTeamSize += 10000; 
+//     }
+
+//     // 4. Final Response 
+//     res.json({
+//       success: true,
+//       user: user, 
+//       walletBalance: user.walletBalance || 0,
+      
+//       // 🔥 YAHAN ACTIVE DOWNLINE COUNT BHEJ DIYA FRONTEND KE LIYE
+//       activeDownlineCount: validTeamSize,
+      
+//       // ✅ DASHBOARD LIFETIME TOTALS (Inka data box me dikhta hai)
+//       income: {
+//          totalDirectIncome: life.direct || user.totalDirectIncome || user.directIncome || 0,
+//          totalLevelIncome:  life.level  || user.totalLevelIncome || user.levelIncome || 0,
+//          totalRewardIncome: life.reward || user.totalRewardIncome || user.rewardIncome || 0,
+//          totalSpinIncome:   life.spin   || user.totalSpinIncome || user.spinIncome || 0,
+//          totalFastTrackIncome: user.totalFastTrackIncome || user.fastTrackIncome || 0,
+//          planIncome: currentTotalPlanIncome || 0,
+         
+//          // 🔥 NAYA: STAKING INCOMES YAHAN ADD KI HAIN 🔥
+//          cctStakingIncome: user.cctStakingIncome || 0,
+//          cctStakingDirectIncome: user.cctStakingDirectIncome || 0,
+//          cctStakingLevelIncome: user.cctStakingLevelIncome || 0
+//       },
+
+//       // ✅ CURRENT WITHDRAWABLE BALANCES
+//       directIncome: user.directIncome || 0,
+//       levelIncome:  user.levelIncome || 0,
+//       spinIncome:   user.spinIncome || 0,
+//       rewardIncome: user.rewardIncome || 0, 
+//       fastTrackIncome: user.fastTrackIncome || 0, 
+
+//       // Sabka total (Staking isme alag rakha hai dashboard design ke hisaab se)
+//       totalLifetimeIncome: (
+//         (life.direct || 0) + 
+//         (life.level || 0) + 
+//         (currentTotalPlanIncome || 0) + 
+//         (life.spin || 0) + 
+//         (life.reward || 0) + 
+//         (user.totalFastTrackIncome || 0)
+//       )
+//     });
+
+//   } catch (err) {
+//     console.error("Fetch Wallet Error:", err);
+//     res.status(500).json({ success: false, message: "Server error while fetching wallet" });
+//   }
+// });
+
+
 router.get("/:userId", authMiddleware, async (req, res) => {
   try {
     const userId = Number(req.params.userId);
@@ -3228,10 +3398,11 @@ router.get("/:userId", authMiddleware, async (req, res) => {
     });
 
     // =========================================================
-    // 🔥 NAYA: ACTIVE DOWNLINE TEAM CALCULATION (For Dashboard)
+    // 🔥 NAYA: ACTIVE DOWNLINE TEAM & LEVEL TARGET CALCULATION
     // =========================================================
     const allUsersForTeam = await User.find({}, 'userId sponsorId isToppedUp').lean();
     const directMap = new Map();
+    
     for (let u of allUsersForTeam) {
         if (u.sponsorId) {
             if (!directMap.has(u.sponsorId)) directMap.set(u.sponsorId, []);
@@ -3239,22 +3410,67 @@ router.get("/:userId", authMiddleware, async (req, res) => {
         }
     }
     
-    let totalPaidTeam = 0;
-    let paidDirects = 0;
-    let queue = [...(directMap.get(user.userId) || [])];
+    // ✅ ADMIN WALE LEVEL TARGETS YAHAN ADD KIYE
+    const levelTargets = {
+        1: { required: 1, maxIncome: 10 },
+        2: { required: 2, maxIncome: 20 },
+        3: { required: 4, maxIncome: 40 },
+        4: { required: 8, maxIncome: 80 },
+        5: { required: 15, maxIncome: 150 },
+        6: { required: 20, maxIncome: 200 },
+        7: { required: 50, maxIncome: 500 },
+        8: { required: 70, maxIncome: 700 },
+        9: { required: 100, maxIncome: 1000 },
+        10: { required: 150, maxIncome: 1500 },
+        11: { required: 300, maxIncome: 3000 },
+        12: { required: 500, maxIncome: 5000 }
+    };
+
+    let currentLevelUsers = directMap.get(user.userId) || [];
+    let levelActiveCounts = {}; 
+    let levelDetails = []; // Frontend ko detail dene ke liye
+    let totalEligibleLevels = 0;
+    let totalIncomeCap = 0;
+    let totalPaidTeam = 0; 
     
-    for (let d of queue) {
-        if (d.isToppedUp) paidDirects++;
+    for (let depth = 1; depth <= 12; depth++) {
+        let activeCount = 0;
+        let nextLevelUsers = [];
+        
+        for (let u of currentLevelUsers) {
+            if (u.isToppedUp) {
+                activeCount++;
+                totalPaidTeam++; // Total team me add karo
+            }
+            const children = directMap.get(u.userId) || [];
+            nextLevelUsers.push(...children);
+        }
+        
+        // Target check karo
+        const target = levelTargets[depth];
+        const isEligible = activeCount >= target.required;
+        
+        if (isEligible) {
+            totalEligibleLevels++;
+            totalIncomeCap += target.maxIncome;
+        }
+
+        // Frontend ke liye report banao
+        levelDetails.push({
+            level: depth,
+            actualActiveTeam: activeCount,
+            requiredTeam: target.required,
+            incomeCap: target.maxIncome,
+            isEligible: isEligible
+        });
+
+        // Pura object
+        levelActiveCounts[depth] = activeCount;
+        currentLevelUsers = nextLevelUsers;
     }
 
-    while (queue.length > 0) {
-        const current = queue.shift();
-        if (current.isToppedUp) totalPaidTeam++; 
-        const children = directMap.get(current.userId) || [];
-        for (let child of children) queue.push(child);
-    }
-
-    // Withdrawal ke logic ke hisaab se directs ko minus kar rahe hain
+    // Withdrawal ke logic ke hisaab se directs (Level 1) ko minus karna
+    let paidDirects = levelActiveCounts[1] || 0; 
     let validTeamSize = Math.max(0, totalPaidTeam - paidDirects);
 
     // 🔥 VIP ID Ke Liye Custom Boost
@@ -3262,16 +3478,24 @@ router.get("/:userId", authMiddleware, async (req, res) => {
         validTeamSize += 10000; 
     }
 
+    // 🔥 Mongoose document ko plain object me convert karke naya data attach kiya
+    const userDataToSend = user.toObject();
+    userDataToSend.levelActiveCounts = levelActiveCounts;
+    userDataToSend.levelDetails = levelDetails; // Lvl 1-12 details
+    userDataToSend.totalEligibleLevels = totalEligibleLevels; // Kitne level pass kiye
+    userDataToSend.totalIncomeCap = totalIncomeCap; // Total kitna fund limit bana
+
+    console.log("👉 BACKEND SENDING LEVEL COUNTS:", userDataToSend.levelActiveCounts);
     // 4. Final Response 
     res.json({
       success: true,
-      user: user, 
+      user: userDataToSend, 
       walletBalance: user.walletBalance || 0,
       
-      // 🔥 YAHAN ACTIVE DOWNLINE COUNT BHEJ DIYA FRONTEND KE LIYE
+      // 🔥 YAHAN ACTIVE DOWNLINE COUNT BHEJ DIYA
       activeDownlineCount: validTeamSize,
       
-      // ✅ DASHBOARD LIFETIME TOTALS (Inka data box me dikhta hai)
+      // ✅ DASHBOARD LIFETIME TOTALS
       income: {
          totalDirectIncome: life.direct || user.totalDirectIncome || user.directIncome || 0,
          totalLevelIncome:  life.level  || user.totalLevelIncome || user.levelIncome || 0,
@@ -3280,7 +3504,7 @@ router.get("/:userId", authMiddleware, async (req, res) => {
          totalFastTrackIncome: user.totalFastTrackIncome || user.fastTrackIncome || 0,
          planIncome: currentTotalPlanIncome || 0,
          
-         // 🔥 NAYA: STAKING INCOMES YAHAN ADD KI HAIN 🔥
+         // STAKING INCOMES
          cctStakingIncome: user.cctStakingIncome || 0,
          cctStakingDirectIncome: user.cctStakingDirectIncome || 0,
          cctStakingLevelIncome: user.cctStakingLevelIncome || 0
@@ -3293,7 +3517,6 @@ router.get("/:userId", authMiddleware, async (req, res) => {
       rewardIncome: user.rewardIncome || 0, 
       fastTrackIncome: user.fastTrackIncome || 0, 
 
-      // Sabka total (Staking isme alag rakha hai dashboard design ke hisaab se)
       totalLifetimeIncome: (
         (life.direct || 0) + 
         (life.level || 0) + 
@@ -3309,5 +3532,4 @@ router.get("/:userId", authMiddleware, async (req, res) => {
     res.status(500).json({ success: false, message: "Server error while fetching wallet" });
   }
 });
-
 module.exports = router;

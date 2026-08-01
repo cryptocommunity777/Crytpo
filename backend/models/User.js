@@ -162,6 +162,18 @@ stakedEarned: { type: Number, default: 0 },
 isStaked: { type: Boolean, default: false },
 
 
+
+
+
+
+// Add these in your User.js schema
+compoundStakes: { type: Array, default: [] }, // Naye 40-day stakes yahan save honge
+totalCompoundStaked: { type: Number, default: 0 },
+cctCompoundIncome: { type: Number, default: 0 }, // Daily ROI wallet
+cctCompoundDirectIncome: { type: Number, default: 0 },
+cctCompoundLevelIncome: { type: Number, default: 0 },
+
+
 // models/User.js ke andar
 activeStakes: [{
     amount: { type: Number, default: 0 },

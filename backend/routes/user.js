@@ -2681,6 +2681,56 @@ router.get('/global-team-count/:userId', async (req, res) => {
 });
 
 
+// Get User Profile Route
+router.get("/profile", authMiddleware, async (req, res) => {
+  try {
+    // User ko fetch karo
+    const user = await User.findOne({ userId: req.user.userId }).lean();
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // =========================================================
+    // 🔥 LEVEL-WISE ACTIVE TEAM CALCULATION
+    // =========================================================
+    const allUsersForTeam = await User.find({}, 'userId sponsorId isToppedUp').lean();
+    const directMap = new Map();
+    
+    // Parent-Child tree map banaya
+    for (let u of allUsersForTeam) {
+        if (u.sponsorId) {
+            if (!directMap.has(u.sponsorId)) directMap.set(u.sponsorId, []);
+            directMap.get(u.sponsorId).push(u);
+        }
+    }
+
+    let currentLevelUsers = directMap.get(user.userId) || [];
+    let levelActiveCounts = {};
+
+    // 12 Levels tak active users count karna
+    for (let depth = 1; depth <= 12; depth++) {
+        let activeCount = 0;
+        let nextLevelUsers = [];
+        
+        for (let u of currentLevelUsers) {
+            if (u.isToppedUp) activeCount++; // Sirf active (topped up) user count honge
+            const children = directMap.get(u.userId) || [];
+            nextLevelUsers.push(...children);
+        }
+        
+        levelActiveCounts[depth] = activeCount;
+        currentLevelUsers = nextLevelUsers;
+    }
+
+    // User object me yeh naya data inject kar diya
+    user.levelActiveCounts = levelActiveCounts;
+
+    // Response bhej diya
+    res.json({ success: true, user });
+
+  } catch (err) {
+    console.error("Profile Error:", err);
+    res.status(500).json({ message: "Server error processing profile." });
+  }
+});
 
 
 
@@ -3013,21 +3063,51 @@ router.get('/:userId', authMiddleware, async (req, res) => {
         await user.save();
     }
 
-    // 💰 6. Response
-    // res.json({ 
-    //     success: true,
-    //     user: user, 
-    //     income: {
-    //         totalDirectIncome: user.totalDirectIncome || user.directIncome || 0,
-    //         totalLevelIncome: user.levelIncome || 0,
-    //         totalRewardIncome: user.totalRewardIncome || user.rewardIncome || 0,
-    //         totalIncome: (user.totalDirectIncome || 0) + (user.levelIncome || 0) + (user.totalRewardIncome || 0)
-    //     }
-    // });
+    // 🔥 Mongoose Document ko Plain Object me convert karna zaroori hai taaki naya data inject ho sake
+    user = user.toObject ? user.toObject() : user;
+
+    // =========================================================
+    // 🔥 5.5: LEVEL-WISE ACTIVE TEAM CALCULATION YAHAN AAYEGA
+    // =========================================================
+    const allUsersForTeam = await User.find({}, 'userId sponsorId isToppedUp').lean();
+    const directMap = new Map();
+    
+    for (let u of allUsersForTeam) {
+        if (u.sponsorId) {
+            if (!directMap.has(u.sponsorId)) directMap.set(u.sponsorId, []);
+            directMap.get(u.sponsorId).push(u);
+        }
+    }
+
+    let currentLevelUsers = directMap.get(user.userId) || [];
+    let levelActiveCounts = {};
+
+    for (let depth = 1; depth <= 12; depth++) {
+        let activeCount = 0;
+        let nextLevelUsers = [];
+        
+        for (let u of currentLevelUsers) {
+            if (u.isToppedUp) activeCount++; // Sirf ID Topped Up wale count honge
+            const children = directMap.get(u.userId) || [];
+            nextLevelUsers.push(...children);
+        }
+        
+        levelActiveCounts[depth] = activeCount; // Inject mapping { 1: 5, 2: 10, ... }
+        currentLevelUsers = nextLevelUsers;
+    }
+
+    // Calculate kiye gaye data ko user object me assign kar do
+    user.levelActiveCounts = levelActiveCounts;
+    // =========================================================
+
+    // Dashboard UI ke liye Real aur Fake users count (Optional, but UI me set hota hai)
+    const totalRealUsers = await User.countDocuments({ isFake: { $ne: true } }).catch(() => 0);
+
     // 💰 6. Response
     res.json({ 
         success: true,
         user: user, 
+        totalRealUsers: totalRealUsers, // Dashboard ko ye chahiye total system users show karne ke liye
         income: {
             totalDirectIncome: user.totalDirectIncome || user.directIncome || 0,
             
