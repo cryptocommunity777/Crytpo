@@ -1334,134 +1334,134 @@ router.post('/stake', authMiddleware, async (req, res) => {
 // });
 
 
-// 🔥 NAYA ROUTE: Reinvest Compound Income
-router.post('/reinvest-compound', authMiddleware, async (req, res) => {
-    try {
-        const { amount, transactionPassword } = req.body; // Isme Target ID nahi hai
-        const user = await User.findOne({ userId: req.user.userId });
+// // 🔥 NAYA ROUTE: Reinvest Compound Income
+// router.post('/reinvest-compound', authMiddleware, async (req, res) => {
+//     try {
+//         const { amount, transactionPassword } = req.body; // Isme Target ID nahi hai
+//         const user = await User.findOne({ userId: req.user.userId });
 
-        if (!user) return res.status(404).json({ message: "User not found" });
+//         if (!user) return res.status(404).json({ message: "User not found" });
         
-        if (user.transactionPassword.toLowerCase() !== transactionPassword.toLowerCase()) {
-            return res.status(400).json({ message: "Invalid Transaction Password" });
-        }
+//         if (user.transactionPassword.toLowerCase() !== transactionPassword.toLowerCase()) {
+//             return res.status(400).json({ message: "Invalid Transaction Password" });
+//         }
         
-        const stakeAmt = Number(amount);
+//         const stakeAmt = Number(amount);
         
-        // 🛑 NAYA RULE: 10 se 2000 CCT ki limit
-        if (stakeAmt < 10 || stakeAmt > 2001) {
-            return res.status(400).json({ message: "Reinvest amount must be between 10 and 2000 CCT." });
-        }
+//         // 🛑 NAYA RULE: 10 se 2000 CCT ki limit
+//         if (stakeAmt < 10 || stakeAmt > 2001) {
+//             return res.status(400).json({ message: "Reinvest amount must be between 10 and 2000 CCT." });
+//         }
         
-        // 🔥 MAIN CHANGE: cctBalance ki jagah cctCompoundIncome check kar rahe hain
-        if ((user.cctCompoundIncome || 0) < stakeAmt) {
-            return res.status(400).json({ message: "Insufficient Compound Income Balance to Reinvest!" });
-        }
+//         // 🔥 MAIN CHANGE: cctBalance ki jagah cctCompoundIncome check kar rahe hain
+//         if ((user.cctCompoundIncome || 0) < stakeAmt) {
+//             return res.status(400).json({ message: "Insufficient Compound Income Balance to Reinvest!" });
+//         }
  
 
-        // 🔥 40 Days, 3% Daily = Total 120%
-        let dailyRate = 3.0; 
-        let maxCap = stakeAmt * 1.20; // 120% limit
+//         // 🔥 40 Days, 3% Daily = Total 120%
+//         let dailyRate = 3.0; 
+//         let maxCap = stakeAmt * 1.20; // 120% limit
 
-        const newCompoundRecord = {
-            amount: stakeAmt,
-            maxCap: maxCap,
-            earned: 0,
-            dailyRate: dailyRate,
-            durationDays: 40,
-            createdAt: new Date(),
-            status: 'active'
-        };
+//         const newCompoundRecord = {
+//             amount: stakeAmt,
+//             maxCap: maxCap,
+//             earned: 0,
+//             dailyRate: dailyRate,
+//             durationDays: 40,
+//             createdAt: new Date(),
+//             status: 'active'
+//         };
 
-        if (!user.compoundStakes) {
-            user.compoundStakes = [];
-        }
+//         if (!user.compoundStakes) {
+//             user.compoundStakes = [];
+//         }
 
-        // Push new compounding stake
-        user.compoundStakes.push(newCompoundRecord);
+//         // Push new compounding stake
+//         user.compoundStakes.push(newCompoundRecord);
 
-        // 🔥 MAIN CHANGE: Balance deduction from cctCompoundIncome
-        user.cctCompoundIncome -= stakeAmt;
-        user.totalCompoundStaked = (user.totalCompoundStaked || 0) + stakeAmt;
+//         // 🔥 MAIN CHANGE: Balance deduction from cctCompoundIncome
+//         user.cctCompoundIncome -= stakeAmt;
+//         user.totalCompoundStaked = (user.totalCompoundStaked || 0) + stakeAmt;
         
-        await user.save();
+//         await user.save();
 
-        await Transaction.create({
-            userId: user.userId, type: 'cct_compound_reinvest', amount: stakeAmt, status: 'success',
-            description: `Reinvested ${stakeAmt} CCT into 40 Days Cycle from ROI Income`, date: new Date()
-        });
+//         await Transaction.create({
+//             userId: user.userId, type: 'cct_compound_reinvest', amount: stakeAmt, status: 'success',
+//             description: `Reinvested ${stakeAmt} CCT into 40 Days Cycle from ROI Income`, date: new Date()
+//         });
 
-        // =======================================================
-        // 🔥 MLM ENGINE (DIRECT & LEVEL) - ONLY IF STAKE >= 50
-        // =======================================================
-        if (stakeAmt >= 50) {
-            (async () => {
-                try {
-                    // ✅ 1. DIRECT INCOME (5%)
-                    if (user.sponsorId) {
-                        const sponsor = await User.findOne({ userId: user.sponsorId });
-                        if (sponsor && sponsor.isToppedUp && sponsor.totalCompoundStaked >= 50) {
-                            const directBonus = (stakeAmt * 5) / 100; // 5% Direct
+//         // =======================================================
+//         // 🔥 MLM ENGINE (DIRECT & LEVEL) - ONLY IF STAKE >= 50
+//         // =======================================================
+//         if (stakeAmt >= 50) {
+//             (async () => {
+//                 try {
+//                     // ✅ 1. DIRECT INCOME (5%)
+//                     if (user.sponsorId) {
+//                         const sponsor = await User.findOne({ userId: user.sponsorId });
+//                         if (sponsor && sponsor.isToppedUp && sponsor.totalCompoundStaked >= 50) {
+//                             const directBonus = (stakeAmt * 5) / 100; // 5% Direct
 
-                            if (directBonus > 0) {
-                                sponsor.cctCompoundDirectIncome = (sponsor.cctCompoundDirectIncome || 0) + directBonus;
-                                await sponsor.save();
+//                             if (directBonus > 0) {
+//                                 sponsor.cctCompoundDirectIncome = (sponsor.cctCompoundDirectIncome || 0) + directBonus;
+//                                 await sponsor.save();
 
-                                await Transaction.create({
-                                    userId: sponsor.userId, type: "compound_direct_income", source: "cct_compound", amount: directBonus, 
-                                    fromUserId: user.userId,
-                                    description: `Direct Bonus (5%) from ${user.name}'s Reinvestment of ${stakeAmt} CCT`, 
-                                    status: 'success', date: new Date()
-                                });
-                            }
-                        }
-                    }
+//                                 await Transaction.create({
+//                                     userId: sponsor.userId, type: "compound_direct_income", source: "cct_compound", amount: directBonus, 
+//                                     fromUserId: user.userId,
+//                                     description: `Direct Bonus (5%) from ${user.name}'s Reinvestment of ${stakeAmt} CCT`, 
+//                                     status: 'success', date: new Date()
+//                                 });
+//                             }
+//                         }
+//                     }
 
-                    // ✅ 2. 10-LEVEL INCOME ENGINE
-                    const LEVEL_PERCENTAGES = [0, 2, 1, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25];
-                    let currentUplineId = user.sponsorId; 
-                    let currentLevel = 1;
+//                     // ✅ 2. 10-LEVEL INCOME ENGINE
+//                     const LEVEL_PERCENTAGES = [0, 2, 1, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25];
+//                     let currentUplineId = user.sponsorId; 
+//                     let currentLevel = 1;
 
-                    while (currentUplineId && currentLevel <= 10) {
-                        const upline = await User.findOne({ userId: currentUplineId }).select('_id userId isToppedUp sponsorId name totalCompoundStaked');
-                        if (!upline) break;
+//                     while (currentUplineId && currentLevel <= 10) {
+//                         const upline = await User.findOne({ userId: currentUplineId }).select('_id userId isToppedUp sponsorId name totalCompoundStaked');
+//                         if (!upline) break;
 
-                        if (currentLevel >= 2 && currentLevel <= 10) {
-                            if (upline.isToppedUp && upline.totalCompoundStaked >= 50) {
-                                const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
-                                const levelBonus = (stakeAmt * percentage) / 100;
+//                         if (currentLevel >= 2 && currentLevel <= 10) {
+//                             if (upline.isToppedUp && upline.totalCompoundStaked >= 50) {
+//                                 const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
+//                                 const levelBonus = (stakeAmt * percentage) / 100;
 
-                                if (levelBonus > 0) {
-                                    await User.updateOne(
-                                        { _id: upline._id }, 
-                                        { $inc: { cctCompoundLevelIncome: levelBonus } }
-                                    );
+//                                 if (levelBonus > 0) {
+//                                     await User.updateOne(
+//                                         { _id: upline._id }, 
+//                                         { $inc: { cctCompoundLevelIncome: levelBonus } }
+//                                     );
 
-                                    await Transaction.create({
-                                        userId: upline.userId, type: "compound_level_income", source: "cct_compound", amount: levelBonus,
-                                        fromUserId: user.userId, 
-                                        description: `Level ${currentLevel} Compounding Income (${percentage}%) from ${user.name}'s Reinvestment`, 
-                                        status: 'success', date: new Date()
-                                    });
-                                }
-                            }
-                        }
-                        currentUplineId = upline.sponsorId;
-                        currentLevel++;
-                    }
-                } catch (bgError) {
-                    console.error("Background Compounding MLM Error:", bgError);
-                }
-            })();
-        }
+//                                     await Transaction.create({
+//                                         userId: upline.userId, type: "compound_level_income", source: "cct_compound", amount: levelBonus,
+//                                         fromUserId: user.userId, 
+//                                         description: `Level ${currentLevel} Compounding Income (${percentage}%) from ${user.name}'s Reinvestment`, 
+//                                         status: 'success', date: new Date()
+//                                     });
+//                                 }
+//                             }
+//                         }
+//                         currentUplineId = upline.sponsorId;
+//                         currentLevel++;
+//                     }
+//                 } catch (bgError) {
+//                     console.error("Background Compounding MLM Error:", bgError);
+//                 }
+//             })();
+//         }
 
-        // Return the updated user object so frontend can immediately reflect balance
-        res.json({ success: true, message: `Successfully Reinvested ${stakeAmt} CCT into 40-Days Cycle!`, user: user });
-    } catch (err) {
-        console.error("Reinvest Error:", err);
-        res.status(500).json({ message: 'Server error during reinvestment' });
-    }
-});
+//         // Return the updated user object so frontend can immediately reflect balance
+//         res.json({ success: true, message: `Successfully Reinvested ${stakeAmt} CCT into 40-Days Cycle!`, user: user });
+//     } catch (err) {
+//         console.error("Reinvest Error:", err);
+//         res.status(500).json({ message: 'Server error during reinvestment' });
+//     }
+// });
 
 router.post("/promo-stake", authMiddleware, async (req, res) => {
   try {
@@ -1481,7 +1481,7 @@ router.post("/promo-stake", authMiddleware, async (req, res) => {
 
     // 💰 Amount Verification (100 to 1999 CCT)
     const stakeAmt = Number(amount);
-    if (isNaN(stakeAmt) || stakeAmt < 50 || stakeAmt > 5000) {
+    if (isNaN(stakeAmt) || stakeAmt < 10 || stakeAmt > 5000) {
       return res.status(400).json({ message: "Staking amount must be between 100 and 1999 CCT." });
     }
 

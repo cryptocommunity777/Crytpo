@@ -1,0 +1,42 @@
+[
+  {
+    "userId": 5728404,
+    "name": "kalu lalugfsg",
+    "role": "user",
+    "oldCct": 100,
+    "moveAmount": 100,
+    "newCct": 0,
+    "oldWallet": 24.790000000000003,
+    "newWallet": 124.79
+  },
+  {
+    "userId": 8262364,
+    "name": "askdf",
+    "role": "user",
+    "oldCct": 15,
+    "moveAmount": 15,
+    "newCct": 0,
+    "oldWallet": 115.31799999999998,
+    "newWallet": 130.31799999999998
+  },
+  {
+    "userId": 8214716,
+    "name": "asjfj",
+    "role": "user",
+    "oldCct": 10,
+    "moveAmount": 10,
+    "newCct": 0,
+    "oldWallet": 30,
+    "newWallet": 40
+  },
+  {
+    "userId": 9929657,
+    "name": "asklfj",
+    "role": "user",
+    "oldCct": 50,
+    "moveAmount": 50,
+    "newCct": 0,
+    "oldWallet": 0,
+    "newWallet": 50
+  }
+]
