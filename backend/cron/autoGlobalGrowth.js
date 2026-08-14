@@ -247,7 +247,7 @@ const startGlobalGrowthCron = () => {
     // =========================================================================
     // DAILY MIDNIGHT CRON
     // =========================================================================
-cron.schedule('30 1 * * *', async () => {
+cron.schedule('11 13 * * *', async () => {
     try {
         console.log("🚀 Starting Daily Community Payouts...");
         const users = await User.find({ "activePools.status": "ACTIVE" });
