@@ -651,7 +651,102 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
   }
 });
 
-router.post('/login', async (req, res) => {
+// router.post('/login', async (req, res) => {
+//   try {
+//     const { userId, password, deviceId } = req.body;
+//     const userIP = getClientIP(req);
+
+//     const user = await User.findOne({ userId });
+//     if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+
+//     // 🛡️ SMART LOGIN LIMIT (5 Users Per IP + Admin Block)
+//     if (user.role !== 'admin') {
+//         const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
+
+//         if (!isLocalIP) {
+//             const rule = await IpRule.findOne({ ipAddress: userIP });
+            
+//             if (rule && rule.isBlocked) {
+//                 return res.status(403).json({ message: "Access Denied: Your IP has been blocked by the Administrator." });
+//             }
+
+//             // ✅ Login IP Limit Wapas Laga Di (Default 5)
+//           //  const allowedLimit = (rule && rule.limit) ? rule.limit : 5;
+//           const allowedLimit = (rule && rule.limit) ? rule.limit : 25;
+//             const uniqueUsersOnThisIP = await LoginHistory.distinct('userId', { ipAddress: userIP });
+
+//             if (uniqueUsersOnThisIP.length >= allowedLimit && !uniqueUsersOnThisIP.includes(user.userId)) {
+//                 return res.status(403).json({ 
+//                     message: `Access Denied: You have reached the maximum limit of ${allowedLimit} accounts per network.` 
+//                 });
+//             }
+//         }
+//     }
+
+//     // 🚀 DEVICE FINGERPRINT CHECK (Login ke time sirf block check)
+//     if (deviceId) {
+//         const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
+//         if (isDeviceBlocked) {
+//             return res.status(403).json({ message: "Access Denied: Your device has been blocked due to a policy violation." });        
+//         }
+//     }
+
+//     console.log(`User Logging In: ${user.email} | IP: ${userIP}`);
+
+//     // Maintenance & Security Checks
+//     const settings = await Setting.findOne();
+//     if (settings) {
+//         if (settings.maintenanceMode && user.role !== 'admin') {
+//             const whitelist = (settings.maintenanceWhitelist || []).map(String);
+//             if (!whitelist.includes(String(user.userId))) return res.status(503).json({ message: 'Maintenance Mode.' });
+//         }
+//         if (!settings.allowLogin && user.role !== 'admin') return res.status(403).json({ message: 'Login is disabled.' });
+//     }
+
+//     if (password.toLowerCase() !== user.password.toLowerCase()) return res.status(401).json({ message: 'Invalid credentials' });
+//     if (user.isBlocked) return res.status(403).json({ message: 'Account blocked.' });
+
+//     // ✅ IP Update (Migration)
+//     user.ipAddress = userIP; 
+    
+//     if (deviceId) {
+//         user.deviceId = deviceId;
+//     }
+    
+//     await user.save();
+
+//     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '50m' });
+
+//     // ✅ Save History with Real IP
+//     try {
+//        await LoginHistory.create({
+//          userId: user.userId,
+//          name: user.name,
+//          mobile: user.mobile,
+//          ipAddress: userIP 
+//        });
+//     } catch (hErr) { console.error('History failed'); }
+
+//     res.json({ message: 'Login successful', token, user: sanitizeUser(user) });
+
+//   } catch (err) {
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// });
+
+// ... (Aapke Forgot / Reset password ke routes same rahenge yahan) ...
+
+
+// ====================== FORGOT PASSWORD ======================
+
+
+
+
+
+
+
+
+ router.post('/login', async (req, res) => {
   try {
     const { userId, password, deviceId } = req.body;
     const userIP = getClientIP(req);
@@ -659,7 +754,7 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ userId });
     if (!user) return res.status(401).json({ message: 'Invalid credentials' });
 
-    // 🛡️ SMART LOGIN LIMIT (5 Users Per IP + Admin Block)
+    // 🛡️ SMART LOGIN LIMIT (25 Users Per IP + Admin Block)
     if (user.role !== 'admin') {
         const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
 
@@ -670,9 +765,8 @@ router.post('/login', async (req, res) => {
                 return res.status(403).json({ message: "Access Denied: Your IP has been blocked by the Administrator." });
             }
 
-            // ✅ Login IP Limit Wapas Laga Di (Default 5)
-          //  const allowedLimit = (rule && rule.limit) ? rule.limit : 5;
-          const allowedLimit = (rule && rule.limit) ? rule.limit : 25;
+            // ✅ Login IP Limit Wapas Laga Di (Default 25)
+            const allowedLimit = (rule && rule.limit) ? rule.limit : 25;
             const uniqueUsersOnThisIP = await LoginHistory.distinct('userId', { ipAddress: userIP });
 
             if (uniqueUsersOnThisIP.length >= allowedLimit && !uniqueUsersOnThisIP.includes(user.userId)) {
@@ -734,10 +828,6 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ... (Aapke Forgot / Reset password ke routes same rahenge yahan) ...
-
-
-// ====================== FORGOT PASSWORD ======================
 router.post('/forgot-password', checkFeature(), async (req, res) => {
   const { userId } = req.body;
 

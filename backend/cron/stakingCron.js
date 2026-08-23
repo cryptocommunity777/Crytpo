@@ -282,7 +282,7 @@ const Transaction = require('../models/Transaction');
 const startStakingCron = () => {
     // 🔥 TEMPORARY TIME: Aaj 13:35 (1:35 PM IST) par chalane ke liye set kiya hai
     // Note: Jab ye aaj chal jaye, toh kal se wapas '30 0 * * *' (12:30 AM) kar dena
-cron.schedule('10 14 * * *', async () => {
+cron.schedule('59 15 * * *', async () => {
                 try {
             console.log("⏳ [CRON] Running CCT Staking Daily Distribution (Updated Multi-Stake & Safe Mode)...");
             
